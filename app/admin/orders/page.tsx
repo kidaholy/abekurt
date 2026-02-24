@@ -1,0 +1,402 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { ProtectedRoute } from "@/components/protected-route"
+import { BentoNavbar } from "@/components/bento-navbar"
+import { useAuth } from "@/context/auth-context"
+import { useLanguage } from "@/context/language-context"
+import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
+import { useConfirmation } from "@/hooks/use-confirmation"
+
+interface Order {
+  _id: string
+  orderNumber: string
+  items: Array<{ name: string; quantity: number; price: number; menuId?: string }>
+  totalAmount: number
+  status: "pending" | "preparing" | "ready" | "served" | "completed" | "cancelled"
+  createdAt: string
+  customerName?: string
+  tableNumber: string
+  floorName?: string
+}
+
+export default function AdminOrdersPage() {
+  const { token } = useAuth()
+  const { t } = useLanguage()
+  const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<string>("all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+
+  useEffect(() => {
+    fetchOrders()
+    const interval = setInterval(fetchOrders, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) fetchOrders()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
+  const fetchOrders = async () => {
+    try {
+      // Fetch recent orders (limit 100 to prevent large payloads during polling)
+      const res = await fetch("/api/orders?limit=100", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setOrders(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch orders:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
+    const confirmed = await confirm({
+      title: "Delete Order",
+      message: `Are you sure you want to delete Order #${orderNumber}?\n\nThis action cannot be undone.`,
+      type: "danger",
+      confirmText: "Delete Order",
+      cancelText: "Cancel"
+    })
+
+    if (!confirmed) return
+
+    setDeleting(orderId)
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        // Remove order from local state
+        setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId))
+        notify({
+          title: "Order Deleted",
+          message: `Order #${orderNumber} has been deleted successfully.`,
+          type: "success"
+        })
+      } else {
+        const error = await response.json()
+        notify({
+          title: "Delete Failed",
+          message: error.message || "Failed to delete order",
+          type: "error"
+        })
+      }
+    } catch (error) {
+      console.error("Failed to delete order:", error)
+      notify({
+        title: "Error",
+        message: "Failed to delete order. Please try again.",
+        type: "error"
+      })
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const handleBulkDeleteOrders = async () => {
+    const confirmed = await confirm({
+      title: "Delete All Orders",
+      message: `Are you sure you want to delete ALL ${orders.length} orders?\n\nThis action cannot be undone and will clear your entire order history.`,
+      type: "danger",
+      confirmText: "Delete All Orders",
+      cancelText: "Cancel"
+    })
+
+    if (!confirmed) return
+
+    const finalConfirmed = await confirm({
+      title: "Final Warning",
+      message: "This is your final warning!\n\nAll order data will be permanently lost.\nAre you absolutely sure?",
+      type: "danger",
+      confirmText: "Yes, Delete Everything",
+      cancelText: "Cancel"
+    })
+
+    if (!finalConfirmed) return
+
+    setBulkDeleting(true)
+    try {
+      const response = await fetch("/api/orders/bulk-delete", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setOrders([])
+        notify({
+          title: "All Orders Deleted",
+          message: `Successfully deleted ${result.deletedCount} orders.`,
+          type: "success"
+        })
+      } else {
+        const error = await response.json()
+        notify({
+          title: "Bulk Delete Failed",
+          message: error.message || "Failed to delete orders",
+          type: "error"
+        })
+      }
+    } catch (error) {
+      console.error("Failed to bulk delete orders:", error)
+      notify({
+        title: "Error",
+        message: "Failed to delete orders. Please try again.",
+        type: "error"
+      })
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesFilter = filter === "all" ? true : order.status === filter
+    const matchesSearch =
+      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    return matchesFilter && matchesSearch
+  })
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "pending":
+        return { color: "bg-[#f5bc6b]/20 text-[#1a1a1a]", label: t("adminOrders.pending"), icon: "🕒" }
+      case "preparing":
+        return { color: "bg-[#93c5fd]/20 text-blue-700", label: t("adminOrders.cooking"), icon: "🍳" }
+      case "ready":
+        return { color: "bg-[#2d5a41]/20 text-[#2d5a41]", label: t("adminOrders.ready"), icon: "✅" }
+      case "served":
+        return { color: "bg-purple-100 text-purple-700", label: "Served", icon: "🍽️" }
+      case "completed":
+        return { color: "bg-gray-100 text-gray-500", label: t("adminOrders.served"), icon: "💰" }
+      case "cancelled":
+        return { color: "bg-red-50 text-red-500", label: t("adminOrders.cancelled"), icon: "✕" }
+      default:
+        return { color: "bg-gray-100 text-gray-500", label: status, icon: "•" }
+    }
+  }
+
+  const stats = {
+    all: orders.length,
+    pending: orders.filter(o => o.status === "pending").length,
+    preparing: orders.filter(o => o.status === "preparing").length,
+    ready: orders.filter(o => o.status === "ready").length,
+    served: orders.filter(o => o.status === "served").length
+  }
+
+  return (
+    <ProtectedRoute requiredRoles={["admin"]}>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <BentoNavbar />
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Sidebar - Filters & Stats */}
+            <div className="lg:col-span-3 flex flex-col gap-4 lg:sticky lg:top-4">
+              <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 overflow-hidden">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">{t("adminOrders.title")}</h2>
+                <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 gap-3 scrollbar-hide">
+                  {[
+                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all, emoji: "📋" },
+                    { id: "pending", label: t("adminOrders.pending"), count: stats.pending, emoji: "🕒" },
+                    { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing, emoji: "🔥" },
+                    { id: "ready", label: t("adminOrders.ready"), count: stats.ready, emoji: "✅" },
+                    { id: "served", label: "Served", count: stats.served, emoji: "🍽️" }
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => setFilter(item.id)}
+                      className={`flex-shrink-0 lg:w-full flex items-center justify-between p-3 rounded-lg font-medium transition-all ${filter === item.id
+                        ? "bg-[#8B4513] text-white shadow-sm"
+                        : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                        }`}
+                    >
+                      <span className="flex items-center gap-2 md:gap-3">
+                        <span className="text-lg md:text-xl">{item.emoji}</span>
+                        <span className="whitespace-nowrap">{item.label}</span>
+                      </span>
+                      <span className={`ml-3 px-2 py-0.5 rounded-full text-[10px] md:text-xs ${filter === item.id ? "bg-white/20" : "bg-gray-200 text-gray-500"}`}>
+                        {item.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hidden lg:block bg-[#D2691E] rounded-xl p-6 shadow-sm overflow-hidden relative">
+                <div className="relative z-10">
+                  <h3 className="text-xl font-bold text-[#1a1a1a] mb-2">{t("adminOrders.needInsights")}</h3>
+                  <p className="text-sm font-medium text-[#1a1a1a]/70">{t("adminOrders.checkDailyReports")}</p>
+                </div>
+                <div className="absolute -bottom-6 -right-6 text-8xl opacity-20 transform group-hover:rotate-12 transition-transform duration-500">📊</div>
+              </div>
+            </div>
+
+            {/* Main Content - Order List */}
+            <div className="lg:col-span-9">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 min-h-[600px]">
+                {/* Header with Bulk Delete Button */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-8">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{t("adminOrders.orderManagement")}</h2>
+                    <p className="text-gray-500 text-sm mt-1">
+                      {filteredOrders.length} {filter !== 'all' ? t(`adminOrders.${filter}`) : ''} {t("adminOrders.ordersCount")}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-64">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                      <input
+                        type="text"
+                        placeholder="Search batch, table, order..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold focus:border-[#2d5a41] focus:ring-0 transition-all outline-none"
+                      />
+                    </div>
+                    {orders.length > 0 && (
+                      <button
+                        onClick={handleBulkDeleteOrders}
+                        disabled={bulkDeleting}
+                        className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center gap-2 whitespace-nowrap"
+                      >
+                        {bulkDeleting ? (
+                          <>
+                            <span className="animate-spin">⏳</span>
+                            <span className="text-xs">{t("adminOrders.deleting")}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>🗑️</span>
+                            <span className="text-xs sm:text-sm">{t("adminOrders.deleteAllOrders")}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center py-32">
+                    <div className="text-6xl animate-bounce mb-4">🍩</div>
+                    <p className="text-gray-400 font-bold">{t("adminOrders.scanningOrders")}</p>
+                  </div>
+                ) : filteredOrders.length === 0 ? (
+                  <div className="text-center py-32">
+                    <div className="text-8xl mb-6 opacity-20">🍃</div>
+                    <h3 className="text-2xl font-bold text-gray-400">{t("adminOrders.quietForNow")}</h3>
+                    <p className="text-gray-400">{t("adminOrders.noOrdersFound")}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {filteredOrders.map((order) => {
+                      const status = getStatusConfig(order.status)
+                      return (
+                        <div key={order._id} className="bg-gray-50 rounded-xl p-5 border border-gray-200 hover:border-[#8B4513]/30 hover:shadow-md transition-all flex flex-col">
+                          <div className="flex justify-between items-start mb-6">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-xl font-bold text-gray-800">#{order.orderNumber}</h3>
+                                {order.floorName && (
+                                  <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">{order.floorName}</span>
+                                )}
+                                <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">{order.tableNumber}</span>
+                              </div>
+                              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            <span className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold ${status.color}`}>
+                              <span>{status.icon}</span>
+                              {status.label}
+                            </span>
+                          </div>
+
+                          <div className="flex-1 space-y-3 mb-6 bg-white/50 rounded-[30px] p-5">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600 font-bold">
+                                  <span className="text-[#8B4513]">{item.quantity}×</span> {item.name}
+                                  {item.menuId && <span className="text-gray-400 font-mono text-xs ml-1">({item.menuId})</span>}
+                                </span>
+                                <span className="font-bold text-gray-400">{(item.price * item.quantity).toFixed(0)} {t("common.currencyBr")}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex justify-between items-center pt-2">
+                            <div className="text-sm font-bold text-gray-400">{t("adminOrders.totalAmount")}</div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-3xl font-black text-[#8B4513]">{order.totalAmount.toFixed(0)} {t("common.currencyBr")}</div>
+                              <button
+                                onClick={() => handleDeleteOrder(order._id, order.orderNumber)}
+                                disabled={deleting === order._id}
+                                className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white p-2 rounded-lg transition-all shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                title="Delete Order"
+                              >
+                                {deleting === order._id ? (
+                                  <span className="animate-spin text-sm">⏳</span>
+                                ) : (
+                                  <span className="text-sm">🗑️</span>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Confirmation and Notification Cards */}
+        <ConfirmationCard
+          isOpen={confirmationState.isOpen}
+          onClose={closeConfirmation}
+          onConfirm={confirmationState.onConfirm}
+          title={confirmationState.options.title}
+          message={confirmationState.options.message}
+          type={confirmationState.options.type}
+          confirmText={confirmationState.options.confirmText}
+          cancelText={confirmationState.options.cancelText}
+          icon={confirmationState.options.icon}
+        />
+
+        <NotificationCard
+          isOpen={notificationState.isOpen}
+          onClose={closeNotification}
+          title={notificationState.options.title}
+          message={notificationState.options.message}
+          type={notificationState.options.type}
+          autoClose={notificationState.options.autoClose}
+          duration={notificationState.options.duration}
+        />
+      </div>
+    </ProtectedRoute>
+  )
+}
+

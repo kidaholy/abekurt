@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
-import Floor from "@/lib/models/floor"
+import Batch from "@/lib/models/batch"
 import Table from "@/lib/models/table"
 import User from "@/lib/models/user"
 
@@ -8,30 +8,30 @@ export async function GET(request: Request) {
     try {
         await connectDB()
 
-        const floors = await Floor.find({}).lean()
+        const batches = await Batch.find({}).lean()
         const tables = await Table.find({}).lean()
         const users = await User.find({ role: "cashier" }).lean()
 
         return NextResponse.json({
-            floors: floors.map(f => ({
-                _id: f._id.toString(),
-                name: f.name,
-                isActive: f.isActive,
-                idType: typeof f._id
+            batches: batches.map(b => ({
+                _id: b._id.toString(),
+                batchNumber: b.batchNumber,
+                isActive: b.isActive,
+                idType: typeof b._id
             })),
             tables: tables.map(t => ({
                 _id: t._id.toString(),
                 tableNumber: t.tableNumber,
-                floorId: t.floorId,
-                floorIdType: typeof t.floorId,
+                batchId: t.batchId,
+                batchIdType: typeof t.batchId,
                 status: t.status
             })),
             cashiers: users.map(u => ({
                 _id: u._id.toString(),
                 name: u.name,
                 email: u.email,
-                floorId: u.floorId,
-                floorIdType: typeof u.floorId
+                batchId: u.batchId,
+                batchIdType: typeof u.batchId
             }))
         })
     } catch (error: any) {

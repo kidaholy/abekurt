@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
 import { connectDB } from "@/lib/db"
-import Floor from "@/lib/models/floor"
+import Batch from "@/lib/models/batch"
 import Table from "@/lib/models/table"
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production"
-
 import { validateSession } from "@/lib/auth"
 
 // Middleware helper to verify admin access
@@ -24,10 +20,10 @@ export async function GET(request: Request) {
         if (!(await verifyAdmin(request))) return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 
         await connectDB()
-        const floors = await Floor.find({}).sort({ order: 1 })
-        return NextResponse.json(floors)
+        const batches = await Batch.find({}).sort({ order: 1 })
+        return NextResponse.json(batches)
     } catch (error: any) {
-        return NextResponse.json({ message: "Failed to fetch floors" }, { status: 500 })
+        return NextResponse.json({ message: "Failed to fetch batches" }, { status: 500 })
     }
 }
 
@@ -36,16 +32,16 @@ export async function POST(request: Request) {
         if (!(await verifyAdmin(request))) return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 
         await connectDB()
-        const { name, description, order } = await request.json()
+        const { batchNumber, description, order } = await request.json()
 
-        if (!name) {
-            return NextResponse.json({ message: "Name is required" }, { status: 400 })
+        if (!batchNumber) {
+            return NextResponse.json({ message: "Batch Number is required" }, { status: 400 })
         }
 
-        const floor = await Floor.create({ name, description, order: order || 0 })
-        return NextResponse.json(floor, { status: 201 })
+        const batch = await Batch.create({ batchNumber, description, order: order || 0 })
+        return NextResponse.json(batch, { status: 201 })
     } catch (error: any) {
-        return NextResponse.json({ message: error.message || "Failed to create floor" }, { status: 500 })
+        return NextResponse.json({ message: error.message || "Failed to create batch" }, { status: 500 })
     }
 }
 
@@ -54,25 +50,25 @@ export async function PUT(request: Request) {
         if (!(await verifyAdmin(request))) return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 
         await connectDB()
-        const { id, name, description, order, isActive } = await request.json()
+        const { id, batchNumber, description, order, isActive } = await request.json()
 
         if (!id) {
             return NextResponse.json({ message: "ID is required" }, { status: 400 })
         }
 
-        const updatedFloor = await Floor.findByIdAndUpdate(
+        const updatedBatch = await Batch.findByIdAndUpdate(
             id,
-            { name, description, order, isActive },
+            { batchNumber, description, order, isActive },
             { new: true }
         )
 
-        if (!updatedFloor) {
-            return NextResponse.json({ message: "Floor not found" }, { status: 404 })
+        if (!updatedBatch) {
+            return NextResponse.json({ message: "Batch not found" }, { status: 404 })
         }
 
-        return NextResponse.json(updatedFloor)
+        return NextResponse.json(updatedBatch)
     } catch (error: any) {
-        return NextResponse.json({ message: error.message || "Failed to update floor" }, { status: 500 })
+        return NextResponse.json({ message: error.message || "Failed to update batch" }, { status: 500 })
     }
 }
 
@@ -87,12 +83,17 @@ export async function DELETE(request: Request) {
 
         await connectDB()
 
-        // Unassign tables associated with this floor
-        await Table.updateMany({ floorId: id }, { $unset: { floorId: "" } })
+        // 1. Find the batch to get its batchNumber if needed for unassigning/cascading
+        const batch = await Batch.findById(id)
+        if (!batch) return NextResponse.json({ message: "Batch not found" }, { status: 404 })
 
-        await Floor.findByIdAndDelete(id)
-        return NextResponse.json({ message: "Floor deleted" })
+        // 2. Cascade delete or unassign tables
+        // For now, let's keep the unassign logic but rename the field
+        await Table.updateMany({ batchId: id }, { $unset: { batchId: "" } })
+
+        await Batch.findByIdAndDelete(id)
+        return NextResponse.json({ message: "Batch deleted" })
     } catch (error: any) {
-        return NextResponse.json({ message: "Failed to delete floor" }, { status: 500 })
+        return NextResponse.json({ message: "Failed to delete batch" }, { status: 500 })
     }
 }

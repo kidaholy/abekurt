@@ -389,7 +389,7 @@ export default function ReportsPage() {
                                                                     </td>
                                                                     <td className="p-4 text-center">
                                                                         <div className="flex flex-col items-center gap-1">
-                                                                            {order.floorName && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">{order.floorName}</span>}
+                                                                            {order.batchNumber && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">Batch #{order.batchNumber}</span>}
                                                                             {order.tableNumber ? <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-black">{order.tableNumber}</span> : <span className="text-gray-300">-</span>}
                                                                         </div>
                                                                     </td>
@@ -424,7 +424,7 @@ export default function ReportsPage() {
                                                             </div>
                                                             <div className="flex justify-between items-end mt-4">
                                                                 <div className="flex items-center gap-2">
-                                                                    {order.floorName && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">{order.floorName}</span>}
+                                                                    {order.batchNumber && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">Batch #{order.batchNumber}</span>}
                                                                     {order.tableNumber && <span className="bg-white border border-gray-200 px-2 py-1 rounded text-[10px] font-black text-gray-600">{order.tableNumber}</span>}
                                                                     <span className="text-[10px] font-bold text-gray-400">{order.items.reduce((s: any, i: any) => s + (i.quantity || 0), 0)} ITEMS</span>
                                                                 </div>

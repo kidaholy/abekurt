@@ -156,6 +156,7 @@ export default function MenuPage() {
           paymentMethod: "cash",
           status: "pending",
           tableNumber,
+          batchId: user?.batchId
         }),
       })
 
@@ -245,8 +246,8 @@ export default function MenuPage() {
                             key={tab}
                             onClick={() => { setMainCategoryFilter(tab); setCategoryFilter('all') }}
                             className={`flex items-center gap-2 px-7 py-3 rounded-full font-black text-sm transition-all ${mainCategoryFilter === tab
-                                ? 'bg-[#8B4513] text-white shadow-lg scale-105'
-                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              ? 'bg-[#8B4513] text-white shadow-lg scale-105'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                               }`}
                           >
                             {tab === 'Food' ? '🍽️' : '🥤'} {tab}
@@ -317,6 +318,7 @@ export default function MenuPage() {
                     setTableNumber={setTableNumber}
                     paperWidth={paperWidth}
                     setPaperWidth={setPaperWidth}
+                    assignedBatchId={user?.batchId}
                   />
                 </div>
               </div>
@@ -381,6 +383,7 @@ export default function MenuPage() {
                       setTableNumber={setTableNumber}
                       paperWidth={paperWidth}
                       setPaperWidth={setPaperWidth}
+                      assignedBatchId={user?.batchId}
                     />
                   </div>
                 </motion.div>

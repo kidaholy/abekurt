@@ -32,7 +32,7 @@ export async function GET() {
 
     // Ensure other collections are initialized
     await Promise.all([
-      import("@/lib/models/floor"),
+      import("@/lib/models/batch"),
       import("@/lib/models/table"),
       import("@/lib/models/category"),
       import("@/lib/models/menu-item"),

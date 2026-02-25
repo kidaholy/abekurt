@@ -17,7 +17,7 @@ interface Order {
   createdAt: string
   customerName?: string
   tableNumber: string
-  floorName?: string
+  batchNumber?: string
 }
 
 export default function AdminOrdersPage() {
@@ -318,8 +318,8 @@ export default function AdminOrdersPage() {
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-xl font-bold text-gray-800">#{order.orderNumber}</h3>
-                                {order.floorName && (
-                                  <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">{order.floorName}</span>
+                                {order.batchNumber && (
+                                  <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">Batch #{order.batchNumber}</span>
                                 )}
                                 <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">{order.tableNumber}</span>
                               </div>

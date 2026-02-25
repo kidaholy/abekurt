@@ -21,18 +21,18 @@ export async function POST(request: Request) {
         }
 
         await connectDB()
-        const { tableNumber, name, capacity, floorId } = await request.json()
+        const { tableNumber, name, capacity, batchId } = await request.json()
 
         if (!tableNumber) {
             return NextResponse.json({ message: "Table Number is required" }, { status: 400 })
         }
 
-        const existing = await Table.findOne({ tableNumber, floorId })
+        const existing = await Table.findOne({ tableNumber, batchId })
         if (existing) {
-            return NextResponse.json({ message: "Table Number already exists on this floor" }, { status: 400 })
+            return NextResponse.json({ message: "Table Number already exists in this batch" }, { status: 400 })
         }
 
-        const table = await Table.create({ tableNumber, name, capacity, floorId, status: "active" })
+        const table = await Table.create({ tableNumber, name, capacity, batchId, status: "active" })
         return NextResponse.json(table, { status: 201 })
     } catch (error: any) {
         return NextResponse.json({ message: error.message || "Failed to create table" }, { status: 500 })
@@ -47,21 +47,21 @@ export async function PUT(request: Request) {
         }
 
         await connectDB()
-        const { id, tableNumber, name, capacity, floorId } = await request.json()
+        const { id, tableNumber, name, capacity, batchId } = await request.json()
 
         if (!id || !tableNumber) {
             return NextResponse.json({ message: "ID and Table Number are required" }, { status: 400 })
         }
 
-        // Check if new table number exists on this floor (excluding current table)
-        const existing = await Table.findOne({ tableNumber, floorId, _id: { $ne: id } })
+        // Check if new table number exists on this batch (excluding current table)
+        const existing = await Table.findOne({ tableNumber, batchId, _id: { $ne: id } })
         if (existing) {
-            return NextResponse.json({ message: "Table Number already exists on this floor" }, { status: 400 })
+            return NextResponse.json({ message: "Table Number already exists in this batch" }, { status: 400 })
         }
 
         const updatedTable = await Table.findByIdAndUpdate(
             id,
-            { tableNumber, name, capacity, floorId },
+            { tableNumber, name, capacity, batchId },
             { new: true }
         )
 

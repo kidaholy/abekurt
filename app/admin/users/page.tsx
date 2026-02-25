@@ -16,13 +16,13 @@ interface User {
   plainPassword?: string
   role: "admin" | "chef" | "cashier" | "display"
   isActive: boolean
-  floorId?: string
+  batchId?: string
   assignedCategories?: string[]
 }
 
-interface Floor {
+interface Batch {
   _id: string
-  name: string
+  batchNumber: string
 }
 
 export default function AdminUsersPage() {
@@ -36,10 +36,10 @@ export default function AdminUsersPage() {
     email: "",
     password: "",
     role: "cashier" as "admin" | "chef" | "cashier" | "display",
-    floorId: "",
+    batchId: "",
     assignedCategories: [] as string[],
   })
-  const [floors, setFloors] = useState<Floor[]>([])
+  const [batches, setBatches] = useState<Batch[]>([])
   const [categories, setCategories] = useState<{ _id: string, name: string }[]>([])
 
   const { token, user: currentUser } = useAuth()
@@ -54,7 +54,7 @@ export default function AdminUsersPage() {
   useEffect(() => {
     if (token) {
       fetchUsers()
-      fetchFloors()
+      fetchBatches()
       fetchCategories()
     }
   }, [token])
@@ -72,16 +72,16 @@ export default function AdminUsersPage() {
     }
   }
 
-  const fetchFloors = async () => {
+  const fetchBatches = async () => {
     try {
-      const response = await fetch("/api/floors", {
+      const response = await fetch("/api/batches", {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (response.ok) {
-        setFloors(await response.json())
+        setBatches(await response.json())
       }
     } catch (err) {
-      console.error("Failed to fetch floors")
+      console.error("Failed to fetch batches")
     }
   }
 
@@ -230,7 +230,7 @@ export default function AdminUsersPage() {
       email: userToEdit.email,
       password: "",
       role: userToEdit.role,
-      floorId: userToEdit.floorId || "",
+      batchId: userToEdit.batchId || "",
       assignedCategories: userToEdit.assignedCategories || [],
     })
     setShowForm(true)
@@ -243,7 +243,7 @@ export default function AdminUsersPage() {
       email: "",
       password: "",
       role: "cashier",
-      floorId: "",
+      batchId: "",
       assignedCategories: [],
     })
     setShowForm(false)
@@ -320,10 +320,10 @@ export default function AdminUsersPage() {
                               ))}
                             </div>
                           )}
-                          {(u.role === "cashier" || u.role === "display") && u.floorId && (
+                          {(u.role === "cashier" || u.role === "display") && u.batchId && (
                             <div className="mb-2">
                               <span className="text-[10px] font-black uppercase tracking-widest text-[#8B4513] bg-[#8B4513]/5 px-2 py-1 rounded">
-                                📍 {floors.find(f => f._id === u.floorId)?.name || "Assigned Floor"}
+                                📍 {batches.find(b => b._id === u.batchId)?.batchNumber ? `Batch #${batches.find(b => b._id === u.batchId)?.batchNumber}` : "Assigned Batch"}
                               </span>
                             </div>
                           )}
@@ -426,15 +426,15 @@ export default function AdminUsersPage() {
 
                   {(formData.role === "cashier" || formData.role === "display") && (
                     <div className="space-y-2 animate-fade-in">
-                      <label className="text-sm font-bold text-gray-600 ml-2">Assigned Floor</label>
+                      <label className="text-sm font-bold text-gray-600 ml-2">Assigned Batch</label>
                       <select
-                        value={formData.floorId}
-                        onChange={e => setFormData({ ...formData, floorId: e.target.value })}
+                        value={formData.batchId}
+                        onChange={e => setFormData({ ...formData, batchId: e.target.value })}
                         className="w-full bg-gray-50 border-none rounded-2xl p-4 outline-none focus:ring-4 focus:ring-[#8B4513]/10 font-medium appearance-none"
                       >
-                        <option value="">All Floors (Global)</option>
-                        {floors.map(floor => (
-                          <option key={floor._id} value={floor._id}>{floor.name}</option>
+                        <option value="">All Batches (Global)</option>
+                        {batches.map(batch => (
+                          <option key={batch._id} value={batch._id}>Batch #{batch.batchNumber}</option>
                         ))}
                       </select>
                     </div>

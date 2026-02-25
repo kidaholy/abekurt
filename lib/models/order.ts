@@ -24,8 +24,8 @@ interface IOrder extends Document {
   customerName?: string
   tableNumber: string
   tableId?: mongoose.Types.ObjectId | string
-  floorId?: mongoose.Types.ObjectId | string
-  floorName?: string
+  batchId?: mongoose.Types.ObjectId | string
+  batchNumber?: string
   createdBy: mongoose.Types.ObjectId
   createdAt: Date
   updatedAt: Date
@@ -67,8 +67,8 @@ const orderSchema = new Schema<IOrder>(
     customerName: { type: String },
     tableNumber: { type: String, required: true, index: true },
     tableId: { type: Schema.Types.ObjectId, ref: "Table" },
-    floorId: { type: Schema.Types.ObjectId, ref: "Floor" },
-    floorName: { type: String },
+    batchId: { type: Schema.Types.ObjectId, ref: "Batch" },
+    batchNumber: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     kitchenAcceptedAt: { type: Date },
     readyAt: { type: Date },
@@ -79,7 +79,7 @@ const orderSchema = new Schema<IOrder>(
 
 // Performance Indexes
 orderSchema.index({ status: 1, createdAt: -1 })
-orderSchema.index({ floorId: 1 })
+orderSchema.index({ batchId: 1 })
 orderSchema.index({ "items.category": 1 })
 orderSchema.index({ createdBy: 1 })
 orderSchema.index({ createdAt: -1 })

@@ -6,7 +6,7 @@ export interface TokenPayload {
     id: string
     email?: string
     role: string
-    floorId?: string
+    batchId?: string
     [key: string]: any
 }
 

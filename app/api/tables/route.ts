@@ -13,7 +13,7 @@ export async function GET(request: Request) {
             _id: t._id,
             tableNumber: t.tableNumber,
             capacity: t.capacity,
-            floorId: t.floorId
+            batchId: t.batchId
         }))
         return NextResponse.json(serializedTables)
     } catch (error: any) {

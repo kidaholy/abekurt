@@ -7,7 +7,7 @@ interface IUser {
   plainPassword?: string
   role: "admin" | "cashier" | "chef" | "display"
   isActive: boolean
-  floorId?: mongoose.Types.ObjectId | string
+  batchId?: mongoose.Types.ObjectId | string
   assignedCategories?: string[]
   createdAt: Date
   updatedAt: Date
@@ -21,7 +21,7 @@ const userSchema = new Schema<IUser>(
     plainPassword: { type: String },
     role: { type: String, enum: ["admin", "cashier", "chef", "display"], default: "cashier" },
     isActive: { type: Boolean, default: true },
-    floorId: { type: Schema.Types.ObjectId, ref: "Floor" },
+    batchId: { type: Schema.Types.ObjectId, ref: "Batch" },
     assignedCategories: [{ type: String }],
   },
   { timestamps: true },

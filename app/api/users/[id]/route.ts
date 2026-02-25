@@ -66,7 +66,7 @@ export async function PUT(request: Request, context: any) {
       return NextResponse.json({ message: "Invalid JSON in request body" }, { status: 400 })
     }
 
-    const { name, email, role, password, isActive, floorId, assignedCategories } = requestBody
+    const { name, email, role, password, isActive, batchId, assignedCategories } = requestBody
     console.log("📝 Update data received:", { name, email, role, isActive, hasPassword: !!password, assignedCategories })
     console.log("🔍 Looking for user with ID:", params?.id)
 
@@ -162,7 +162,7 @@ export async function PUT(request: Request, context: any) {
     if (email) updateData.email = email
     if (role) updateData.role = role
     if (typeof isActive === 'boolean') updateData.isActive = isActive
-    if (floorId !== undefined) updateData.floorId = floorId || null
+    if (batchId !== undefined) updateData.batchId = batchId || null
     if (assignedCategories !== undefined) updateData.assignedCategories = assignedCategories
 
     // Hash new password if provided

@@ -11,7 +11,7 @@ interface Order {
     _id: string
     orderNumber: string
     status: "pending" | "preparing" | "ready" | "completed" | "cancelled"
-    floorName?: string
+    batchNumber?: string
     tableNumber?: string
     createdAt: string
 }
@@ -68,7 +68,7 @@ export default function OrderDisplayPage() {
                             </h1>
                             <div className="flex items-center gap-3 text-gray-500 text-lg mt-1 font-bold uppercase tracking-widest">
                                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                                <span>{user?.floorName || (user?.floorId ? t("display.status") : t("display.status"))}</span>
+                                <span>{user?.batchNumber ? `Batch #${user.batchNumber}` : (user?.batchId ? t("display.status") : t("display.status"))}</span>
                             </div>
                         </div>
                     </div>
@@ -99,7 +99,7 @@ export default function OrderDisplayPage() {
                 </div>
 
                 {/* Content Overlay/Warning for Display Users without Floor */}
-                {user?.role === 'display' && !user?.floorId && (
+                {user?.role === 'display' && !user?.batchId && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-gray-50/90 backdrop-blur-sm">
                         <div className="bg-white rounded-[3rem] p-12 shadow-2xl border border-red-100 max-w-2xl text-center transform scale-110">
                             <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-8">
@@ -121,7 +121,7 @@ export default function OrderDisplayPage() {
                 )}
 
                 {/* Display Content - 3 Column Grid */}
-                <div className={`flex-1 grid grid-cols-3 gap-8 ${user?.role === 'display' && !user?.floorId ? 'blur-md pointer-events-none' : ''}`}>
+                <div className={`flex-1 grid grid-cols-3 gap-8 ${user?.role === 'display' && !user?.batchId ? 'blur-md pointer-events-none' : ''}`}>
 
                     {/* Pending Column */}
                     <div className="flex flex-col h-full">
@@ -143,9 +143,9 @@ export default function OrderDisplayPage() {
                                                 #{order.orderNumber}
                                             </span>
                                             <div className="flex items-center gap-2 mt-1">
-                                                {order.floorName && (
+                                                {order.batchNumber && (
                                                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                                                        {order.floorName}
+                                                        Batch #{order.batchNumber}
                                                     </span>
                                                 )}
                                                 {order.tableNumber && (
@@ -189,9 +189,9 @@ export default function OrderDisplayPage() {
                                             #{order.orderNumber}
                                         </span>
                                         <div className="flex items-center gap-2 mt-2">
-                                            {order.floorName && (
+                                            {order.batchNumber && (
                                                 <span className="text-[10px] font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">
-                                                    {order.floorName}
+                                                    Batch #{order.batchNumber}
                                                 </span>
                                             )}
                                             {order.tableNumber && (
@@ -234,9 +234,9 @@ export default function OrderDisplayPage() {
                                             #{order.orderNumber}
                                         </span>
                                         <div className="flex items-center gap-2 mt-2">
-                                            {order.floorName && (
+                                            {order.batchNumber && (
                                                 <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
-                                                    {order.floorName}
+                                                    Batch #{order.batchNumber}
                                                 </span>
                                             )}
                                             {order.tableNumber && (

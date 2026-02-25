@@ -5,7 +5,7 @@ interface ITable extends Document {
     name?: string
     status: "active" | "inactive" | "maintenance"
     capacity?: number
-    floorId?: mongoose.Types.ObjectId | string
+    batchId?: mongoose.Types.ObjectId | string
     createdAt: Date
     updatedAt: Date
 }
@@ -20,13 +20,13 @@ const tableSchema = new Schema<ITable>(
             default: "active",
         },
         capacity: { type: Number },
-        floorId: { type: Schema.Types.ObjectId, ref: "Floor" },
+        batchId: { type: Schema.Types.ObjectId, ref: "Batch" },
     },
     { timestamps: true }
 )
 
-// Allow same table number on different floors
-tableSchema.index({ tableNumber: 1, floorId: 1 }, { unique: true })
+// Allow same table number on different batches
+tableSchema.index({ tableNumber: 1, batchId: 1 }, { unique: true })
 
 const Table = mongoose.models.Table || mongoose.model<ITable>("Table", tableSchema)
 

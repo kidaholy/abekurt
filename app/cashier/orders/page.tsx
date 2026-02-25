@@ -23,7 +23,7 @@ interface Order {
   paymentMethod: string
   status: "pending" | "completed" | "cancelled"
   tableNumber: string
-  floorName?: string
+  batchNumber?: string
   createdAt: string
   updatedAt: string
 }
@@ -101,9 +101,9 @@ export default function CashierOrdersPage() {
                   <h1 className="text-3xl font-bold text-gray-900">Recent Orders</h1>
                   <p className="text-sm text-gray-600 mt-1">
                     Today's sales history
-                    {user?.floorName && (
+                    {user?.batchNumber && (
                       <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
-                        {user.floorName}
+                        Batch #{user.batchNumber}
                       </span>
                     )}
                   </p>
@@ -157,7 +157,7 @@ export default function CashierOrdersPage() {
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Order #</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Floor</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Batch</th>
                         <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Table</th>
                         <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Items</th>
                         <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
@@ -172,7 +172,7 @@ export default function CashierOrdersPage() {
                             <span className="text-sm font-medium text-gray-900">#{order.orderNumber}</span>
                           </td>
                           <td className="py-4 px-4">
-                            <span className="text-sm font-medium text-purple-600">{order.floorName || '—'}</span>
+                            <span className="text-sm font-medium text-purple-600">{order.batchNumber ? `Batch #${order.batchNumber}` : '—'}</span>
                           </td>
                           <td className="py-4 px-4">
                             <span className="text-sm font-medium text-blue-600">{order.tableNumber}</span>

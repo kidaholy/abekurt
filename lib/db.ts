@@ -29,7 +29,7 @@ export async function connectDB() {
       await Promise.all([
         import("./models/user"),
         import("./models/table"),
-        import("./models/floor"),
+        import("./models/batch"),
         import("./models/order"),
         import("./models/menu-item"),
         import("./models/stock"),

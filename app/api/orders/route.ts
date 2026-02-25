@@ -8,30 +8,30 @@ import Stock from "@/lib/models/stock"
 import { addNotification } from "@/lib/notifications"
 import { calculateStockConsumption, applyStockAdjustment } from "@/lib/stock-logic"
 import { validateSession } from "@/lib/auth"
-import Floor from "@/lib/models/floor"
+import Batch from "@/lib/models/batch"
 import Table from "@/lib/models/table"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production"
 
 // High-speed In-Memory Cache for Vercel lambdas
-let floorCache: { data: Map<string, string>, lastFetch: number } = { data: new Map(), lastFetch: 0 }
+let batchCache: { data: Map<string, string>, lastFetch: number } = { data: new Map(), lastFetch: 0 }
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
-async function getFloorMap() {
+async function getBatchMap() {
   const now = Date.now()
-  if (now - floorCache.lastFetch < CACHE_TTL && floorCache.data.size > 0) {
-    return floorCache.data
+  if (now - batchCache.lastFetch < CACHE_TTL && batchCache.data.size > 0) {
+    return batchCache.data
   }
 
   try {
-    const floors = await Floor.find({}, { name: 1 }).lean() as any[]
+    const batches = await Batch.find({}, { batchNumber: 1 }).lean() as any[]
     const newMap = new Map()
-    floors.forEach(f => newMap.set(f._id.toString(), f.name))
-    floorCache = { data: newMap, lastFetch: now }
+    batches.forEach(b => newMap.set(b._id.toString(), b.batchNumber))
+    batchCache = { data: newMap, lastFetch: now }
     return newMap
   } catch (err) {
-    console.error("Floor cache refresh error:", err)
-    return floorCache.data // Return stale if fail
+    console.error("Batch cache refresh error:", err)
+    return batchCache.data // Return stale if fail
   }
 }
 
@@ -56,23 +56,23 @@ export async function GET(request: Request) {
       if (endDate) query.createdAt.$lte = new Date(endDate)
     }
 
-    // RBAC: Filter by floor for display and cashier users
+    // RBAC: Filter by batch for display and cashier users
     if (decoded.role === 'display' || decoded.role === 'cashier') {
-      if (decoded.floorId) {
-        // Find all table numbers for this floor to include orders that might be missing floorId
-        const floorTables = await Table.find({ floorId: decoded.floorId }, { tableNumber: 1 }).lean() as any[]
-        const tableNumbers = floorTables.map((t: any) => t.tableNumber)
+      if (decoded.batchId) {
+        // Find all table numbers for this batch to include orders that might be missing batchId
+        const batchTables = await Table.find({ batchId: decoded.batchId }, { tableNumber: 1 }).lean() as any[]
+        const tableNumbers = batchTables.map((t: any) => t.tableNumber)
 
         query.$or = [
-          { floorId: decoded.floorId },
+          { batchId: decoded.batchId },
           { tableNumber: { $in: tableNumbers } },
           { createdBy: decoded.id } // Always allow seeing their own orders
         ]
       } else if (decoded.role === 'display') {
-        // Force no results if role is display but no floor is assigned
-        query.floorId = new mongoose.Types.ObjectId()
+        // Force no results if role is display but no batch is assigned
+        query.batchId = new mongoose.Types.ObjectId()
       } else if (decoded.role === 'cashier') {
-        // Cashiers without an assigned floor only see their own orders
+        // Cashiers without an assigned batch only see their own orders
         query.createdBy = decoded.id
       }
     }
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
 
     const orders = await orderQuery.lean()
 
-    const floorMap = await getFloorMap()
+    const batchMap = await getBatchMap()
 
     // Optimization: Pre-calculate chef settings once
     let normalizedAssigned: string[] = []
@@ -116,7 +116,7 @@ export async function GET(request: Request) {
 
     // Process orders efficiently
     const populatedOrders = orders.map((order) => {
-      let floorName = order.floorName || floorMap.get(order.floorId?.toString());
+      let batchNumber = order.batchNumber || batchMap.get(order.batchId?.toString());
 
       // Filter items for chefs
       let items = (order.items || []).sort((a: any, b: any) => {
@@ -134,7 +134,7 @@ export async function GET(request: Request) {
       return {
         ...order,
         _id: order._id.toString(),
-        floorName,
+        batchNumber,
         items
       };
     });
@@ -184,8 +184,8 @@ export async function POST(request: Request) {
       MenuItem.find({ _id: { $in: menuItemIds } }).populate('stockItemId'),
       Stock.find({ _id: { $in: stockIds } }),
       Order.findOne({}, { orderNumber: 1 }).sort({ orderNumber: -1 }),
-      tableId ? Table.findById(tableId).populate("floorId") :
-        (tableNumber && tableNumber !== "Buy&Go" ? Table.findOne({ tableNumber }).populate("floorId") : null)
+      tableId ? Table.findById(tableId).populate("batchId") :
+        (tableNumber && tableNumber !== "Buy&Go" ? Table.findOne({ tableNumber }).populate("batchId") : null)
     ])
 
     // Validate sufficient stock quantities
@@ -215,17 +215,17 @@ export async function POST(request: Request) {
       orderNumber = "001"
     }
 
-    // Lookup floor
-    let floorId = body.floorId || (decoded.role === 'cashier' ? decoded.floorId : undefined)
-    let floorName = body.floorName || ""
+    // Lookup batch
+    let batchId = body.batchId || (decoded.role === 'cashier' ? decoded.batchId : undefined)
+    let batchNumber = body.batchNumber || ""
 
-    if (tableData && tableData.floorId) {
-      floorId = tableData.floorId._id
-      floorName = tableData.floorId.name
-    } else if (floorId && !floorName) {
-      // Small optimization: only fetch floor if we don't have the name yet
-      const floor = await Floor.findById(floorId).lean()
-      if (floor) floorName = (floor as any).name
+    if (tableData && tableData.batchId) {
+      batchId = tableData.batchId._id
+      batchNumber = tableData.batchId.batchNumber
+    } else if (batchId && !batchNumber) {
+      // Small optimization: only fetch batch if we don't have the number yet
+      const batch = await Batch.findById(batchId).lean()
+      if (batch) batchNumber = (batch as any).batchNumber
     }
 
     // Create order data
@@ -254,8 +254,8 @@ export async function POST(request: Request) {
       customerName: customerName || `Table ${tableNumber}`,
       tableNumber,
       tableId,
-      floorId,
-      floorName,
+      batchId,
+      batchNumber,
       createdBy: decoded.id,
     }
 

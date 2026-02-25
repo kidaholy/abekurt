@@ -9,8 +9,8 @@ interface User {
   name: string
   email: string
   role: "admin" | "cashier" | "chef" | "display"
-  floorId?: string
-  floorName?: string
+  batchId?: string
+  batchNumber?: string
 }
 
 interface AuthContextType {

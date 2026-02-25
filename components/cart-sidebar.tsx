@@ -32,7 +32,7 @@ interface CartSidebarProps {
   setIsButcherOrder?: (val: boolean) => void
   paperWidth: number
   setPaperWidth: (val: number) => void
-  assignedFloorId?: string
+  assignedBatchId?: string
 }
 
 export function CartSidebar({
@@ -50,7 +50,7 @@ export function CartSidebar({
   setIsButcherOrder,
   paperWidth,
   setPaperWidth,
-  assignedFloorId,
+  assignedBatchId,
 }: CartSidebarProps) {
   const { t } = useLanguage()
   const { settings } = useSettings()
@@ -62,63 +62,63 @@ export function CartSidebar({
 
   // Settings State for Tables
   const [tables, setTables] = useState<any[]>([])
-  const [floors, setFloors] = useState<any[]>([])
+  const [batches, setBatches] = useState<any[]>([])
   const [isTableModalOpen, setIsTableModalOpen] = useState(false)
 
   useEffect(() => {
-    // Fetch tables and floors
+    // Fetch tables and batches
     const fetchData = async () => {
       if (!token) return
 
       try {
         const headers = { Authorization: `Bearer ${token}` }
-        const [tablesRes, floorsRes] = await Promise.all([
+        const [tablesRes, batchesRes] = await Promise.all([
           fetch("/api/tables", { headers }),
-          fetch("/api/floors", { headers })
+          fetch("/api/batches", { headers })
         ])
 
         if (tablesRes.ok) setTables(await tablesRes.json())
-        if (floorsRes.ok) setFloors(await floorsRes.json())
+        if (batchesRes.ok) setBatches(await batchesRes.json())
       } catch (err) { console.error("Failed to load data", err) }
     }
     fetchData()
   }, [token])
 
-  const visibleFloors = assignedFloorId
-    ? floors.filter(f => f._id === assignedFloorId)
-    : floors
+  const visibleBatches = assignedBatchId
+    ? batches.filter(b => b._id === assignedBatchId)
+    : batches
 
-  // If a floor is assigned, don't show unassigned tables tab
-  const showUnassigned = !assignedFloorId
+  // If a batch is assigned, don't show unassigned tables tab
+  const showUnassigned = !assignedBatchId
 
-  // Helper to get floor name for selected table
-  const getSelectedFloorName = () => {
+  // Helper to get batch name for selected table
+  const getSelectedBatchNumber = () => {
     if (!tableNumber) return ""
     const table = tables.find(t => t.tableNumber === tableNumber)
     if (!table) return ""
 
-    // Check if floorId is populated object or string ID
-    const tableFloorId = (table.floorId && typeof table.floorId === 'object') ? table.floorId._id : table.floorId
-    const floor = floors.find(f => String(f._id) === String(tableFloorId))
-    return floor ? floor.name : ""
+    // Check if batchId is populated object or string ID
+    const tableBatchId = (table.batchId && typeof table.batchId === 'object') ? table.batchId._id : table.batchId
+    const batch = batches.find(b => String(b._id) === String(tableBatchId))
+    return batch ? `Batch #${batch.batchNumber}` : ""
   }
 
   // Debug logging
   useEffect(() => {
     console.log("CartSidebar Debug Info:")
-    console.log("- Assigned Floor ID:", assignedFloorId)
-    console.log("- Total Floors Fetched:", floors.length)
+    console.log("- Assigned Batch ID:", assignedBatchId)
+    console.log("- Total Batches Fetched:", batches.length)
     console.log("- Total Tables Fetched:", tables.length)
-    console.log("- Visible Floors:", visibleFloors)
+    console.log("- Visible Batches:", visibleBatches)
 
-    if (assignedFloorId) {
-      const assignedFloorFound = floors.find(f => f._id === assignedFloorId)
-      console.log("- Assigned Floor Object Found:", assignedFloorFound)
-      if (!assignedFloorFound) {
-        console.warn("⚠️ Assigned floor ID is set but not found in fetched floors list!")
+    if (assignedBatchId) {
+      const assignedBatchFound = batches.find(b => b._id === assignedBatchId)
+      console.log("- Assigned Batch Object Found:", assignedBatchFound)
+      if (!assignedBatchFound) {
+        console.warn("⚠️ Assigned batch ID is set but not found in fetched batches list!")
       }
     }
-  }, [assignedFloorId, floors, tables, visibleFloors])
+  }, [assignedBatchId, batches, tables, visibleBatches])
 
   const containerClasses = isEmbedded
     ? "w-full flex flex-col h-full bg-transparent"
@@ -183,8 +183,8 @@ export function CartSidebar({
                   <button className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold flex justify-between items-center hover:border-[#2d5a41] hover:bg-[#2d5a41]/5 transition-all outline-none">
                     <div className="flex flex-col items-start">
                       <span>{tableNumber ? `Table ${tableNumber}` : "Select Table"}</span>
-                      {tableNumber && getSelectedFloorName() && (
-                        <span className="text-[10px] text-gray-500 font-medium">{getSelectedFloorName()}</span>
+                      {tableNumber && getSelectedBatchNumber() && (
+                        <span className="text-[10px] text-gray-500 font-medium">{getSelectedBatchNumber()}</span>
                       )}
                     </div>
                     <span className="text-xs text-gray-400">▼</span>
@@ -195,16 +195,16 @@ export function CartSidebar({
                     <DialogTitle>Select Table</DialogTitle>
                   </DialogHeader>
 
-                  <Tabs defaultValue={assignedFloorId || floors[0]?._id || "unassigned"} className="flex-1 flex flex-col overflow-hidden">
+                  <Tabs defaultValue={assignedBatchId || batches[0]?._id || "unassigned"} className="flex-1 flex flex-col overflow-hidden">
                     <div className="px-1 border-b mb-4">
                       <TabsList className="bg-transparent h-auto flex-wrap justify-start gap-2">
-                        {visibleFloors.map(floor => (
+                        {visibleBatches.map(batch => (
                           <TabsTrigger
-                            key={floor._id}
-                            value={floor._id}
+                            key={batch._id}
+                            value={batch._id}
                             className="data-[state=active]:bg-[#2d5a41] data-[state=active]:text-white px-4 py-2 rounded-full border border-transparent data-[state=active]:border-[#2d5a41] bg-gray-100"
                           >
-                            {floor.name}
+                            Batch #{batch.batchNumber}
                           </TabsTrigger>
                         ))}
                         {showUnassigned && (
@@ -219,12 +219,12 @@ export function CartSidebar({
                     </div>
 
                     <div className="flex-1 overflow-y-auto min-h-[300px] p-1">
-                      {visibleFloors.map(floor => (
-                        <TabsContent key={floor._id} value={floor._id} className="mt-0">
+                      {visibleBatches.map(batch => (
+                        <TabsContent key={batch._id} value={batch._id} className="mt-0">
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                             {tables.filter(t => {
-                              const tableFloorId = (t.floorId && typeof t.floorId === 'object') ? t.floorId._id : t.floorId;
-                              return tableFloorId && String(tableFloorId) === String(floor._id);
+                              const tableBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
+                              return tableBatchId && String(tableBatchId) === String(batch._id);
                             }).map(table => (
                               <button
                                 key={table._id}
@@ -242,10 +242,10 @@ export function CartSidebar({
                               </button>
                             ))}
                             {tables.filter(t => {
-                              const tableFloorId = (t.floorId && typeof t.floorId === 'object') ? t.floorId._id : t.floorId;
-                              return tableFloorId && String(tableFloorId) === String(floor._id);
+                              const tableBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
+                              return tableBatchId && String(tableBatchId) === String(batch._id);
                             }).length === 0 && (
-                                <div className="col-span-full py-10 text-center text-gray-400 italic">No tables on this floor</div>
+                                <div className="col-span-full py-10 text-center text-gray-400 italic">No tables in this batch</div>
                               )}
                           </div>
                         </TabsContent>
@@ -255,8 +255,8 @@ export function CartSidebar({
                         <TabsContent value="unassigned" className="mt-0">
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                             {tables.filter(t => {
-                              const tFloorId = (t.floorId && typeof t.floorId === 'object') ? t.floorId._id : t.floorId;
-                              return !tFloorId || !floors.some(f => String(f._id) === String(tFloorId));
+                              const tBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
+                              return !tBatchId || !batches.some(b => String(b._id) === String(tBatchId));
                             }).map(table => (
                               <button
                                 key={table._id}
@@ -274,8 +274,8 @@ export function CartSidebar({
                               </button>
                             ))}
                             {tables.filter(t => {
-                              const tFloorId = (t.floorId && typeof t.floorId === 'object') ? t.floorId._id : t.floorId;
-                              return !tFloorId || !floors.some(f => String(f._id) === String(tFloorId));
+                              const tBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
+                              return !tBatchId || !batches.some(b => String(b._id) === String(tBatchId));
                             }).length === 0 && (
                                 <div className="col-span-full py-10 text-center text-gray-400 italic">No unassigned tables</div>
                               )}

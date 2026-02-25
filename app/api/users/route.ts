@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     await connectDB()
     console.log("📊 Database connected for user creation")
 
-    const { name, email, role, password, floorId, assignedCategories } = await request.json()
+    const { name, email, role, password, batchId, assignedCategories } = await request.json()
     console.log("📝 User data received:", { name, email, role, passwordLength: password?.length, assignedCategories })
 
     if (!name || !email || !role || !password) {
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       plainPassword: password, // Store plain password for admin view
       role,
       isActive: true,
-      floorId: floorId || undefined,
+      batchId: batchId || undefined,
       assignedCategories: (role === 'chef' && assignedCategories) ? assignedCategories : undefined,
     }
 
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
         name: user.name,
         email: user.email,
         role: user.role,
-        floorId: user.floorId,
+        batchId: user.batchId,
       },
       credentials: {
         email,

@@ -165,8 +165,8 @@ export default function CashierPOSPage() {
             // A full page reload might be needed or we rely on AuthProvider to re-check.
             // For now, let's just log it. In a real app, we'd want a refreshUser method in context.
             // Actually, let's force a reload if floorId changed significantly to ensure consistency
-            if (data.user.floorId !== user?.floorId) {
-              console.log("Floor assignment changed, reloading...")
+            if (data.user.batchId !== user?.batchId) {
+              console.log("Batch assignment changed, reloading...")
               localStorage.setItem("user", JSON.stringify(data.user))
               window.location.reload()
             }
@@ -245,7 +245,7 @@ export default function CashierPOSPage() {
           paymentMethod: "cash",
           status: "pending",
           tableNumber: isButcherOrder ? "Buy&Go" : tableNumber,
-          floorId: user?.floorId
+          batchId: user?.batchId
         }),
       })
 
@@ -354,9 +354,9 @@ export default function CashierPOSPage() {
                   <h1 className="text-3xl font-bold text-gray-900">POS System</h1>
                   <p className="text-sm text-gray-600 mt-1">
                     Welcome, {user?.name}
-                    {user?.floorName && (
+                    {user?.batchNumber && (
                       <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
-                        {user.floorName}
+                        Batch #{user.batchNumber}
                       </span>
                     )}
                   </p>
@@ -458,7 +458,7 @@ export default function CashierPOSPage() {
                   setIsButcherOrder={setIsButcherOrder}
                   paperWidth={paperWidth}
                   setPaperWidth={setPaperWidth}
-                  assignedFloorId={user?.floorId}
+                  assignedBatchId={user?.batchId}
                 />
               </div>
             </div>

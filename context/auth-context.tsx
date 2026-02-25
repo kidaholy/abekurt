@@ -55,20 +55,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Global fetch interceptor to handle 401s (deactivation/expired session)
     const originalFetch = window.fetch
     window.fetch = async (...args) => {
-      const response = await originalFetch(...args)
+      try {
+        const response = await originalFetch(...args)
 
-      if (response.status === 401) {
-        // Check if we are already on login page or calling login/system-check to avoid loops
-        const url = args[0] instanceof Request ? args[0].url : String(args[0])
-        const isAuthRequest = url.includes("/api/auth/login") || url.includes("/api/system-check")
-        const isLoginPage = window.location.pathname === "/login"
+        if (response.status === 401) {
+          // Check if we are already on login page or calling login/system-check to avoid loops
+          const url = args[0] instanceof Request ? args[0].url : String(args[0])
+          const isAuthRequest = url.includes("/api/auth/login") || url.includes("/api/system-check")
+          const isLoginPage = window.location.pathname === "/login"
 
-        if (!isAuthRequest && !isLoginPage) {
-          console.warn("🚫 401 Unauthorized detected globally. Forcing logout.")
-          logout()
+          if (!isAuthRequest && !isLoginPage) {
+            console.warn("🚫 401 Unauthorized detected globally. Forcing logout.")
+            logout()
+          }
         }
+        return response
+      } catch (networkError) {
+        // Re-throw so each individual caller's own .catch() / try-catch handles it
+        throw networkError
       }
-      return response
     }
 
     return () => {

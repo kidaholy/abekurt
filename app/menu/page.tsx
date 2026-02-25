@@ -46,6 +46,7 @@ interface MenuItem {
   menuId: string
   name: string
   description?: string
+  mainCategory: 'Food' | 'Drinks'
   category: string
   price: number
   image?: string
@@ -60,6 +61,7 @@ export default function MenuPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [categoryFilter, setCategoryFilter] = useState("all")
+  const [mainCategoryFilter, setMainCategoryFilter] = useState<'Food' | 'Drinks'>('Food')
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
   const [loading, setLoading] = useState(false)
   const [menuLoading, setMenuLoading] = useState(true)
@@ -183,8 +185,9 @@ export default function MenuPage() {
     }
   }
 
-  const categories = ["all", ...new Set(menuItems.map((item) => item.category))]
-  const filteredItems = (categoryFilter === "all" ? menuItems : menuItems.filter((item) => item.category === categoryFilter))
+  const itemsInTab = menuItems.filter(item => (item.mainCategory || 'Food') === mainCategoryFilter)
+  const categories = ["all", ...new Set(itemsInTab.map((item) => item.category))]
+  const filteredItems = (categoryFilter === "all" ? itemsInTab : itemsInTab.filter((item) => item.category === categoryFilter))
     .sort((a, b) => {
       const idA = a.menuId || ""
       const idB = b.menuId || ""
@@ -235,7 +238,24 @@ export default function MenuPage() {
 
                   {!menuLoading && !error && (
                     <div className="menu-content-safe-area">
-                      {/* Category Filter */}
+                      {/* Food / Drinks top-level tabs */}
+                      <div className="flex gap-2 mb-6">
+                        {(['Food', 'Drinks'] as const).map(tab => (
+                          <button
+                            key={tab}
+                            onClick={() => { setMainCategoryFilter(tab); setCategoryFilter('all') }}
+                            className={`flex items-center gap-2 px-7 py-3 rounded-full font-black text-sm transition-all ${mainCategoryFilter === tab
+                                ? 'bg-[#8B4513] text-white shadow-lg scale-105'
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
+                          >
+                            {tab === 'Food' ? '🍽️' : '🥤'} {tab}
+                            <span className="text-[10px] opacity-70">({menuItems.filter(i => (i.mainCategory || 'Food') === tab).length})</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Sub-category Filter */}
                       <div className="mb-8 overflow-x-auto pb-4 hide-scrollbar">
                         <div className="flex gap-3">
                           {categories.map((cat: string, index: number) => (
@@ -243,7 +263,7 @@ export default function MenuPage() {
                               key={cat}
                               onClick={() => setCategoryFilter(cat)}
                               className={`px-6 py-3 rounded-full font-bold whitespace-nowrap transition-all duration-300 ${categoryFilter === cat
-                                ? "bg-[#8B4513] text-white shadow-lg scale-105"
+                                ? "bg-[#8B4513]/80 text-white shadow-lg scale-105"
                                 : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                                 }`}
                             >

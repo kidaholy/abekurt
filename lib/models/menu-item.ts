@@ -11,6 +11,7 @@ interface IRecipeIngredient {
 interface IMenuItem {
   menuId: string
   name: string
+  mainCategory: 'Food' | 'Drinks'
   category: string
   price: number
   available: boolean
@@ -40,6 +41,7 @@ const menuItemSchema = new Schema<IMenuItem>(
   {
     menuId: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
+    mainCategory: { type: String, enum: ['Food', 'Drinks'], default: 'Food' },
     category: { type: String, required: true },
     price: { type: Number, required: true },
     available: { type: Boolean, default: true },

@@ -15,6 +15,7 @@ interface MenuItem {
   _id: string
   menuId: string
   name: string
+  mainCategory: 'Food' | 'Drinks'
   category: string
   price: number
   description?: string
@@ -32,6 +33,7 @@ interface MenuItem {
 interface MenuItemForm {
   menuId: string
   name: string
+  mainCategory: 'Food' | 'Drinks'
   category: string
   price: string
   description: string
@@ -57,9 +59,11 @@ export default function AdminMenuPage() {
   const [imageProcessing, setImageProcessing] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
+  const [mainCategoryFilter, setMainCategoryFilter] = useState<'Food' | 'Drinks'>('Food')
   const [formData, setFormData] = useState<MenuItemForm>({
     menuId: "",
     name: "",
+    mainCategory: 'Food',
     category: "",
     price: "",
     description: "",
@@ -170,7 +174,7 @@ export default function AdminMenuPage() {
 
   useEffect(() => {
     filterItems()
-  }, [menuItems, searchTerm, categoryFilter])
+  }, [menuItems, searchTerm, categoryFilter, mainCategoryFilter])
 
 
 
@@ -201,7 +205,7 @@ export default function AdminMenuPage() {
   }
 
   const filterItems = () => {
-    let filtered = menuItems
+    let filtered = menuItems.filter(item => (item.mainCategory || 'Food') === mainCategoryFilter)
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -386,6 +390,7 @@ export default function AdminMenuPage() {
     setFormData({
       menuId: item.menuId || "",
       name: item.name,
+      mainCategory: item.mainCategory || 'Food',
       category: item.category,
       price: item.price.toString(),
       description: item.description || "",
@@ -454,7 +459,7 @@ export default function AdminMenuPage() {
 
   const resetForm = () => {
     setFormData({
-      menuId: "", name: "", category: "", price: "", description: "",
+      menuId: "", name: "", mainCategory: 'Food', category: "", price: "", description: "",
       image: "", preparationTime: "10", available: true,
       reportUnit: 'piece', reportQuantity: '1',
       stockItemId: "", stockConsumption: "0"
@@ -567,7 +572,7 @@ export default function AdminMenuPage() {
 
             <div className="md:col-span-8 lg:col-span-9">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 min-h-[600px]">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <div>
                     <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">{t("adminMenu.title")}</h1>
                     <p className="text-gray-400 text-xs md:text-sm font-bold uppercase tracking-widest">{t("adminMenu.subtitle")}</p>
@@ -575,6 +580,23 @@ export default function AdminMenuPage() {
                   <div className="bg-[#8B4513]/5 px-4 py-2 rounded-xl border border-[#8B4513]/10 text-[#8B4513] text-[10px] font-black uppercase tracking-widest">
                     {filteredItems.length} {t("adminMenu.itemsFound")}
                   </div>
+                </div>
+
+                {/* Food / Drinks top-level tabs */}
+                <div className="flex gap-2 mb-6">
+                  {(['Food', 'Drinks'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => { setMainCategoryFilter(tab); setCategoryFilter('all') }}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-black text-sm transition-all ${mainCategoryFilter === tab
+                        ? 'bg-[#8B4513] text-white shadow-md'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                    >
+                      {tab === 'Food' ? '🍽️' : '🥤'} {tab}
+                      <span className="text-[10px] opacity-70">({menuItems.filter(i => (i.mainCategory || 'Food') === tab).length})</span>
+                    </button>
+                  ))}
                 </div>
 
                 {error && (
@@ -762,6 +784,24 @@ export default function AdminMenuPage() {
                           placeholder="Flat White"
                           required
                         />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Main Category *</label>
+                      <div className="flex gap-2">
+                        {(['Food', 'Drinks'] as const).map(mc => (
+                          <button
+                            key={mc}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, mainCategory: mc })}
+                            className={`flex-1 py-3 rounded-2xl font-black text-sm transition-all border-2 ${formData.mainCategory === mc
+                              ? 'bg-[#8B4513] text-white border-[#8B4513]'
+                              : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-[#8B4513]/30'
+                              }`}
+                          >
+                            {mc === 'Food' ? '🍽️' : '🥤'} {mc}
+                          </button>
+                        ))}
                       </div>
                     </div>
                     <div>

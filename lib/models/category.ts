@@ -11,7 +11,7 @@ export interface ICategory extends Document {
 const categorySchema = new Schema<ICategory>(
     {
         name: { type: String, required: true, trim: true },
-        type: { type: String, enum: ['menu', 'stock', 'fixed-asset'], required: true },
+        type: { type: String, enum: ['menu', 'stock', 'fixed-asset', 'expense'], required: true },
         description: { type: String },
     },
     { timestamps: true }

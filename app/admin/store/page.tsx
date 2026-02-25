@@ -25,6 +25,16 @@ interface DailyExpense {
     updatedAt: string
 }
 
+interface OperationalExpense {
+    _id: string
+    date: string
+    category: string
+    amount: number
+    description: string
+    createdAt: string
+    updatedAt: string
+}
+
 interface StockItem {
     _id: string
     name: string
@@ -67,18 +77,21 @@ interface FixedAsset {
 }
 
 export default function StorePage() {
-    const [activeTab, setActiveTab] = useState<"inventory" | "categories" | "fixed-assets">("inventory")
+    const [activeTab, setActiveTab] = useState<"inventory" | "categories" | "fixed-assets" | "expenses">("inventory")
     const [expenses, setExpenses] = useState<DailyExpense[]>([])
+    const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([])
     const [stockItems, setStockItems] = useState<StockItem[]>([])
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
     const [showStockForm, setShowStockForm] = useState(false)
     const [editingExpense, setEditingExpense] = useState<DailyExpense | null>(null)
+    const [editingOperationalExpense, setEditingOperationalExpense] = useState<OperationalExpense | null>(null)
     const [editingStock, setEditingStock] = useState<StockItem | null>(null)
     const [editingCategory, setEditingCategory] = useState<any | null>(null)
     const [newCategory, setNewCategory] = useState({ name: "" })
     const [saveLoading, setSaveLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
+    const [showOperationalExpenseForm, setShowOperationalExpenseForm] = useState(false)
 
     const [showRestockModal, setShowRestockModal] = useState(false)
     const [restockingItem, setRestockingItem] = useState<StockItem | null>(null)
@@ -97,9 +110,10 @@ export default function StorePage() {
     // Fixed Assets State
     const [fixedAssets, setFixedAssets] = useState<FixedAsset[]>([])
     const [assetCategories, setAssetCategories] = useState<any[]>([])
+    const [expenseCategories, setExpenseCategories] = useState<any[]>([])
     const [showAssetForm, setShowAssetForm] = useState(false)
     const [editingAsset, setEditingAsset] = useState<FixedAsset | null>(null)
-    const [categoryType, setCategoryType] = useState<'stock' | 'fixed-asset'>('stock')
+    const [categoryType, setCategoryType] = useState<'stock' | 'fixed-asset' | 'expense'>('stock')
     const [showDismissModal, setShowDismissModal] = useState(false)
     const [dismissingAsset, setDismissingAsset] = useState<FixedAsset | null>(null)
     const [dismissReason, setDismissReason] = useState("")
@@ -119,6 +133,13 @@ export default function StorePage() {
         date: new Date().toISOString().split('T')[0],
         items: [] as Array<{ name: string; amount: number; quantity: number; unit: string }>,
         otherExpenses: "", // Kept for aggregate view
+        description: ""
+    })
+
+    const [operationalExpenseFormData, setOperationalExpenseFormData] = useState({
+        date: new Date().toISOString().split('T')[0],
+        category: "",
+        amount: "",
         description: ""
     })
 
@@ -143,8 +164,10 @@ export default function StorePage() {
         if (token) {
             fetchStockItems()
             fetchExpenses()
+            fetchOperationalExpenses()
             fetchCategories()
             fetchAssetCategories()
+            fetchExpenseCategories()
             fetchFixedAssets()
         }
 
@@ -188,6 +211,20 @@ export default function StorePage() {
         }
     }
 
+    const fetchOperationalExpenses = async () => {
+        try {
+            const response = await fetch("/api/operational-expenses", {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            if (response.ok) {
+                const data = await response.json()
+                setOperationalExpenses(data)
+            }
+        } catch (error) {
+            console.error("Error fetching operational expenses:", String(error))
+        }
+    }
+
     const fetchCategories = async () => {
         try {
             const response = await fetch("/api/categories?type=stock", {
@@ -219,6 +256,23 @@ export default function StorePage() {
             }
         } catch (error) {
             console.error("Error fetching asset categories:", String(error))
+        }
+    }
+
+    const fetchExpenseCategories = async () => {
+        try {
+            const response = await fetch("/api/categories?type=expense", {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            if (response.ok) {
+                const data = await response.json()
+                setExpenseCategories(data)
+                if (data.length > 0 && !operationalExpenseFormData.category) {
+                    setOperationalExpenseFormData(prev => ({ ...prev, category: data[0].name }))
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching expense categories:", String(error))
         }
     }
 
@@ -438,6 +492,7 @@ export default function StorePage() {
             if (response.ok) {
                 fetchCategories()
                 fetchAssetCategories()
+                fetchExpenseCategories()
                 notify({
                     title: "Category Deleted",
                     message: "Category has been removed successfully.",
@@ -446,6 +501,63 @@ export default function StorePage() {
             }
         } catch (error) {
             console.error("Error deleting category:", String(error))
+        }
+    }
+
+    const handleSaveOperationalExpense = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSaveLoading(true)
+        try {
+            const response = await fetch("/api/operational-expenses", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    _id: editingOperationalExpense?._id,
+                    ...operationalExpenseFormData,
+                    amount: Number(operationalExpenseFormData.amount)
+                }),
+            })
+
+            if (response.ok) {
+                fetchOperationalExpenses()
+                resetOperationalExpenseForm()
+                notify({
+                    title: editingOperationalExpense ? "Expense Updated" : "Expense Saved",
+                    message: "Operational expense has been saved successfully.",
+                    type: "success"
+                })
+            } else {
+                const data = await response.json()
+                notify({ title: "Save Failed", message: data.message || "Failed to save expense", type: "error" })
+            }
+        } catch (error) {
+            console.error("Error saving operational expense:", String(error))
+        } finally {
+            setSaveLoading(false)
+        }
+    }
+
+    const deleteOperationalExpense = async (id: string) => {
+        const confirmed = await confirm({
+            title: "Delete Expense",
+            message: "Are you sure you want to delete this expense record?",
+            type: "danger"
+        })
+        if (!confirmed) return
+        try {
+            const response = await fetch(`/api/operational-expenses?id=${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            if (response.ok) {
+                fetchOperationalExpenses()
+                notify({ title: "Expense Deleted", message: "Expense record has been removed.", type: "success" })
+            }
+        } catch (error) {
+            console.error("Error deleting operational expense:", String(error))
         }
     }
 
@@ -754,7 +866,7 @@ export default function StorePage() {
     const resetStockForm = () => {
         setStockFormData({
             name: "",
-            category: "meat",
+            category: categories.length > 0 ? categories[0].name : "meat",
             quantity: "",
             unit: "kg",
             minLimit: "",
@@ -768,6 +880,17 @@ export default function StorePage() {
         setShowStockForm(false)
     }
 
+    const resetOperationalExpenseForm = () => {
+        setOperationalExpenseFormData({
+            date: new Date().toISOString().split('T')[0],
+            category: expenseCategories.length > 0 ? expenseCategories[0].name : "",
+            amount: "",
+            description: ""
+        })
+        setEditingOperationalExpense(null)
+        setShowOperationalExpenseForm(false)
+    }
+
     const filteredStock = stockItems.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -776,6 +899,11 @@ export default function StorePage() {
     const filteredExpenses = expenses.filter(e =>
         (e.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         e.items.some(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+
+    const filteredOperationalExpenses = operationalExpenses.filter(e =>
+        e.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (e.description || "").toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     const totalStats = {
@@ -819,6 +947,10 @@ export default function StorePage() {
                                         <p className="text-xl font-bold">{totalStats.fixedAssetValue.toLocaleString()} <span className="text-xs">ETB</span></p>
                                         <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Fixed Assets ({totalStats.fixedAssetCount})</p>
                                     </div>
+                                    <div className="pt-4 border-t border-white/10">
+                                        <p className="text-xl font-bold">{operationalExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString()} <span className="text-xs">ETB</span></p>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Operational Expenses (This Month)</p>
+                                    </div>
                                 </div>
                             </motion.div>
 
@@ -848,6 +980,12 @@ export default function StorePage() {
                                         className="w-full bg-slate-50 text-slate-600 border border-slate-200 py-3 rounded-lg font-medium hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
                                     >
                                         <PlusCircle className="w-4 h-4" /> Manage Categories
+                                    </button>
+                                    <button
+                                        onClick={() => { resetOperationalExpenseForm(); setShowOperationalExpenseForm(true); }}
+                                        className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-lg font-medium hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <DollarSign className="w-4 h-4" /> Add Op. Expense
                                     </button>
                                     <button
                                         onClick={() => { resetAssetForm(); setShowAssetForm(true); }}
@@ -884,6 +1022,12 @@ export default function StorePage() {
                                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'categories' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                     >
                                         Categories
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('expenses')}
+                                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'expenses' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Expenses
                                     </button>
                                 </div>
                             </div>
@@ -1113,6 +1257,12 @@ export default function StorePage() {
                                                             >
                                                                 Fixed Asset
                                                             </button>
+                                                            <button
+                                                                onClick={() => setCategoryType('expense')}
+                                                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${categoryType === 'expense' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                            >
+                                                                Expense
+                                                            </button>
                                                         </div>
                                                     </div>
                                                     <form onSubmit={handleSaveCategory} className="flex gap-3">
@@ -1144,7 +1294,7 @@ export default function StorePage() {
                                                 </div>
 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {(categoryType === 'stock' ? categories : assetCategories).map((cat) => (
+                                                    {(categoryType === 'stock' ? categories : categoryType === 'fixed-asset' ? assetCategories : expenseCategories).map((cat) => (
                                                         <div key={cat._id} className="p-4 bg-white border border-gray-100 rounded-2xl flex justify-between items-center group hover:border-[#8B4513] hover:shadow-md transition-all">
                                                             <div className="font-black text-lg text-gray-800">{cat.name}</div>
                                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1163,12 +1313,78 @@ export default function StorePage() {
                                                             </div>
                                                         </div>
                                                     ))}
-                                                    {(categoryType === 'stock' ? categories : assetCategories).length === 0 && (
+                                                    {(categoryType === 'stock' ? categories : categoryType === 'fixed-asset' ? assetCategories : expenseCategories).length === 0 && (
                                                         <div className="col-span-full text-center py-20 text-gray-300 text-sm italic border-2 border-dashed border-gray-100 rounded-[2rem]">
-                                                            No {categoryType === 'stock' ? 'stock' : 'asset'} categories found. Add your first one above!
+                                                            No {categoryType === 'stock' ? 'stock' : categoryType === 'fixed-asset' ? 'asset' : 'expense'} categories found. Add your first one above!
                                                         </div>
                                                     )}
                                                 </div>
+                                            </div>
+                                        )}
+
+                                        {activeTab === 'expenses' && (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left">
+                                                    <thead>
+                                                        <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                            <th className="pb-4 pl-4">Date</th>
+                                                            <th className="pb-4">Category</th>
+                                                            <th className="pb-4">Amount</th>
+                                                            <th className="pb-4">Description</th>
+                                                            <th className="pb-4 text-right pr-4">Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-50">
+                                                        {filteredOperationalExpenses.map((expense) => (
+                                                            <tr key={expense._id} className="group hover:bg-gray-50/50 transition-colors">
+                                                                <td className="py-5 pl-4">
+                                                                    <p className="font-bold text-slate-800">{new Date(expense.date).toLocaleDateString()}</p>
+                                                                </td>
+                                                                <td className="py-5 text-sm font-bold text-gray-600">
+                                                                    {expense.category}
+                                                                </td>
+                                                                <td className="py-5">
+                                                                    <p className="text-xl font-black text-red-600">
+                                                                        {expense.amount.toLocaleString()}
+                                                                        <span className="text-[10px] font-bold text-gray-400 ml-1">ETB</span>
+                                                                    </p>
+                                                                </td>
+                                                                <td className="py-5 text-xs text-gray-400 max-w-[200px] truncate">
+                                                                    {expense.description}
+                                                                </td>
+                                                                <td className="py-5 text-right pr-4">
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setEditingOperationalExpense(expense);
+                                                                                setOperationalExpenseFormData({
+                                                                                    date: new Date(expense.date).toISOString().split('T')[0],
+                                                                                    category: expense.category,
+                                                                                    amount: expense.amount.toString(),
+                                                                                    description: expense.description || ""
+                                                                                });
+                                                                                setShowOperationalExpenseForm(true);
+                                                                            }}
+                                                                            className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
+                                                                        >
+                                                                            <Edit2 size={16} />
+                                                                        </button>
+                                                                        <button onClick={() => deleteOperationalExpense(expense._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                        {filteredOperationalExpenses.length === 0 && (
+                                                            <tr>
+                                                                <td colSpan={5} className="py-20 text-center text-gray-300 text-sm italic">
+                                                                    No expenses found for this period.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         )}
                                     </>
@@ -1395,6 +1611,52 @@ export default function StorePage() {
                                     <div className="flex gap-3 pt-4">
                                         <button type="button" onClick={() => setShowDismissModal(false)} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Cancel</button>
                                         <button type="submit" className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors">{saveLoading ? "Processing..." : "Confirm Dismiss"}</button>
+                                    </div>
+                                </form>
+                            </motion.div>
+                        </div>
+                    )}
+
+                    {showOperationalExpenseForm && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={resetOperationalExpenseForm} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+                            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="relative bg-white rounded-[2rem] p-8 max-w-xl w-full">
+                                <h2 className="text-2xl font-black mb-6">{editingOperationalExpense ? 'Edit Operational Expense' : 'Add Operational Expense'}</h2>
+                                <form onSubmit={handleSaveOperationalExpense} className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date</label>
+                                            <input type="date" value={operationalExpenseFormData.date} onChange={e => setOperationalExpenseFormData({ ...operationalExpenseFormData, date: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" required />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Category</label>
+                                            <select
+                                                value={operationalExpenseFormData.category}
+                                                onChange={e => setOperationalExpenseFormData({ ...operationalExpenseFormData, category: e.target.value })}
+                                                className="w-full p-4 bg-gray-50 rounded-xl font-bold"
+                                                required
+                                            >
+                                                {expenseCategories.length > 0 ? (
+                                                    expenseCategories.map(cat => (
+                                                        <option key={cat._id} value={cat.name}>{cat.name}</option>
+                                                    ))
+                                                ) : (
+                                                    <option value="">Select Category</option>
+                                                )}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Amount (ETB)</label>
+                                        <input type="number" placeholder="Amount" value={operationalExpenseFormData.amount} onChange={e => setOperationalExpenseFormData({ ...operationalExpenseFormData, amount: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" required min="0" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Description</label>
+                                        <textarea placeholder="e.g. Rent for November, Electricity bill..." value={operationalExpenseFormData.description} onChange={e => setOperationalExpenseFormData({ ...operationalExpenseFormData, description: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold resize-none" rows={3} />
+                                    </div>
+                                    <div className="flex gap-4 pt-4">
+                                        <button type="button" onClick={resetOperationalExpenseForm} className="flex-1 py-4 font-bold text-gray-400">Cancel</button>
+                                        <button type="submit" className="flex-[2] py-4 bg-red-600 text-white rounded-xl font-bold">{saveLoading ? "Saving..." : "Save Expense"}</button>
                                     </div>
                                 </form>
                             </motion.div>

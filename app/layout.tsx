@@ -67,6 +67,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${fredoka.className} antialiased bg-white overflow-x-hidden`} suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for(let registration of registrations) {
+                    registration.unregister();
+                  }
+                });
+              }
+            `,
+          }}
+        />
         <LanguageProvider>
           <ThemeProvider>
             <SettingsProvider>

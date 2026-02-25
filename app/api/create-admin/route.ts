@@ -10,24 +10,36 @@ export async function GET() {
     // Check if admin already exists
     const existingAdmin = await User.findOne({ email: "kidayos2014@gmail.com" })
     if (existingAdmin) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: "Admin user already exists",
         email: "kidayos2014@gmail.com"
       })
     }
 
     // Create admin user
-    const hashedPassword = await bcrypt.hash("admin123", 10)
-    
+    const hashedPassword = await bcrypt.hash("123456", 10)
+
     const adminUser = new User({
-      name: "Admin User",
+      name: "Super Admin",
       email: "kidayos2014@gmail.com",
       password: hashedPassword,
+      plainPassword: "123456",
       role: "admin",
       isActive: true
     })
 
     await adminUser.save()
+
+    // Ensure other collections are initialized
+    await Promise.all([
+      import("@/lib/models/floor"),
+      import("@/lib/models/table"),
+      import("@/lib/models/category"),
+      import("@/lib/models/menu-item"),
+      import("@/lib/models/order"),
+      import("@/lib/models/stock"),
+      import("@/lib/models/settings")
+    ])
 
     // Also create cashier and chef users
     const cashierPassword = await bcrypt.hash("cashier123", 10)
@@ -42,7 +54,7 @@ export async function GET() {
     })
 
     const chefUser = new User({
-      name: "Chef User", 
+      name: "Chef User",
       email: "chef@primeaddis.com",
       password: chefPassword,
       role: "chef",
@@ -55,7 +67,7 @@ export async function GET() {
     return NextResponse.json({
       message: "Admin users created successfully!",
       users: [
-        { email: "kidayos2014@gmail.com", password: "admin123", role: "admin" },
+        { email: "kidayos2014@gmail.com", password: "123456", role: "admin" },
         { email: "cashier@primeaddis.com", password: "cashier123", role: "cashier" },
         { email: "chef@primeaddis.com", password: "chef123", role: "chef" }
       ]

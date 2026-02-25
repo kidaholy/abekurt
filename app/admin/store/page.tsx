@@ -168,7 +168,7 @@ export default function StorePage() {
                 setStockItems(data)
             }
         } catch (error) {
-            console.error("Error fetching stock:", error)
+            console.error("Error fetching stock:", String(error))
         } finally {
             setLoading(false)
         }
@@ -184,7 +184,7 @@ export default function StorePage() {
                 setExpenses(data)
             }
         } catch (error) {
-            console.error("Error fetching expenses:", error)
+            console.error("Error fetching expenses:", String(error))
         }
     }
 
@@ -201,7 +201,7 @@ export default function StorePage() {
                 }
             }
         } catch (error) {
-            console.error("Error fetching categories:", error)
+            console.error("Error fetching categories:", String(error))
         }
     }
 
@@ -218,7 +218,7 @@ export default function StorePage() {
                 }
             }
         } catch (error) {
-            console.error("Error fetching asset categories:", error)
+            console.error("Error fetching asset categories:", String(error))
         }
     }
 
@@ -232,7 +232,7 @@ export default function StorePage() {
                 setFixedAssets(data)
             }
         } catch (error) {
-            console.error("Error fetching fixed assets:", error)
+            console.error("Error fetching fixed assets:", String(error))
         }
     }
 
@@ -273,7 +273,7 @@ export default function StorePage() {
                 notify({ title: "Save Failed", message: data.message || "Failed to save asset", type: "error" })
             }
         } catch (error) {
-            console.error("Error saving asset:", error)
+            console.error("Error saving asset:", String(error))
         } finally {
             setSaveLoading(false)
         }
@@ -319,7 +319,7 @@ export default function StorePage() {
                 notify({ title: "Dismiss Failed", message: data.message || "Failed to dismiss asset.", type: "error" })
             }
         } catch (error) {
-            console.error("Error dismissing asset:", error)
+            console.error("Error dismissing asset:", String(error))
         } finally {
             setSaveLoading(false)
         }
@@ -344,7 +344,7 @@ export default function StorePage() {
                 notify({ title: "Asset Deleted", message: "Fixed asset has been removed.", type: "success" })
             }
         } catch (error) {
-            console.error("Error deleting asset:", error)
+            console.error("Error deleting asset:", String(error))
         }
     }
 
@@ -416,7 +416,7 @@ export default function StorePage() {
                 })
             }
         } catch (error) {
-            console.error("Error saving category:", error)
+            console.error("Error saving category:", String(error))
         } finally {
             setSaveLoading(false)
         }
@@ -445,7 +445,7 @@ export default function StorePage() {
                 })
             }
         } catch (error) {
-            console.error("Error deleting category:", error)
+            console.error("Error deleting category:", String(error))
         }
     }
 
@@ -487,7 +487,7 @@ export default function StorePage() {
                 })
             }
         } catch (error) {
-            console.error("Error saving expense:", error)
+            console.error("Error saving expense:", String(error))
         } finally {
             setSaveLoading(false)
         }
@@ -534,7 +534,7 @@ export default function StorePage() {
                 })
             }
         } catch (error) {
-            console.error("Error saving stock:", error)
+            console.error("Error saving stock:", String(error))
         } finally {
             setSaveLoading(false)
         }
@@ -559,7 +559,7 @@ export default function StorePage() {
                 fetchStockItems()
             }
         } catch (error) {
-            console.error("Error deleting stock:", error)
+            console.error("Error deleting stock:", String(error))
         }
     }
 
@@ -610,7 +610,7 @@ export default function StorePage() {
                 })
             }
         } catch (error) {
-            console.error(error)
+            console.error(String(error))
             notify({
                 title: "Error",
                 message: "An error occurred while restocking.",
@@ -660,7 +660,7 @@ export default function StorePage() {
                 })
             }
         } catch (error) {
-            console.error(error)
+            console.error(String(error))
             notify({
                 title: "Error",
                 message: "An error occurred during transfer.",
@@ -708,7 +708,7 @@ export default function StorePage() {
                 })
             }
         } catch (error) {
-            console.error("Error deleting expense:", error)
+            console.error("Error deleting expense:", String(error))
         }
     }
 

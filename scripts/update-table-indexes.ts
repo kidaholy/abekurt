@@ -25,8 +25,8 @@ async function updateIndexes() {
         const indexes = await collection.indexes();
         console.log(JSON.stringify(indexes, null, 2));
 
-        // Check for the old unique index on tableNumber
-        const oldIndex = indexes.find(idx => idx.name === "tableNumber_1" || (idx.key.tableNumber && Object.keys(idx.key).length === 1 && idx.unique));
+        // Check for the old unique index on tableNumber_floorId
+        const oldIndex = indexes.find(idx => idx.name === "tableNumber_1_floorId_1" || idx.name === "tableNumber_1_batchId_1");
 
         if (oldIndex) {
             console.log(`🗑️ Dropping old unique index: ${oldIndex.name}`);
@@ -36,8 +36,9 @@ async function updateIndexes() {
             console.log("ℹ️ Old unique index not found.");
         }
 
-        console.log("✨ Creating new compound unique index: { tableNumber: 1, floorId: 1 }");
-        await collection.createIndex({ tableNumber: 1, floorId: 1 }, { unique: true, name: "tableNumber_1_floorId_1" });
+        console.log("✨ Creating new unique index: { tableNumber: 1 }");
+        await collection.createIndex({ tableNumber: 1 }, { unique: true, name: "tableNumber_1" });
+        console.log("✅ Created.");
         console.log("✅ Created.");
 
         console.log("🔍 Final indexes:");

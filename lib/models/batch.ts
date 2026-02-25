@@ -5,6 +5,7 @@ export interface IBatch extends Document {
     description?: string
     order: number
     isActive: boolean
+    status?: string
     createdAt: Date
     updatedAt: Date
 }
@@ -15,6 +16,7 @@ const BatchSchema = new Schema<IBatch>(
         description: { type: String },
         order: { type: Number, default: 0 },
         isActive: { type: Boolean, default: true },
+        status: { type: String, default: "active" },
     },
     { timestamps: true }
 )

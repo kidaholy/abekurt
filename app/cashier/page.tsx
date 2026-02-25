@@ -43,6 +43,7 @@ export default function CashierPOSPage() {
   const [isButcherOrder, setIsButcherOrder] = useState(false)
   const [showMobileCart, setShowMobileCart] = useState(false)
   const [paperWidth, setPaperWidth] = useState(80)
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("")
   const { token, user } = useAuth()
   const { t } = useLanguage()
   const { settings } = useSettings()
@@ -245,7 +246,7 @@ export default function CashierPOSPage() {
           paymentMethod: "cash",
           status: "pending",
           tableNumber: isButcherOrder ? "Buy&Go" : tableNumber,
-          batchId: user?.batchId
+          batchId: selectedBatchId || user?.batchId
         }),
       })
 
@@ -458,7 +459,8 @@ export default function CashierPOSPage() {
                   setIsButcherOrder={setIsButcherOrder}
                   paperWidth={paperWidth}
                   setPaperWidth={setPaperWidth}
-                  assignedBatchId={user?.batchId}
+                  assignedBatchId={selectedBatchId || user?.batchId}
+                  setSelectedBatchId={setSelectedBatchId}
                 />
               </div>
             </div>
@@ -527,7 +529,8 @@ export default function CashierPOSPage() {
                     setIsButcherOrder={setIsButcherOrder}
                     paperWidth={paperWidth}
                     setPaperWidth={setPaperWidth}
-                    assignedFloorId={user?.floorId}
+                    assignedBatchId={selectedBatchId || user?.batchId}
+                    setSelectedBatchId={setSelectedBatchId}
                   />
                 </div>
               </motion.div>

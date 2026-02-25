@@ -7,13 +7,14 @@ export async function GET(request: Request) {
     try {
         await validateSession(request)
         await connectDB()
-        const tables = await Table.find({ status: "active" }).sort({ tableNumber: 1 })
+        const tables = await Table.find({ status: "active" }).lean()
+        // Sort manually to avoid Mongoose-Next.js typing issues if they persist
+        tables.sort((a: any, b: any) => String(a.tableNumber).localeCompare(String(b.tableNumber), undefined, { numeric: true }))
         // Return only necessary fields
         const serializedTables = tables.map(t => ({
             _id: t._id,
             tableNumber: t.tableNumber,
-            capacity: t.capacity,
-            batchId: t.batchId
+            capacity: t.capacity
         }))
         return NextResponse.json(serializedTables)
     } catch (error: any) {

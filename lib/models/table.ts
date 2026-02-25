@@ -5,14 +5,13 @@ interface ITable extends Document {
     name?: string
     status: "active" | "inactive" | "maintenance"
     capacity?: number
-    batchId?: mongoose.Types.ObjectId | string
     createdAt: Date
     updatedAt: Date
 }
 
 const tableSchema = new Schema<ITable>(
     {
-        tableNumber: { type: String, required: true },
+        tableNumber: { type: String, required: true, unique: true },
         name: { type: String },
         status: {
             type: String,
@@ -20,14 +19,14 @@ const tableSchema = new Schema<ITable>(
             default: "active",
         },
         capacity: { type: Number },
-        batchId: { type: Schema.Types.ObjectId, ref: "Batch" },
     },
     { timestamps: true }
 )
 
-// Allow same table number on different batches
-tableSchema.index({ tableNumber: 1, batchId: 1 }, { unique: true })
-
-const Table = mongoose.models.Table || mongoose.model<ITable>("Table", tableSchema)
+// Force delete to avoid schema caching issues in Next.js Dev Mode
+if (mongoose.models.Table) {
+    delete mongoose.models.Table
+}
+const Table = mongoose.model<ITable>("Table", tableSchema)
 
 export default Table

@@ -33,6 +33,7 @@ interface CartSidebarProps {
   paperWidth: number
   setPaperWidth: (val: number) => void
   assignedBatchId?: string
+  setSelectedBatchId?: (val: string) => void
 }
 
 export function CartSidebar({
@@ -51,6 +52,7 @@ export function CartSidebar({
   paperWidth,
   setPaperWidth,
   assignedBatchId,
+  setSelectedBatchId,
 }: CartSidebarProps) {
   const { t } = useLanguage()
   const { settings } = useSettings()
@@ -63,6 +65,7 @@ export function CartSidebar({
   // Settings State for Tables
   const [tables, setTables] = useState<any[]>([])
   const [batches, setBatches] = useState<any[]>([])
+  const [activeBatchTab, setActiveBatchTab] = useState<string>("")
   const [isTableModalOpen, setIsTableModalOpen] = useState(false)
 
   useEffect(() => {
@@ -77,48 +80,35 @@ export function CartSidebar({
           fetch("/api/batches", { headers })
         ])
 
-        if (tablesRes.ok) setTables(await tablesRes.json())
-        if (batchesRes.ok) setBatches(await batchesRes.json())
+        if (tablesRes.ok) {
+          const tData = await tablesRes.json()
+          console.log(`📡 Loaded ${tData.length} tables`)
+          setTables(tData)
+        }
+        if (batchesRes.ok) {
+          const data = await batchesRes.json()
+          console.log(`📡 Loaded ${data.length} batches`)
+          setBatches(data)
+          // If we have an assignedBatchId, use it as initial tab, otherwise used the first batch
+          if (assignedBatchId) {
+            setActiveBatchTab(assignedBatchId)
+          } else if (data.length > 0) {
+            setActiveBatchTab(data[0]._id)
+          }
+        }
       } catch (err) { console.error("Failed to load data", err) }
     }
     fetchData()
-  }, [token])
+  }, [token, assignedBatchId])
 
-  const visibleBatches = assignedBatchId
-    ? batches.filter(b => b._id === assignedBatchId)
-    : batches
 
-  // If a batch is assigned, don't show unassigned tables tab
-  const showUnassigned = !assignedBatchId
-
-  // Helper to get batch name for selected table
-  const getSelectedBatchNumber = () => {
-    if (!tableNumber) return ""
-    const table = tables.find(t => t.tableNumber === tableNumber)
-    if (!table) return ""
-
-    // Check if batchId is populated object or string ID
-    const tableBatchId = (table.batchId && typeof table.batchId === 'object') ? table.batchId._id : table.batchId
-    const batch = batches.find(b => String(b._id) === String(tableBatchId))
+  // Helper to get batch name for selected context
+  const getSelectedBatchDisplay = () => {
+    const bId = assignedBatchId || activeBatchTab;
+    if (!bId) return "";
+    const batch = batches.find(b => String(b._id) === String(bId))
     return batch ? `Batch #${batch.batchNumber}` : ""
   }
-
-  // Debug logging
-  useEffect(() => {
-    console.log("CartSidebar Debug Info:")
-    console.log("- Assigned Batch ID:", assignedBatchId)
-    console.log("- Total Batches Fetched:", batches.length)
-    console.log("- Total Tables Fetched:", tables.length)
-    console.log("- Visible Batches:", visibleBatches)
-
-    if (assignedBatchId) {
-      const assignedBatchFound = batches.find(b => b._id === assignedBatchId)
-      console.log("- Assigned Batch Object Found:", assignedBatchFound)
-      if (!assignedBatchFound) {
-        console.warn("⚠️ Assigned batch ID is set but not found in fetched batches list!")
-      }
-    }
-  }, [assignedBatchId, batches, tables, visibleBatches])
 
   const containerClasses = isEmbedded
     ? "w-full flex flex-col h-full bg-transparent"
@@ -181,10 +171,10 @@ export function CartSidebar({
               <Dialog open={isTableModalOpen} onOpenChange={setIsTableModalOpen}>
                 <DialogTrigger asChild>
                   <button className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold flex justify-between items-center hover:border-[#2d5a41] hover:bg-[#2d5a41]/5 transition-all outline-none">
-                    <div className="flex flex-col items-start">
+                    <div className="flex flex-col items-start text-left">
                       <span>{tableNumber ? `Table ${tableNumber}` : "Select Table"}</span>
-                      {tableNumber && getSelectedBatchNumber() && (
-                        <span className="text-[10px] text-gray-500 font-medium">{getSelectedBatchNumber()}</span>
+                      {getSelectedBatchDisplay() && (
+                        <span className="text-[10px] text-gray-400 font-bold">{getSelectedBatchDisplay()}</span>
                       )}
                     </div>
                     <span className="text-xs text-gray-400">▼</span>
@@ -195,10 +185,14 @@ export function CartSidebar({
                     <DialogTitle>Select Table</DialogTitle>
                   </DialogHeader>
 
-                  <Tabs defaultValue={assignedBatchId || batches[0]?._id || "unassigned"} className="flex-1 flex flex-col overflow-hidden">
+                  <Tabs
+                    value={activeBatchTab}
+                    onValueChange={setActiveBatchTab}
+                    className="flex-1 flex flex-col overflow-hidden"
+                  >
                     <div className="px-1 border-b mb-4">
                       <TabsList className="bg-transparent h-auto flex-wrap justify-start gap-2">
-                        {visibleBatches.map(batch => (
+                        {batches.map(batch => (
                           <TabsTrigger
                             key={batch._id}
                             value={batch._id}
@@ -207,81 +201,36 @@ export function CartSidebar({
                             Batch #{batch.batchNumber}
                           </TabsTrigger>
                         ))}
-                        {showUnassigned && (
-                          <TabsTrigger
-                            value="unassigned"
-                            className="data-[state=active]:bg-gray-800 data-[state=active]:text-white px-4 py-2 rounded-full border border-transparent bg-gray-100"
-                          >
-                            Unassigned
-                          </TabsTrigger>
-                        )}
                       </TabsList>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto min-h-[300px] p-1">
-                      {visibleBatches.map(batch => (
+                    <div className="flex-1 overflow-y-auto min-h-[400px] p-1">
+                      {batches.map(batch => (
                         <TabsContent key={batch._id} value={batch._id} className="mt-0">
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                            {tables.filter(t => {
-                              const tableBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
-                              return tableBatchId && String(tableBatchId) === String(batch._id);
-                            }).map(table => (
+                            {tables.map(table => (
                               <button
                                 key={table._id}
                                 onClick={() => {
                                   setTableNumber(table.tableNumber)
+                                  if (setSelectedBatchId) setSelectedBatchId(batch._id)
                                   setIsTableModalOpen(false)
                                 }}
-                                className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${tableNumber === table.tableNumber
+                                className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${tableNumber === table.tableNumber && assignedBatchId === batch._id
                                   ? "bg-[#2d5a41] border-[#2d5a41] text-white shadow-lg scale-105"
                                   : "bg-white border-gray-100 hover:border-[#2d5a41] hover:shadow-md text-gray-700"
                                   }`}
                               >
                                 <span className="text-lg font-black">{table.tableNumber}</span>
-                                {table.capacity && <span className={`text-[10px] font-bold ${tableNumber === table.tableNumber ? "text-white/80" : "text-gray-400"}`}>{table.capacity} Seats</span>}
+                                {table.capacity && <span className={`text-[10px] font-bold ${tableNumber === table.tableNumber && assignedBatchId === batch._id ? "text-white/80" : "text-gray-400"}`}>{table.capacity} Seats</span>}
                               </button>
                             ))}
-                            {tables.filter(t => {
-                              const tableBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
-                              return tableBatchId && String(tableBatchId) === String(batch._id);
-                            }).length === 0 && (
-                                <div className="col-span-full py-10 text-center text-gray-400 italic">No tables in this batch</div>
-                              )}
+                            {tables.length === 0 && (
+                              <div className="col-span-full py-20 text-center text-gray-400 italic">No tables available</div>
+                            )}
                           </div>
                         </TabsContent>
                       ))}
-
-                      {showUnassigned && (
-                        <TabsContent value="unassigned" className="mt-0">
-                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                            {tables.filter(t => {
-                              const tBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
-                              return !tBatchId || !batches.some(b => String(b._id) === String(tBatchId));
-                            }).map(table => (
-                              <button
-                                key={table._id}
-                                onClick={() => {
-                                  setTableNumber(table.tableNumber)
-                                  setIsTableModalOpen(false)
-                                }}
-                                className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all ${tableNumber === table.tableNumber
-                                  ? "bg-[#2d5a41] border-[#2d5a41] text-white shadow-lg scale-105"
-                                  : "bg-white border-gray-100 hover:border-[#2d5a41] hover:shadow-md text-gray-700"
-                                  }`}
-                              >
-                                <span className="text-lg font-black">{table.tableNumber}</span>
-                                {table.capacity && <span className={`text-[10px] font-bold ${tableNumber === table.tableNumber ? "text-white/80" : "text-gray-400"}`}>{table.capacity} Seats</span>}
-                              </button>
-                            ))}
-                            {tables.filter(t => {
-                              const tBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
-                              return !tBatchId || !batches.some(b => String(b._id) === String(tBatchId));
-                            }).length === 0 && (
-                                <div className="col-span-full py-10 text-center text-gray-400 italic">No unassigned tables</div>
-                              )}
-                          </div>
-                        </TabsContent>
-                      )}
                     </div>
                   </Tabs>
                 </DialogContent>

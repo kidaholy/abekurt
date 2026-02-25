@@ -45,7 +45,7 @@ export default function AdminSettingsPage() {
   const [newBatch, setNewBatch] = useState({ batchNumber: "", order: 0 })
 
   const [editingTable, setEditingTable] = useState<any>(null)
-  const [newTable, setNewTable] = useState({ tableNumber: "", capacity: "", batchId: "" })
+  const [newTable, setNewTable] = useState({ tableNumber: "", capacity: "" })
 
   // Category Management State
   const [categories, setCategories] = useState<any[]>([])
@@ -132,10 +132,6 @@ export default function AdminSettingsPage() {
 
   // --- Table Handlers ---
   const handleAddTable = async () => {
-    if (!newTable.batchId) {
-      notify({ title: "Error", message: "Please select a batch", type: "error" })
-      return
-    }
     try {
       const url = "/api/admin/tables"
       const method = editingTable ? "PUT" : "POST"
@@ -147,7 +143,7 @@ export default function AdminSettingsPage() {
         body: JSON.stringify(body)
       })
       if (res.ok) {
-        setNewTable({ tableNumber: "", capacity: "", batchId: "" })
+        setNewTable({ tableNumber: "", capacity: "" })
         setEditingTable(null)
         fetchTables()
         notify({ title: "Success", message: `Table ${editingTable ? 'updated' : 'added'} successfully`, type: "success" })
@@ -160,17 +156,15 @@ export default function AdminSettingsPage() {
 
   const handleEditTable = (table: any) => {
     setEditingTable(table)
-    const bId = (table.batchId && typeof table.batchId === 'object') ? table.batchId._id : table.batchId;
     setNewTable({
       tableNumber: table.tableNumber,
-      capacity: table.capacity || "",
-      batchId: bId ? String(bId) : ""
+      capacity: table.capacity || ""
     })
   }
 
   const handleCancelEditTable = () => {
     setEditingTable(null)
-    setNewTable({ tableNumber: "", capacity: "", batchId: "" })
+    setNewTable({ tableNumber: "", capacity: "" })
   }
 
   const handleDeleteTable = async (id: string) => {
@@ -688,16 +682,9 @@ export default function AdminSettingsPage() {
 
                       <div className="flex flex-wrap gap-2">
                         {batches.map(batch => {
-                          const batchTablesCount = tables.filter(t => {
-                            const tBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
-                            return tBatchId && String(tBatchId) === String(batch._id);
-                          }).length;
                           return (
                             <div key={batch._id} className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2 shadow-sm hover:shadow-md transition-all">
                               <span className="font-bold text-sm text-gray-700">Batch #{batch.batchNumber}</span>
-                              <span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100">
-                                {batchTablesCount} {batchTablesCount === 1 ? 'Table' : 'Tables'}
-                              </span>
                               <div className="flex items-center gap-1 ml-1 border-l pl-2 border-gray-100">
                                 <button onClick={() => { setEditingBatch(batch); setNewBatch({ batchNumber: batch.batchNumber, order: batch.order }) }} className="text-gray-400 hover:text-[#8B4513] transition-colors">✏️</button>
                                 <button onClick={() => handleDeleteBatch(batch._id)} className="text-gray-400 hover:text-red-500 transition-colors">🗑️</button>
@@ -724,16 +711,6 @@ export default function AdminSettingsPage() {
                         )}
                       </div>
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <select
-                          value={newTable.batchId}
-                          onChange={(e) => setNewTable({ ...newTable, batchId: e.target.value })}
-                          className="w-full sm:w-1/3 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-[#8B4513]/5"
-                        >
-                          <option value="">Select Batch</option>
-                          {batches.map(b => (
-                            <option key={b._id} value={b._id}>Batch #{b.batchNumber}</option>
-                          ))}
-                        </select>
                         <div className="flex-1">
                           <input
                             type="text"
@@ -754,7 +731,7 @@ export default function AdminSettingsPage() {
                         </div>
                         <button
                           onClick={handleAddTable}
-                          disabled={!newTable.tableNumber || !newTable.batchId}
+                          disabled={!newTable.tableNumber}
                           className="bg-[#8B4513] text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 hover:bg-[#A0522D] transition-all shadow-lg shadow-[#8B4513]/20"
                         >
                           {editingTable ? "Update" : "Add"}
@@ -762,73 +739,36 @@ export default function AdminSettingsPage() {
                       </div>
                     </div>
 
-                    {/* Tables List Grouped by Batch */}
-                    <div className="grid grid-cols-1 gap-6">
-                      {batches.map(batch => {
-                        const batchTables = tables.filter(t => {
-                          const tableBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
-                          return tableBatchId && String(tableBatchId) === String(batch._id);
-                        });
-                        return (
-                          <div key={batch._id} className="bg-white border border-gray-200 rounded-[2rem] overflow-hidden shadow-sm hover:border-emerald-200 transition-all">
-                            <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                              <h4 className="font-black text-xs uppercase tracking-widest text-gray-500">Batch #{batch.batchNumber}</h4>
-                              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                                {batchTables.length} Tables Registered
-                              </span>
-                            </div>
-                            <div className="p-6">
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {batchTables.map(table => (
-                                  <div key={table._id} className="p-4 bg-white border border-gray-100 rounded-2xl flex justify-between items-center group hover:border-[#8B4513] hover:shadow-md transition-all">
-                                    <div>
-                                      <div className="font-black text-lg text-gray-800">{table.tableNumber}</div>
-                                      {table.capacity && <div className="text-xs text-gray-400 font-bold">{table.capacity} Seats</div>}
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <button onClick={() => handleEditTable(table)} className="text-gray-300 hover:text-[#8B4513] transition-colors p-2 rounded-lg hover:bg-[#8B4513]/5">✏️</button>
-                                      <button onClick={() => handleDeleteTable(table._id)} className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50">🗑️</button>
-                                    </div>
-                                  </div>
-                                ))}
-                                {batchTables.length === 0 && (
-                                  <div className="col-span-full text-center py-10 text-gray-300 text-xs italic border-2 border-dashed border-gray-100 rounded-2xl">
-                                    <div className="text-2xl mb-2 opacity-50">🪑</div>
-                                    No tables registered for Batch #{batch.batchNumber}
-                                  </div>
-                                )}
+                    {/* Global Tables List */}
+                    <div className="bg-white border border-gray-200 rounded-[2rem] overflow-hidden shadow-sm hover:border-emerald-200 transition-all">
+                      <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                        <h4 className="font-black text-xs uppercase tracking-widest text-gray-500">Universal Tables</h4>
+                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                          {tables.length} Total Tables
+                        </span>
+                      </div>
+                      <div className="p-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {tables.map(table => (
+                            <div key={table._id} className="p-4 bg-white border border-gray-100 rounded-2xl flex justify-between items-center group hover:border-[#8B4513] hover:shadow-md transition-all">
+                              <div>
+                                <div className="font-black text-lg text-gray-800">{table.tableNumber}</div>
+                                {table.capacity && <div className="text-xs text-gray-400 font-bold">{table.capacity} Seats</div>}
+                              </div>
+                              <div className="flex gap-1">
+                                <button onClick={() => handleEditTable(table)} className="text-gray-300 hover:text-[#8B4513] transition-colors p-2 rounded-lg hover:bg-[#8B4513]/5">✏️</button>
+                                <button onClick={() => handleDeleteTable(table._id)} className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50">🗑️</button>
                               </div>
                             </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {/* Unassigned Tables */}
-                    {tables.filter(t => {
-                      const tBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
-                      return !tBatchId || !batches.some(b => String(b._id) === String(tBatchId));
-                    }).length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="font-bold text-gray-500 text-sm ml-1">Unassigned Tables</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {tables.filter(t => {
-                              const tBatchId = (t.batchId && typeof t.batchId === 'object') ? t.batchId._id : t.batchId;
-                              return !tBatchId || !batches.some(b => String(b._id) === String(tBatchId));
-                            }).map(table => (
-                              <div key={table._id} className="p-4 bg-gray-50 border border-gray-200 rounded-2xl flex justify-between items-center group hover:border-[#8B4513] hover:shadow-md transition-all opacity-75 hover:opacity-100">
-                                <div>
-                                  <div className="font-black text-lg text-gray-800">{table.tableNumber}</div>
-                                  {table.capacity && <div className="text-xs text-gray-400 font-bold">{table.capacity} Seats</div>}
-                                </div>
-                                <div className="flex gap-1">
-                                  <button onClick={() => handleEditTable(table)} className="text-gray-300 hover:text-[#8B4513] transition-colors p-2 rounded-lg hover:bg-[#8B4513]/5">✏️</button>
-                                  <button onClick={() => handleDeleteTable(table._id)} className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50">🗑️</button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          ))}
+                          {tables.length === 0 && (
+                            <div className="col-span-full text-center py-20 text-gray-300 text-sm italic border-2 border-dashed border-gray-100 rounded-[2rem]">
+                              No tables registered yet. Add your first table above!
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
+                    </div>
                   </div>
                 )}
 

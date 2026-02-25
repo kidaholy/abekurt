@@ -87,10 +87,7 @@ export async function DELETE(request: Request) {
         const batch = await Batch.findById(id)
         if (!batch) return NextResponse.json({ message: "Batch not found" }, { status: 404 })
 
-        // 2. Cascade delete or unassign tables
-        // For now, let's keep the unassign logic but rename the field
-        await Table.updateMany({ batchId: id }, { $unset: { batchId: "" } })
-
+        // 2. Delete the batch (Tables are now global and independent)
         await Batch.findByIdAndDelete(id)
         return NextResponse.json({ message: "Batch deleted" })
     } catch (error: any) {

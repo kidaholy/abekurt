@@ -574,7 +574,10 @@ export default function AdminMenuPage() {
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 min-h-[600px]">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">{t("adminMenu.title")}</h1>
+                    <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                      {t("adminMenu.title")}
+                      {loading && <span className="text-xl animate-spin text-[#8B4513]">↻</span>}
+                    </h1>
                     <p className="text-gray-400 text-xs md:text-sm font-bold uppercase tracking-widest">{t("adminMenu.subtitle")}</p>
                   </div>
                   <div className="bg-[#8B4513]/5 px-4 py-2 rounded-xl border border-[#8B4513]/10 text-[#8B4513] text-[10px] font-black uppercase tracking-widest">
@@ -605,62 +608,55 @@ export default function AdminMenuPage() {
                   </div>
                 )}
 
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center py-20">
-                    <div className="text-6xl animate-bounce mb-4 text-[#8B4513]">☕</div>
-                    <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">{t("adminMenu.loading")}</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredItems.map((item, index) => (
-                      <div key={item._id} className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all group flex flex-col relative">
-                        {/* Item Image */}
-                        <div className="h-40 md:h-48 bg-gray-200 relative overflow-hidden">
-                          {item.image ? (
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">☕</div>
-                          )}
-                          <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                            <div className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[9px] font-black text-[#8B4513] shadow-sm border border-white/50">
-                              #{item.menuId}
-                            </div>
-                          </div>
-                          <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest z-10 backdrop-blur-md border border-white/50 shadow-sm ${item.available ? "bg-green-100/90 text-green-700" : "bg-red-100/90 text-red-700"}`}>
-                            {item.available ? t("adminMenu.active") : t("adminMenu.hidden")}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredItems.map((item, index) => (
+                    <div key={item._id} className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all group flex flex-col relative">
+                      {/* Item Image */}
+                      <div className="h-40 md:h-48 bg-gray-200 relative overflow-hidden">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">☕</div>
+                        )}
+                        <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+                          <div className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg text-[9px] font-black text-[#8B4513] shadow-sm border border-white/50">
+                            #{item.menuId}
                           </div>
                         </div>
-
-                        <div className="p-5 flex-1 flex flex-col relative bg-white/50 backdrop-blur-sm">
-                          <h3 className="font-black text-lg text-slate-800 mb-0.5 truncate">{item.name}</h3>
-                          <p className="text-[10px] font-black text-[#8B4513] uppercase tracking-widest mb-4 opacity-70">{item.category}</p>
-                          <div className="flex items-end gap-1 mb-6">
-                            <span className="text-2xl font-black text-slate-900">{item.price}</span>
-                            <span className="text-xs font-black text-slate-400 mb-1">{t("common.currencyBr")}</span>
-                          </div>
-
-                          <div className="flex gap-2 mt-auto">
-                            <button
-                              onClick={() => swapMode ? handleSwap(item.menuId) : handleEdit(item)}
-                              className={`flex-1 font-black py-3 rounded-xl transition-all text-[10px] uppercase tracking-widest border transform active:scale-95 ${swapMode
-                                ? (swapSourceId === item.menuId ? "bg-purple-600 text-white border-purple-600 shadow-lg" : "bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100")
-                                : "bg-white border-gray-100 text-slate-600 hover:border-[#8B4513]/20 hover:text-[#8B4513] hover:shadow-md"
-                                }`}
-                            >
-                              {swapMode ? (swapSourceId === item.menuId ? "Selected" : "Swap ID") : t("adminMenu.edit")}
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item)}
-                              className="w-10 h-10 bg-white border border-gray-100 text-red-500 flex items-center justify-center rounded-xl hover:bg-red-50 hover:border-red-100 transition-all transform active:scale-95 shadow-sm"
-                            >
-                              🗑️
-                            </button>
-                          </div>
+                        <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest z-10 backdrop-blur-md border border-white/50 shadow-sm ${item.available ? "bg-green-100/90 text-green-700" : "bg-red-100/90 text-red-700"}`}>
+                          {item.available ? t("adminMenu.active") : t("adminMenu.hidden")}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      <div className="p-5 flex-1 flex flex-col relative bg-white/50 backdrop-blur-sm">
+                        <h3 className="font-black text-lg text-slate-800 mb-0.5 truncate">{item.name}</h3>
+                        <p className="text-[10px] font-black text-[#8B4513] uppercase tracking-widest mb-4 opacity-70">{item.category}</p>
+                        <div className="flex items-end gap-1 mb-6">
+                          <span className="text-2xl font-black text-slate-900">{item.price}</span>
+                          <span className="text-xs font-black text-slate-400 mb-1">{t("common.currencyBr")}</span>
+                        </div>
+
+                        <div className="flex gap-2 mt-auto">
+                          <button
+                            onClick={() => swapMode ? handleSwap(item.menuId) : handleEdit(item)}
+                            className={`flex-1 font-black py-3 rounded-xl transition-all text-[10px] uppercase tracking-widest border transform active:scale-95 ${swapMode
+                              ? (swapSourceId === item.menuId ? "bg-purple-600 text-white border-purple-600 shadow-lg" : "bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100")
+                              : "bg-white border-gray-100 text-slate-600 hover:border-[#8B4513]/20 hover:text-[#8B4513] hover:shadow-md"
+                              }`}
+                          >
+                            {swapMode ? (swapSourceId === item.menuId ? "Selected" : "Swap ID") : t("adminMenu.edit")}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item)}
+                            className="w-10 h-10 bg-white border border-gray-100 text-red-500 flex items-center justify-center rounded-xl hover:bg-red-50 hover:border-red-100 transition-all transform active:scale-95 shadow-sm"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {!loading && filteredItems.length === 0 && (
                   <div className="text-center py-32">

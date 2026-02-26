@@ -1147,453 +1147,442 @@ export default function StorePage() {
                                     </div>
                                 </div>
 
-                                {loading ? (
-                                    <div className="flex flex-col items-center justify-center py-32 opacity-20">
-                                        <History className="w-16 h-16 animate-spin-slow mb-4" />
-                                        <p className="font-black uppercase tracking-widest text-xs">Loading...</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {activeTab === 'inventory' && (
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left">
-                                                    <thead>
-                                                        <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                            <th className="pb-4 pl-4">Item Details</th>
-                                                            <th className="pb-4">Quantity in Store</th>
-                                                            <th className="pb-4">Active in Stock</th>
-                                                            <th className="pb-4 text-right pr-4">Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-50">
-                                                        {filteredStock.map((item) => (
-                                                            <tr key={item._id} className="group hover:bg-gray-50/50 transition-colors">
-                                                                <td className="py-5 pl-4">
-                                                                    <p className="font-bold text-slate-800">{item.name}</p>
-                                                                    <p className="text-[10px] uppercase text-gray-400 font-bold tracking-widest">{item.category} • {item.unit}</p>
-                                                                </td>
-                                                                <td className="py-5">
-                                                                    <p className="text-2xl font-black text-[#5D4037]">
-                                                                        {(item.storeQuantity || 0).toLocaleString()}
-                                                                        <span className="text-xs font-bold text-gray-400 ml-1 uppercase">{item.unit}</span>
-                                                                    </p>
-                                                                </td>
-                                                                <td className="py-5">
-                                                                    {(item.quantity || 0) > 0 ? (
-                                                                        <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
-                                                                            {(item.quantity || 0).toLocaleString()} {item.unit} Active
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
-                                                                            Inactive in POS
-                                                                        </span>
-                                                                    )}
-                                                                </td>
-                                                                <td className="py-5 text-right pr-4">
-                                                                    <div className="flex justify-end gap-2">
+                                {activeTab === 'inventory' && (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead>
+                                                <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                    <th className="pb-4 pl-4">Item Details</th>
+                                                    <th className="pb-4">Quantity in Store</th>
+                                                    <th className="pb-4">Active in Stock</th>
+                                                    <th className="pb-4 text-right pr-4">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50">
+                                                {filteredStock.map((item) => (
+                                                    <tr key={item._id} className="group hover:bg-gray-50/50 transition-colors">
+                                                        <td className="py-5 pl-4">
+                                                            <p className="font-bold text-slate-800">{item.name}</p>
+                                                            <p className="text-[10px] uppercase text-gray-400 font-bold tracking-widest">{item.category} • {item.unit}</p>
+                                                        </td>
+                                                        <td className="py-5">
+                                                            <p className="text-2xl font-black text-[#5D4037]">
+                                                                {(item.storeQuantity || 0).toLocaleString()}
+                                                                <span className="text-xs font-bold text-gray-400 ml-1 uppercase">{item.unit}</span>
+                                                            </p>
+                                                        </td>
+                                                        <td className="py-5">
+                                                            {(item.quantity || 0) > 0 ? (
+                                                                <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
+                                                                    {(item.quantity || 0).toLocaleString()} {item.unit} Active
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                                                                    Inactive in POS
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-5 text-right pr-4">
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => openTransferModal(item)}
+                                                                    disabled={(item.storeQuantity || 0) <= 0}
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase disabled:opacity-30 border border-emerald-200"
+                                                                >
+                                                                    <ChevronRight size={12} /> Transfer
+                                                                </button>
+                                                                {user?.role === "admin" && (
+                                                                    <>
                                                                         <button
-                                                                            onClick={() => openTransferModal(item)}
-                                                                            disabled={(item.storeQuantity || 0) <= 0}
-                                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase disabled:opacity-30 border border-emerald-200"
+                                                                            onClick={() => openRestockModal(item)}
+                                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase border border-blue-200"
                                                                         >
-                                                                            <ChevronRight size={12} /> Transfer
+                                                                            <PlusCircle size={12} /> Restock
                                                                         </button>
-                                                                        {user?.role === "admin" && (
-                                                                            <>
-                                                                                <button
-                                                                                    onClick={() => openRestockModal(item)}
-                                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase border border-blue-200"
-                                                                                >
-                                                                                    <PlusCircle size={12} /> Restock
-                                                                                </button>
-                                                                                <button onClick={() => handleEditStock(item)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
-                                                                                    <Edit2 size={16} />
-                                                                                </button>
-                                                                                <button onClick={() => deleteStockItem(item._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
-                                                                                    <Trash2 size={16} />
-                                                                                </button>
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-
-                                        {activeTab === 'fixed-assets' && (
-                                            <div className="space-y-4">
-                                                {fixedAssets.length === 0 ? (
-                                                    <div className="text-center py-20 text-gray-300 text-sm italic border-2 border-dashed border-gray-100 rounded-[2rem]">
-                                                        <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                                        No fixed assets added yet. Click "Add Fixed Asset" to start tracking.
-                                                    </div>
-                                                ) : (
-                                                    fixedAssets.map((asset) => {
-                                                        const isExpanded = expandedAsset === asset._id
-                                                        const totalDismissed = asset.dismissals.reduce((s, d) => s + d.valueLost, 0)
-                                                        return (
-                                                            <div key={asset._id} className={`rounded-2xl border overflow-hidden transition-all ${asset.status === 'fully_dismissed' ? 'bg-red-50/50 border-red-100 opacity-60' :
-                                                                asset.status === 'partially_dismissed' ? 'bg-amber-50/40 border-amber-100' :
-                                                                    'bg-white border-gray-200'
-                                                                }`}>
-                                                                <div className="p-5">
-                                                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${asset.status === 'fully_dismissed' ? 'bg-red-100 text-red-500' :
-                                                                                asset.status === 'partially_dismissed' ? 'bg-amber-100 text-amber-600' :
-                                                                                    'bg-emerald-100 text-emerald-600'
-                                                                                }`}>
-                                                                                <Wrench size={18} />
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="font-black text-slate-800 text-lg">{asset.name}</p>
-                                                                                <div className="flex items-center gap-2 mt-0.5">
-                                                                                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{asset.category}</span>
-                                                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${asset.status === 'fully_dismissed' ? 'bg-red-100 text-red-600' :
-                                                                                        asset.status === 'partially_dismissed' ? 'bg-amber-100 text-amber-600' :
-                                                                                            'bg-emerald-100 text-emerald-600'
-                                                                                        }`}>{asset.status === 'fully_dismissed' ? 'Dismissed' : asset.status === 'partially_dismissed' ? 'Partial' : 'Active'}</span>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-6">
-                                                                            <div className="text-center">
-                                                                                <p className="text-2xl font-black text-slate-800">{asset.quantity}</p>
-                                                                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Qty</p>
-                                                                            </div>
-                                                                            <div className="text-center">
-                                                                                <p className="text-lg font-black text-orange-600">{asset.unitPrice.toLocaleString()} <span className="text-[10px]">Br</span></p>
-                                                                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Unit Price</p>
-                                                                            </div>
-                                                                            <div className="text-center">
-                                                                                <p className="text-lg font-black text-emerald-600">{asset.totalValue.toLocaleString()} <span className="text-[10px]">Br</span></p>
-                                                                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Value</p>
-                                                                            </div>
-                                                                            {totalDismissed > 0 && (
-                                                                                <div className="text-center">
-                                                                                    <p className="text-lg font-black text-red-500">-{totalDismissed.toLocaleString()} <span className="text-[10px]">Br</span></p>
-                                                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Lost</p>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1">
-                                                                            {user?.role === "admin" && (
-                                                                                <>
-                                                                                    {asset.status !== 'fully_dismissed' && (
-                                                                                        <button
-                                                                                            onClick={() => openDismissModal(asset)}
-                                                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase border border-red-200"
-                                                                                        >
-                                                                                            <AlertTriangle size={12} /> Dismiss
-                                                                                        </button>
-                                                                                    )}
-                                                                                    <button onClick={() => handleEditAsset(asset)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
-                                                                                        <Edit2 size={16} />
-                                                                                    </button>
-                                                                                    <button onClick={() => deleteFixedAsset(asset._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
-                                                                                        <Trash2 size={16} />
-                                                                                    </button>
-                                                                                </>
-                                                                            )}
-                                                                            {asset.dismissals.length > 0 && (
-                                                                                <button
-                                                                                    onClick={() => setExpandedAsset(isExpanded ? null : asset._id)}
-                                                                                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
-                                                                                >
-                                                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                                                </button>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                    {asset.notes && (
-                                                                        <p className="mt-2 text-xs text-gray-400 italic pl-[52px]">{asset.notes}</p>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Dismissal History */}
-                                                                {isExpanded && asset.dismissals.length > 0 && (
-                                                                    <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-4">
-                                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Dismissal History</p>
-                                                                        <div className="space-y-2">
-                                                                            {asset.dismissals.map((d, i) => (
-                                                                                <div key={i} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-gray-100">
-                                                                                    <div className="h-8 w-8 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                                                        <AlertTriangle size={14} className="text-red-400" />
-                                                                                    </div>
-                                                                                    <div className="flex-1 min-w-0">
-                                                                                        <p className="text-sm font-bold text-slate-800">{d.reason}</p>
-                                                                                        <p className="text-[10px] text-gray-400 mt-0.5">
-                                                                                            {d.quantity} unit(s) · -{d.valueLost.toLocaleString()} Br · {new Date(d.date).toLocaleDateString()}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
+                                                                        <button onClick={() => handleEditStock(item)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
+                                                                            <Edit2 size={16} />
+                                                                        </button>
+                                                                        <button onClick={() => deleteStockItem(item._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </>
                                                                 )}
                                                             </div>
-                                                        )
-                                                    })
-                                                )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+                                {activeTab === 'fixed-assets' && (
+                                    <div className="space-y-4">
+                                        {fixedAssets.length === 0 ? (
+                                            <div className="text-center py-20 text-gray-300 text-sm italic border-2 border-dashed border-gray-100 rounded-[2rem]">
+                                                <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                                No fixed assets added yet. Click "Add Fixed Asset" to start tracking.
                                             </div>
+                                        ) : (
+                                            fixedAssets.map((asset) => {
+                                                const isExpanded = expandedAsset === asset._id
+                                                const totalDismissed = asset.dismissals.reduce((s, d) => s + d.valueLost, 0)
+                                                return (
+                                                    <div key={asset._id} className={`rounded-2xl border overflow-hidden transition-all ${asset.status === 'fully_dismissed' ? 'bg-red-50/50 border-red-100 opacity-60' :
+                                                        asset.status === 'partially_dismissed' ? 'bg-amber-50/40 border-amber-100' :
+                                                            'bg-white border-gray-200'
+                                                        }`}>
+                                                        <div className="p-5">
+                                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${asset.status === 'fully_dismissed' ? 'bg-red-100 text-red-500' :
+                                                                        asset.status === 'partially_dismissed' ? 'bg-amber-100 text-amber-600' :
+                                                                            'bg-emerald-100 text-emerald-600'
+                                                                        }`}>
+                                                                        <Wrench size={18} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-black text-slate-800 text-lg">{asset.name}</p>
+                                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                                            <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{asset.category}</span>
+                                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${asset.status === 'fully_dismissed' ? 'bg-red-100 text-red-600' :
+                                                                                asset.status === 'partially_dismissed' ? 'bg-amber-100 text-amber-600' :
+                                                                                    'bg-emerald-100 text-emerald-600'
+                                                                                }`}>{asset.status === 'fully_dismissed' ? 'Dismissed' : asset.status === 'partially_dismissed' ? 'Partial' : 'Active'}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-6">
+                                                                    <div className="text-center">
+                                                                        <p className="text-2xl font-black text-slate-800">{asset.quantity}</p>
+                                                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Qty</p>
+                                                                    </div>
+                                                                    <div className="text-center">
+                                                                        <p className="text-lg font-black text-orange-600">{asset.unitPrice.toLocaleString()} <span className="text-[10px]">Br</span></p>
+                                                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Unit Price</p>
+                                                                    </div>
+                                                                    <div className="text-center">
+                                                                        <p className="text-lg font-black text-emerald-600">{asset.totalValue.toLocaleString()} <span className="text-[10px]">Br</span></p>
+                                                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Value</p>
+                                                                    </div>
+                                                                    {totalDismissed > 0 && (
+                                                                        <div className="text-center">
+                                                                            <p className="text-lg font-black text-red-500">-{totalDismissed.toLocaleString()} <span className="text-[10px]">Br</span></p>
+                                                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Lost</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-1">
+                                                                    {user?.role === "admin" && (
+                                                                        <>
+                                                                            {asset.status !== 'fully_dismissed' && (
+                                                                                <button
+                                                                                    onClick={() => openDismissModal(asset)}
+                                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase border border-red-200"
+                                                                                >
+                                                                                    <AlertTriangle size={12} /> Dismiss
+                                                                                </button>
+                                                                            )}
+                                                                            <button onClick={() => handleEditAsset(asset)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
+                                                                                <Edit2 size={16} />
+                                                                            </button>
+                                                                            <button onClick={() => deleteFixedAsset(asset._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                    {asset.dismissals.length > 0 && (
+                                                                        <button
+                                                                            onClick={() => setExpandedAsset(isExpanded ? null : asset._id)}
+                                                                            className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
+                                                                        >
+                                                                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            {asset.notes && (
+                                                                <p className="mt-2 text-xs text-gray-400 italic pl-[52px]">{asset.notes}</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Dismissal History */}
+                                                        {isExpanded && asset.dismissals.length > 0 && (
+                                                            <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-4">
+                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Dismissal History</p>
+                                                                <div className="space-y-2">
+                                                                    {asset.dismissals.map((d, i) => (
+                                                                        <div key={i} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-gray-100">
+                                                                            <div className="h-8 w-8 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                                                <AlertTriangle size={14} className="text-red-400" />
+                                                                            </div>
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-sm font-bold text-slate-800">{d.reason}</p>
+                                                                                <p className="text-[10px] text-gray-400 mt-0.5">
+                                                                                    {d.quantity} unit(s) · -{d.valueLost.toLocaleString()} Br · {new Date(d.date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })
                                         )}
+                                    </div>
+                                )}
 
 
-                                        {activeTab === 'categories' && (
-                                            <div className="space-y-8">
-                                                <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
-                                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                                                        <h3 className="font-black text-xs uppercase tracking-widest text-[#8B4513]">
-                                                            {editingCategory ? "Update Category" : `Add New ${categoryType === 'stock' ? 'Stock' : 'Asset'} Category`}
-                                                        </h3>
-                                                        <div className="flex p-1 bg-gray-200/50 rounded-xl">
+                                {activeTab === 'categories' && (
+                                    <div className="space-y-8">
+                                        <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                                                <h3 className="font-black text-xs uppercase tracking-widest text-[#8B4513]">
+                                                    {editingCategory ? "Update Category" : `Add New ${categoryType === 'stock' ? 'Stock' : 'Asset'} Category`}
+                                                </h3>
+                                                <div className="flex p-1 bg-gray-200/50 rounded-xl">
+                                                    <button
+                                                        onClick={() => setCategoryType('stock')}
+                                                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${categoryType === 'stock' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                    >
+                                                        Stock
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setCategoryType('fixed-asset')}
+                                                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${categoryType === 'fixed-asset' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                    >
+                                                        Fixed Asset
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setCategoryType('expense')}
+                                                        className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${categoryType === 'expense' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                    >
+                                                        Expense
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {user?.role === "admin" && (
+                                                <form onSubmit={handleSaveCategory} className="flex gap-3">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Category Name (e.g. Vegetables)"
+                                                        value={newCategory.name}
+                                                        onChange={(e) => setNewCategory({ name: e.target.value })}
+                                                        className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-[#8B4513]/5"
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="submit"
+                                                        disabled={saveLoading || !newCategory.name}
+                                                        className="bg-[#8B4513] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 hover:bg-[#A0522D] transition-all shadow-lg shadow-[#8B4513]/20"
+                                                    >
+                                                        {saveLoading ? "Saving..." : (editingCategory ? "Update" : "Add")}
+                                                    </button>
+                                                    {editingCategory && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setEditingCategory(null); setNewCategory({ name: "" }) }}
+                                                            className="bg-white text-gray-400 border border-gray-200 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-50"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    )}
+                                                </form>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {(categoryType === 'stock' ? categories : categoryType === 'fixed-asset' ? assetCategories : expenseCategories).map((cat) => (
+                                                <div key={cat._id} className="p-4 bg-white border border-gray-100 rounded-2xl flex justify-between items-center group hover:border-[#8B4513] hover:shadow-md transition-all">
+                                                    <div className="font-black text-lg text-gray-800">{cat.name}</div>
+                                                    {user?.role === "admin" && (
+                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
-                                                                onClick={() => setCategoryType('stock')}
-                                                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${categoryType === 'stock' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                                onClick={() => { setEditingCategory(cat); setNewCategory({ name: cat.name }) }}
+                                                                className="text-gray-300 hover:text-[#8B4513] transition-colors p-2 rounded-lg hover:bg-[#8B4513]/5"
                                                             >
-                                                                Stock
+                                                                <Edit2 size={16} />
                                                             </button>
                                                             <button
-                                                                onClick={() => setCategoryType('fixed-asset')}
-                                                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${categoryType === 'fixed-asset' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                                                onClick={() => handleDeleteCategory(cat._id)}
+                                                                className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
                                                             >
-                                                                Fixed Asset
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setCategoryType('expense')}
-                                                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${categoryType === 'expense' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                                            >
-                                                                Expense
+                                                                <Trash2 size={16} />
                                                             </button>
                                                         </div>
-                                                    </div>
-                                                    {user?.role === "admin" && (
-                                                        <form onSubmit={handleSaveCategory} className="flex gap-3">
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Category Name (e.g. Vegetables)"
-                                                                value={newCategory.name}
-                                                                onChange={(e) => setNewCategory({ name: e.target.value })}
-                                                                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-[#8B4513]/5"
-                                                                required
-                                                            />
-                                                            <button
-                                                                type="submit"
-                                                                disabled={saveLoading || !newCategory.name}
-                                                                className="bg-[#8B4513] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 hover:bg-[#A0522D] transition-all shadow-lg shadow-[#8B4513]/20"
-                                                            >
-                                                                {saveLoading ? "Saving..." : (editingCategory ? "Update" : "Add")}
-                                                            </button>
-                                                            {editingCategory && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => { setEditingCategory(null); setNewCategory({ name: "" }) }}
-                                                                    className="bg-white text-gray-400 border border-gray-200 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-50"
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                            )}
-                                                        </form>
                                                     )}
                                                 </div>
+                                            ))}
+                                            {(categoryType === 'stock' ? categories : categoryType === 'fixed-asset' ? assetCategories : expenseCategories).length === 0 && (
+                                                <div className="col-span-full text-center py-20 text-gray-300 text-sm italic border-2 border-dashed border-gray-100 rounded-[2rem]">
+                                                    No {categoryType === 'stock' ? 'stock' : categoryType === 'fixed-asset' ? 'asset' : 'expense'} categories found. Add your first one above!
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {(categoryType === 'stock' ? categories : categoryType === 'fixed-asset' ? assetCategories : expenseCategories).map((cat) => (
-                                                        <div key={cat._id} className="p-4 bg-white border border-gray-100 rounded-2xl flex justify-between items-center group hover:border-[#8B4513] hover:shadow-md transition-all">
-                                                            <div className="font-black text-lg text-gray-800">{cat.name}</div>
+                                {activeTab === 'expenses' && (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead>
+                                                <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                    <th className="pb-4 pl-4">Date</th>
+                                                    <th className="pb-4">Name</th>
+                                                    <th className="pb-4">Category</th>
+                                                    <th className="pb-4">Amount</th>
+                                                    <th className="pb-4">Description</th>
+                                                    <th className="pb-4 text-right pr-4">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50">
+                                                {filteredOperationalExpenses.map((expense) => (
+                                                    <tr key={expense._id} className="group hover:bg-gray-50/50 transition-colors">
+                                                        <td className="py-5 pl-4">
+                                                            <p className="font-bold text-slate-800">{new Date(expense.date).toLocaleDateString()}</p>
+                                                        </td>
+                                                        <td className="py-5">
+                                                            <p className="font-black text-slate-800">{expense.name || <span className="text-gray-300 italic">—</span>}</p>
+                                                        </td>
+                                                        <td className="py-5 text-sm font-bold text-gray-600">
+                                                            {expense.category}
+                                                        </td>
+                                                        <td className="py-5">
+                                                            <p className="text-xl font-black text-red-600">
+                                                                {expense.amount.toLocaleString()}
+                                                                <span className="text-[10px] font-bold text-gray-400 ml-1">ETB</span>
+                                                            </p>
+                                                        </td>
+                                                        <td className="py-5 text-xs text-gray-400 max-w-[200px] truncate">
+                                                            {expense.description}
+                                                        </td>
+                                                        <td className="py-5 text-right pr-4">
                                                             {user?.role === "admin" && (
-                                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <div className="flex justify-end gap-2">
                                                                     <button
-                                                                        onClick={() => { setEditingCategory(cat); setNewCategory({ name: cat.name }) }}
-                                                                        className="text-gray-300 hover:text-[#8B4513] transition-colors p-2 rounded-lg hover:bg-[#8B4513]/5"
+                                                                        onClick={() => {
+                                                                            setEditingOperationalExpense(expense);
+                                                                            setOperationalExpenseFormData({
+                                                                                date: new Date(expense.date).toISOString().split('T')[0],
+                                                                                name: expense.name || "",
+                                                                                category: expense.category,
+                                                                                amount: expense.amount.toString(),
+                                                                                description: expense.description || ""
+                                                                            });
+                                                                            setShowOperationalExpenseForm(true);
+                                                                        }}
+                                                                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
                                                                     >
                                                                         <Edit2 size={16} />
                                                                     </button>
-                                                                    <button
-                                                                        onClick={() => handleDeleteCategory(cat._id)}
-                                                                        className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
-                                                                    >
+                                                                    <button onClick={() => deleteOperationalExpense(expense._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
                                                                         <Trash2 size={16} />
                                                                     </button>
                                                                 </div>
                                                             )}
-                                                        </div>
-                                                    ))}
-                                                    {(categoryType === 'stock' ? categories : categoryType === 'fixed-asset' ? assetCategories : expenseCategories).length === 0 && (
-                                                        <div className="col-span-full text-center py-20 text-gray-300 text-sm italic border-2 border-dashed border-gray-100 rounded-[2rem]">
-                                                            No {categoryType === 'stock' ? 'stock' : categoryType === 'fixed-asset' ? 'asset' : 'expense'} categories found. Add your first one above!
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {activeTab === 'expenses' && (
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-left">
-                                                    <thead>
-                                                        <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                            <th className="pb-4 pl-4">Date</th>
-                                                            <th className="pb-4">Name</th>
-                                                            <th className="pb-4">Category</th>
-                                                            <th className="pb-4">Amount</th>
-                                                            <th className="pb-4">Description</th>
-                                                            <th className="pb-4 text-right pr-4">Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-50">
-                                                        {filteredOperationalExpenses.map((expense) => (
-                                                            <tr key={expense._id} className="group hover:bg-gray-50/50 transition-colors">
-                                                                <td className="py-5 pl-4">
-                                                                    <p className="font-bold text-slate-800">{new Date(expense.date).toLocaleDateString()}</p>
-                                                                </td>
-                                                                <td className="py-5">
-                                                                    <p className="font-black text-slate-800">{expense.name || <span className="text-gray-300 italic">—</span>}</p>
-                                                                </td>
-                                                                <td className="py-5 text-sm font-bold text-gray-600">
-                                                                    {expense.category}
-                                                                </td>
-                                                                <td className="py-5">
-                                                                    <p className="text-xl font-black text-red-600">
-                                                                        {expense.amount.toLocaleString()}
-                                                                        <span className="text-[10px] font-bold text-gray-400 ml-1">ETB</span>
-                                                                    </p>
-                                                                </td>
-                                                                <td className="py-5 text-xs text-gray-400 max-w-[200px] truncate">
-                                                                    {expense.description}
-                                                                </td>
-                                                                <td className="py-5 text-right pr-4">
-                                                                    {user?.role === "admin" && (
-                                                                        <div className="flex justify-end gap-2">
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    setEditingOperationalExpense(expense);
-                                                                                    setOperationalExpenseFormData({
-                                                                                        date: new Date(expense.date).toISOString().split('T')[0],
-                                                                                        name: expense.name || "",
-                                                                                        category: expense.category,
-                                                                                        amount: expense.amount.toString(),
-                                                                                        description: expense.description || ""
-                                                                                    });
-                                                                                    setShowOperationalExpenseForm(true);
-                                                                                }}
-                                                                                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
-                                                                            >
-                                                                                <Edit2 size={16} />
-                                                                            </button>
-                                                                            <button onClick={() => deleteOperationalExpense(expense._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
-                                                                                <Trash2 size={16} />
-                                                                            </button>
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                        {filteredOperationalExpenses.length === 0 && (
-                                                            <tr>
-                                                                <td colSpan={5} className="py-20 text-center text-gray-300 text-sm italic">
-                                                                    No expenses found for this period.
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
-
-                                        {activeTab === 'transfers' && (
-                                            <div className="space-y-4">
-                                                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
-                                                    <div className="flex bg-gray-100/50 rounded-xl p-1">
-                                                        <button onClick={() => { setTransferFilterStatus("all"); fetchTransferRequests("all"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "all" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>All</button>
-                                                        <button onClick={() => { setTransferFilterStatus("pending"); fetchTransferRequests("pending"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "pending" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Pending</button>
-                                                        <button onClick={() => { setTransferFilterStatus("approved"); fetchTransferRequests("approved"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "approved" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Approved</button>
-                                                        <button onClick={() => { setTransferFilterStatus("denied"); fetchTransferRequests("denied"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "denied" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Denied</button>
-                                                    </div>
-                                                    <button onClick={() => setShowTransferRequestForm(true)} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-sm shadow-emerald-600/20">
-                                                        <Plus size={14} /> New Request
-                                                    </button>
-                                                </div>
-
-                                                {transfersLoading ? (
-                                                    <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                                                        <History className="w-16 h-16 animate-spin-slow mb-4" />
-                                                        <p className="font-black uppercase tracking-widest text-xs">Loading Transfers...</p>
-                                                    </div>
-                                                ) : transferRequests.length === 0 ? (
-                                                    <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
-                                                        <Package className="h-12 w-12 text-gray-200 mb-4" />
-                                                        <h3 className="text-lg font-black text-gray-400">No Transfer Requests</h3>
-                                                        <p className="text-gray-400 text-xs font-bold mt-1 uppercase tracking-widest">
-                                                            No requests found for this filter
-                                                        </p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="grid gap-4">
-                                                        {transferRequests.filter(req =>
-                                                            req.stockId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                                            req.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-                                                        ).map(req => (
-                                                            <div key={req._id} className="p-5 hover:bg-gray-50/50 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-gray-100 rounded-2xl group bg-white">
-                                                                <div className="flex gap-4 items-center">
-                                                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm ${req.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
-                                                                            req.status === 'denied' ? 'bg-red-50 text-red-600' :
-                                                                                'bg-amber-50 text-amber-600'
-                                                                        }`}>
-                                                                        <ArrowRightLeft className="h-5 w-5" />
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <h3 className="text-base font-black text-gray-900">{req.stockId?.name}</h3>
-                                                                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${req.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
-                                                                                    req.status === 'denied' ? 'bg-red-50 text-red-600' :
-                                                                                        'bg-amber-50 text-amber-600'
-                                                                                }`}>
-                                                                                {req.status}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                                                            <span className="flex items-center gap-1"><Package className="h-3 w-3" /> {req.quantity} {req.stockId?.unit}</span>
-                                                                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(req.createdAt).toLocaleDateString()}</span>
-                                                                            <span className="text-gray-300">By {req.requestedBy?.name}</span>
-                                                                        </div>
-                                                                        {req.notes && <p className="text-xs text-gray-500 italic mt-1">{req.notes}</p>}
-                                                                        {req.status === 'denied' && req.denialReason && (
-                                                                            <p className="text-xs text-red-500 font-bold mt-1 flex items-center gap-1">
-                                                                                <AlertTriangle size={12} /> Reason: {req.denialReason}
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex flex-col items-end gap-2">
-                                                                    {req.status === 'pending' && user?.role === 'admin' ? (
-                                                                        <div className="flex gap-2">
-                                                                            <button onClick={() => handleTransferAction(req._id, 'approved')} className="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all">Approve</button>
-                                                                            <button onClick={() => setDenialModal({ isOpen: true, requestId: req._id, reason: "" })} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all">Deny</button>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                                            {req.handledBy ? `Handled by ${req.handledBy.name}` : ''}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {filteredOperationalExpenses.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={5} className="py-20 text-center text-gray-300 text-sm italic">
+                                                            No expenses found for this period.
+                                                        </td>
+                                                    </tr>
                                                 )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+                                {activeTab === 'transfers' && (
+                                    <div className="space-y-4">
+                                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+                                            <div className="flex bg-gray-100/50 rounded-xl p-1">
+                                                <button onClick={() => { setTransferFilterStatus("all"); fetchTransferRequests("all"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "all" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>All</button>
+                                                <button onClick={() => { setTransferFilterStatus("pending"); fetchTransferRequests("pending"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "pending" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Pending</button>
+                                                <button onClick={() => { setTransferFilterStatus("approved"); fetchTransferRequests("approved"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "approved" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Approved</button>
+                                                <button onClick={() => { setTransferFilterStatus("denied"); fetchTransferRequests("denied"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "denied" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Denied</button>
+                                            </div>
+                                            <button onClick={() => setShowTransferRequestForm(true)} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-sm shadow-emerald-600/20">
+                                                <Plus size={14} /> New Request
+                                            </button>
+                                        </div>
+
+                                        {transfersLoading ? (
+                                            <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                                                <History className="w-16 h-16 animate-spin-slow mb-4" />
+                                                <p className="font-black uppercase tracking-widest text-xs">Loading Transfers...</p>
+                                            </div>
+                                        ) : transferRequests.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
+                                                <Package className="h-12 w-12 text-gray-200 mb-4" />
+                                                <h3 className="text-lg font-black text-gray-400">No Transfer Requests</h3>
+                                                <p className="text-gray-400 text-xs font-bold mt-1 uppercase tracking-widest">
+                                                    No requests found for this filter
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="grid gap-4">
+                                                {transferRequests.filter(req =>
+                                                    req.stockId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                    req.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+                                                ).map(req => (
+                                                    <div key={req._id} className="p-5 hover:bg-gray-50/50 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-gray-100 rounded-2xl group bg-white">
+                                                        <div className="flex gap-4 items-center">
+                                                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm ${req.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
+                                                                req.status === 'denied' ? 'bg-red-50 text-red-600' :
+                                                                    'bg-amber-50 text-amber-600'
+                                                                }`}>
+                                                                <ArrowRightLeft className="h-5 w-5" />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-3">
+                                                                    <h3 className="text-base font-black text-gray-900">{req.stockId?.name}</h3>
+                                                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${req.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
+                                                                        req.status === 'denied' ? 'bg-red-50 text-red-600' :
+                                                                            'bg-amber-50 text-amber-600'
+                                                                        }`}>
+                                                                        {req.status}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                                    <span className="flex items-center gap-1"><Package className="h-3 w-3" /> {req.quantity} {req.stockId?.unit}</span>
+                                                                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(req.createdAt).toLocaleDateString()}</span>
+                                                                    <span className="text-gray-300">By {req.requestedBy?.name}</span>
+                                                                </div>
+                                                                {req.notes && <p className="text-xs text-gray-500 italic mt-1">{req.notes}</p>}
+                                                                {req.status === 'denied' && req.denialReason && (
+                                                                    <p className="text-xs text-red-500 font-bold mt-1 flex items-center gap-1">
+                                                                        <AlertTriangle size={12} /> Reason: {req.denialReason}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-2">
+                                                            {req.status === 'pending' && user?.role === 'admin' ? (
+                                                                <div className="flex gap-2">
+                                                                    <button onClick={() => handleTransferAction(req._id, 'approved')} className="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all">Approve</button>
+                                                                    <button onClick={() => setDenialModal({ isOpen: true, requestId: req._id, reason: "" })} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all">Deny</button>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                                    {req.handledBy ? `Handled by ${req.handledBy.name}` : ''}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
-                                    </>
+                                    </div>
                                 )}
                             </motion.div>
                         </div>
                     </div>
                 </div>
-
-                {/* Modals (Copy from Stock page but adapted) */}
                 <AnimatePresence>
                     {showForm && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
@@ -1944,7 +1933,7 @@ export default function StorePage() {
                     message={notificationState.options.message}
                     type={notificationState.options.type}
                 />
-            </div>
-        </ProtectedRoute>
+            </div >
+        </ProtectedRoute >
     )
 }

@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { BentoNavbar } from "@/components/bento-navbar"
 import { AnimatedButton } from "@/components/animated-button"
 import { useAuth } from "@/context/auth-context"
+import QRCode from "qrcode"
 
 import { useLanguage } from "@/context/language-context"
 import { compressImage, validateImageFile } from "@/lib/utils/image-utils"
@@ -85,6 +86,9 @@ export default function AdminMenuPage() {
   const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [categoryLoading, setCategoryLoading] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
+  const [showQrModal, setShowQrModal] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string>("")
+  const [qrGenerating, setQrGenerating] = useState(false)
 
   useEffect(() => {
     if (token) {
@@ -468,6 +472,50 @@ export default function AdminMenuPage() {
     setShowCreateForm(false)
   }
 
+  const handleGenerateQr = useCallback(async () => {
+    setQrGenerating(true)
+    try {
+      const menuUrl = `https://abekurt.vercel.app/public-menu`
+      const dataUrl = await QRCode.toDataURL(menuUrl, {
+        width: 512,
+        margin: 2,
+        color: { dark: '#1a1a1a', light: '#ffffff' },
+        errorCorrectionLevel: 'H',
+      })
+      setQrDataUrl(dataUrl)
+      setShowQrModal(true)
+    } catch (err) {
+      console.error('QR generation error:', err)
+      notify({ title: 'Error', message: 'Failed to generate QR code', type: 'error' })
+    } finally {
+      setQrGenerating(false)
+    }
+  }, [notify])
+
+  const handleDownloadQr = () => {
+    if (!qrDataUrl) return
+    const link = document.createElement('a')
+    link.download = 'menu-qr-code.png'
+    link.href = qrDataUrl
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handlePrintQr = () => {
+    if (!qrDataUrl) return
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.write(`
+        <html><head><title>Menu QR Code</title>
+        <style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:sans-serif;}
+        img{width:400px;height:400px;}h2{margin-bottom:8px;}p{color:#666;margin-top:0;}</style></head>
+        <body><h2>Scan to View Menu</h2><p>Point your camera at the QR code</p>
+        <img src="${qrDataUrl}" /><script>setTimeout(()=>{window.print();window.close()},500)<\/script></body></html>`)
+      win.document.close()
+    }
+  }
+
   return (
     <ProtectedRoute requiredRoles={["admin"]}>
       <div className="min-h-screen bg-gray-50 p-6">
@@ -506,12 +554,21 @@ export default function AdminMenuPage() {
                         </button>
                       </div>
 
-                      <button
-                        onClick={handleExportCSV}
-                        className="w-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-black py-2.5 rounded-xl transition-all text-[9px] uppercase tracking-widest border border-white/10 flex items-center justify-center gap-2"
-                      >
-                        📥 {t("adminMenu.exportCsv") || "Export CSV"}
-                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={handleExportCSV}
+                          className="bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-black py-2.5 rounded-xl transition-all text-[9px] uppercase tracking-widest border border-white/10 flex items-center justify-center gap-2"
+                        >
+                          📥 {t("adminMenu.exportCsv") || "Export CSV"}
+                        </button>
+                        <button
+                          onClick={handleGenerateQr}
+                          disabled={qrGenerating}
+                          className="bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-black py-2.5 rounded-xl transition-all text-[9px] uppercase tracking-widest border border-white/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {qrGenerating ? '⏳' : '📱'} QR Menu
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -980,6 +1037,46 @@ export default function AdminMenuPage() {
           onChange={setNewCategoryName}
           t={t}
         />
+
+        {/* QR Code Modal */}
+        {showQrModal && qrDataUrl && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-sm w-full relative overflow-hidden">
+              <button
+                onClick={() => setShowQrModal(false)}
+                className="absolute top-5 right-5 w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center font-bold text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all z-10"
+              >✕</button>
+
+              <div className="p-8 flex flex-col items-center">
+                <h2 className="text-2xl font-black text-gray-900 mb-1 tracking-tight">📱 Menu QR Code</h2>
+                <p className="text-sm text-gray-400 mb-6">Customers scan this to view the menu</p>
+
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-6">
+                  <img src={qrDataUrl} alt="Menu QR Code" className="w-64 h-64" />
+                </div>
+
+                <p className="text-xs text-gray-400 mb-6 text-center font-medium break-all">
+                  https://abekurt.vercel.app/public-menu
+                </p>
+
+                <div className="flex gap-3 w-full">
+                  <button
+                    onClick={handleDownloadQr}
+                    className="flex-1 bg-[#8B4513] text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-[#A0522D] transition-colors shadow-lg flex items-center justify-center gap-2"
+                  >
+                    📥 Download
+                  </button>
+                  <button
+                    onClick={handlePrintQr}
+                    className="flex-1 bg-gray-100 text-gray-700 font-black py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    🖨️ Print
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Confirmation and Notification Cards */}
         <ConfirmationCard

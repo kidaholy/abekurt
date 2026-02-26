@@ -51,8 +51,8 @@ export async function POST(request: Request) {
     await connectDB()
     console.log("📊 Database connected for menu item creation")
 
-    const { menuId, name, category, price, description, image, preparationTime, available, stockItemId, stockConsumption } = await request.json()
-    console.log("📝 Menu item data received:", { menuId, name, category, price, stockItemId })
+    const { menuId, name, mainCategory, category, price, description, image, preparationTime, available, stockItemId, stockConsumption } = await request.json()
+    console.log("📝 Menu item data received:", { menuId, name, mainCategory, category, price, stockItemId })
 
     if (!name || !category || !price) {
       return NextResponse.json({ message: "Name, category, and price are required" }, { status: 400 })
@@ -116,6 +116,7 @@ export async function POST(request: Request) {
     const menuItem = new MenuItem({
       menuId: finalMenuId,
       name: name.trim(),
+      mainCategory: mainCategory || 'Food',
       category: category.trim().normalize("NFC"),
       price: Number(price),
       description,

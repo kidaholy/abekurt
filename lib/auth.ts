@@ -30,7 +30,7 @@ export function verifyToken(token: string): TokenPayload {
  * Uses a lightweight in-memory cache to reduce DB load for frequent polling.
  */
 const sessionCache = new Map<string, { isActive: boolean; timestamp: number }>()
-const CACHE_TTL = 30000 // 30 seconds
+const CACHE_TTL = 300000 // 5 minutes
 
 export async function validateSession(request: Request): Promise<TokenPayload> {
     const token = request.headers.get("authorization")?.replace("Bearer ", "")

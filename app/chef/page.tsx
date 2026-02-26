@@ -47,7 +47,7 @@ export default function KitchenDisplayPage() {
       fetchOrders()
       fetchChefCategories()
     }
-    const interval = setInterval(fetchOrders, 10000)
+    const interval = setInterval(fetchOrders, 3000)
     return () => clearInterval(interval)
   }, [token])
 
@@ -89,8 +89,8 @@ export default function KitchenDisplayPage() {
 
   const fetchOrders = async () => {
     try {
-      // 🚀 HYDRATION CACHE: Load from localStorage on first load
-      if (orders.length === 0) {
+      // 🚀 HYDRATION CACHE: Load from localStorage on very first load
+      if (loading) {
         const cached = localStorage.getItem("chef_orders_cache")
         if (cached) {
           try {
@@ -295,7 +295,7 @@ export default function KitchenDisplayPage() {
               <p className="text-gray-600">Loading kitchen orders...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <OrderColumn
                 title="Preparing"
                 color="blue"
@@ -370,9 +370,9 @@ function OrderColumn({
   return (
     <div className={`rounded-xl p-4 border ${colorClasses[color]} min-h-[500px]`}>
       <h2 className="text-lg font-bold text-gray-900 mb-4">{title}</h2>
-      <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
+      <div className="grid grid-cols-2 gap-3 max-h-[calc(100vh-300px)] overflow-y-auto">
         {orders.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">No orders</p>
+          <p className="col-span-2 text-center text-gray-500 py-8">No orders</p>
         ) : (
           orders.map(order => (
             <OrderCard
@@ -453,8 +453,8 @@ function OrderCard({
               <div className="flex items-center gap-2">
                 {item.status && item.status !== 'pending' && (
                   <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-tight shadow-sm border ${item.status === 'ready' ? 'bg-green-100 text-green-700 border-green-200' :
-                      item.status === 'preparing' ? 'bg-blue-600 text-white border-blue-700' :
-                        'bg-gray-100 text-gray-600 border-gray-200'
+                    item.status === 'preparing' ? 'bg-blue-600 text-white border-blue-700' :
+                      'bg-gray-100 text-gray-600 border-gray-200'
                     }`}>
                     {item.status}
                   </span>
@@ -467,33 +467,83 @@ function OrderCard({
           ))}
         </div>
 
-        <div className="flex gap-2">
-          {order.status === "preparing" && (
-            <>
-              <button
-                onClick={() => onStatusChange(order._id, "ready")}
-                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors"
-              >
-                Mark Ready
-              </button>
-              <button
-                onClick={() => onCancelOrder(order._id)}
-                className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors"
-              >
-                ✕
-              </button>
-            </>
-          )}
-          {order.status === "ready" && (
-            <button
-              onClick={() => onStatusChange(order._id, "completed")}
-              className="flex-1 bg-gray-800 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-gray-900 transition-colors"
-            >
-              Complete
-            </button>
-          )}
-        </div>
+        <OrderCardActions
+          order={order}
+          onStatusChange={onStatusChange}
+          onCancelOrder={onCancelOrder}
+        />
       </CardContent>
     </Card>
   )
+}
+
+function OrderCardActions({
+  order,
+  onStatusChange,
+  onCancelOrder,
+}: {
+  order: Order
+  onStatusChange: (orderId: string, newStatus: string) => void
+  onCancelOrder: (orderId: string) => void
+}) {
+  const [busy, setBusy] = useState(false)
+
+  const handleClick = (newStatus: string) => {
+    if (busy) return
+    setBusy(true)
+    onStatusChange(order._id, newStatus)
+    // Reset after 3s as safety fallback (card will unmount on success anyway)
+    setTimeout(() => setBusy(false), 3000)
+  }
+
+  if (order.status === "preparing") {
+    return (
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleClick("ready")}
+          disabled={busy}
+          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {busy ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+              Updating...
+            </>
+          ) : "✅ Mark Ready"}
+        </button>
+        <button
+          onClick={() => onCancelOrder(order._id)}
+          disabled={busy}
+          className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors disabled:opacity-50"
+        >
+          ✕
+        </button>
+      </div>
+    )
+  }
+
+  if (order.status === "ready") {
+    return (
+      <button
+        onClick={() => handleClick("completed")}
+        disabled={busy}
+        className="w-full bg-gray-800 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {busy ? (
+          <>
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+            Completing...
+          </>
+        ) : "🏁 Complete Order"}
+      </button>
+    )
+  }
+
+  return null
 }

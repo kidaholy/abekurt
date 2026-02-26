@@ -437,24 +437,24 @@ export default function AdminMenuPage() {
     const headers = ["Menu ID", "Name", "Category", "Price", "Available", "Description"]
     const rows = menuItems.map(item => [
       item.menuId || "",
-      item.name,
-      item.category,
+      `"${(item.name || "").replace(/"/g, '""')}"`,
+      `"${(item.category || "").replace(/"/g, '""')}"`,
       item.price,
       item.available ? "Yes" : "No",
-      item.description || ""
+      `"${(item.description || "").replace(/"/g, '""')}"`
     ])
 
-    let csvContent = "data:text/csv;charset=utf-8,"
-      + headers.join(",") + "\n"
-      + rows.map(e => e.join(",")).join("\n")
+    const csvContent = headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n")
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
 
-    const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
+    link.href = url
     link.setAttribute("download", `menu_export_${new Date().toISOString().split('T')[0]}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const resetForm = () => {

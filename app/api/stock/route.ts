@@ -14,7 +14,7 @@ export async function GET(request: Request) {
         const decoded = await validateSession(request)
         console.log("📦 Admin fetching stock items:", decoded.email || decoded.id)
 
-        if (decoded.role !== "admin" && decoded.role !== "super-admin") {
+        if (decoded.role !== "admin" && decoded.role !== "super-admin" && decoded.role !== "store_keeper") {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 })
         }
 

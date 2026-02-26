@@ -11,7 +11,7 @@ export async function GET(request: Request) {
         const period = searchParams.get("period") || "month"
 
         const decoded = await validateSession(request)
-        if (decoded.role !== "admin" && decoded.role !== "super-admin") {
+        if (decoded.role !== "admin" && decoded.role !== "super-admin" && decoded.role !== "store_keeper") {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 })
         }
 
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         await connectDB()
 
         const body = await request.json()
-        const { _id, date, category, amount, description } = body
+        const { _id, date, category, amount, description, name } = body
 
         if (!date || !category || amount === undefined) {
             return NextResponse.json({ message: "Date, category, and amount are required" }, { status: 400 })
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
 
         const expenseData = {
             date: new Date(date),
+            name: name || "",
             category,
             amount: Number(amount),
             description: description || ""

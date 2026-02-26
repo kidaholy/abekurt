@@ -8,7 +8,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: "admin" | "cashier" | "chef" | "display"
+  role: "admin" | "cashier" | "chef" | "display" | "store_keeper"
   batchId?: string
   batchNumber?: string
 }
@@ -113,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cashier: "/cashier",
       chef: "/chef",
       display: "/display",
+      store_keeper: "/admin/store",
     }
     router.push(roleRoutes[data.user.role] || "/login")
   }

@@ -5,7 +5,7 @@ interface IUser {
   email: string
   password: string
   plainPassword?: string
-  role: "admin" | "cashier" | "chef" | "display"
+  role: "admin" | "cashier" | "chef" | "display" | "store_keeper"
   isActive: boolean
   batchId?: mongoose.Types.ObjectId | string
   assignedCategories?: string[]
@@ -19,7 +19,7 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     plainPassword: { type: String },
-    role: { type: String, enum: ["admin", "cashier", "chef", "display"], default: "cashier" },
+    role: { type: String, enum: ["admin", "cashier", "chef", "display", "store_keeper"], default: "cashier" },
     isActive: { type: Boolean, default: true },
     batchId: { type: Schema.Types.ObjectId, ref: "Batch" },
     assignedCategories: [{ type: String }],
@@ -27,6 +27,10 @@ const userSchema = new Schema<IUser>(
   { timestamps: true },
 )
 
-const User = mongoose.models.User || mongoose.model<IUser>("User", userSchema)
+// Force model re-registration to clear any ghost schemas
+if (mongoose.models.User) {
+  delete mongoose.models.User
+}
+const User = mongoose.model<IUser>("User", userSchema)
 
 export default User

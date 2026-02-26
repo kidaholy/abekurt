@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose"
 
 export interface IOperationalExpense extends Document {
+    name?: string
     date: Date
     category: string
     amount: number
@@ -21,6 +22,7 @@ const OperationalExpenseSchema = new Schema<IOperationalExpense>(
                 return date;
             }
         },
+        name: { type: String },
         category: { type: String, required: true },
         amount: { type: Number, required: true },
         description: { type: String },

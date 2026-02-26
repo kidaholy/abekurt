@@ -14,7 +14,7 @@ interface User {
   email: string
   password: string
   plainPassword?: string
-  role: "admin" | "chef" | "cashier" | "display"
+  role: "admin" | "chef" | "cashier" | "display" | "store_keeper"
   isActive: boolean
   batchId?: string
   assignedCategories?: string[]
@@ -35,7 +35,7 @@ export default function AdminUsersPage() {
     name: "",
     email: "",
     password: "",
-    role: "cashier" as "admin" | "chef" | "cashier" | "display",
+    role: "cashier" as "admin" | "chef" | "cashier" | "display" | "store_keeper",
     batchId: "",
     assignedCategories: [] as string[],
   })
@@ -297,8 +297,9 @@ export default function AdminUsersPage() {
                         : u.role === "chef"
                           ? { color: "bg-orange-600 text-white", label: "Chef" }
                           : u.role === "display"
-                            ? { color: "bg-purple-600 text-white", label: "Display" }
-                            : { color: "bg-[#CD853F] text-white", label: "Cashier" }
+                            ? { color: "bg-purple-600 text-white", label: "Display" } :
+                            u.role === "store_keeper" ? { color: "bg-emerald-600 text-white", label: "Store Keeper" }
+                              : { color: "bg-[#CD853F] text-white", label: "Cashier" }
 
                       return (
                         <div key={u._id} className={`bg-gray-50 rounded-2xl p-5 border transition-all flex flex-col relative group ${!u.isActive ? 'opacity-60 grayscale border-dashed border-gray-300' : 'border-gray-100 hover:border-[#8B4513]/30 hover:shadow-xl'}`}>
@@ -309,7 +310,7 @@ export default function AdminUsersPage() {
                             </div>
                           )}
                           <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-2xl flex items-center justify-center text-2xl md:text-3xl mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                            {u.role === "admin" ? "🎩" : u.role === "chef" ? "🍳" : u.role === "display" ? "📺" : "☕"}
+                            {u.role === "admin" ? "🎩" : u.role === "chef" ? "🍳" : u.role === "display" ? "📺" : u.role === "store_keeper" ? "📦" : "☕"}
                           </div>
                           {u.role === "chef" && u.assignedCategories && u.assignedCategories.length > 0 && (
                             <div className="mb-3 flex flex-wrap gap-1.5 pt-1">
@@ -410,13 +411,13 @@ export default function AdminUsersPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-600 ml-2">{t("adminUsers.accessLevel")}</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {["cashier", "chef", "admin", "display"].map(r => (
+                    <div className="flex flex-wrap gap-2">
+                      {["cashier", "chef", "admin", "display", "store_keeper"].map(r => (
                         <button
                           key={r}
                           type="button"
                           onClick={() => setFormData({ ...formData, role: r as any })}
-                          className={`py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${formData.role === r ? "bg-[#8B4513] text-white shadow-lg" : "bg-gray-50 text-gray-400 hover:bg-gray-100"}`}
+                          className={`flex-1 min-w-[120px] py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${formData.role === r ? "bg-[#8B4513] text-white shadow-lg" : "bg-gray-50 text-gray-400 hover:bg-gray-100"}`}
                         >
                           {r === "display" ? "Display" : t(`adminUsers.${r}`)}
                         </button>

@@ -7,7 +7,7 @@ import { validateSession } from "@/lib/auth"
 export async function GET(request: Request) {
     try {
         const decoded = await validateSession(request)
-        if (decoded.role !== "admin" && decoded.role !== "super-admin") {
+        if (decoded.role !== "admin" && decoded.role !== "super-admin" && decoded.role !== "store_keeper") {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 })
         }
 

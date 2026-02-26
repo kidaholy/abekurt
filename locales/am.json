@@ -76,6 +76,7 @@
         "browseMenu": "ሜኑ ይመልከቱ",
         "kitchen": "ወጥ ቤት",
         "logout": "ውጣ",
+        "transfers": "የውስጥ ዝውውር",
         "hi": "ሰላም"
     },
     "adminMenu": {
@@ -235,7 +236,8 @@
         "updateProfile": "ፕሮፋይል አዘምን",
         "admin": "አስተዳዳሪ",
         "chef": "Chef",
-        "cashier": "ካሺየር"
+        "cashier": "ካሺየር",
+        "storeKeeper": "መጋዘን ጠባቂ"
     },
     "adminReports": {
         "title": "ትንታኔ",

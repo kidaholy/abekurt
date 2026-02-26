@@ -77,9 +77,9 @@ export async function PUT(request: Request, context: any) {
     }
 
     // Validate role
-    if (role && !['admin', 'cashier', 'chef', 'display'].includes(role)) {
+    if (role && !['admin', 'cashier', 'chef', 'display', 'store_keeper'].includes(role)) {
       console.log("❌ Invalid role:", role)
-      return NextResponse.json({ message: "Invalid role. Must be admin, cashier, chef, or display" }, { status: 400 })
+      return NextResponse.json({ message: "Invalid role. Must be admin, cashier, chef, display, or store_keeper" }, { status: 400 })
     }
 
     // Extract user ID from URL as fallback

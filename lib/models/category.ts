@@ -17,11 +17,6 @@ const categorySchema = new Schema<ICategory>(
     { timestamps: true }
 )
 
-// In development, we might need to delete the model to refresh the schema
-if (process.env.NODE_ENV === "development") {
-    delete mongoose.models.Category
-}
-
 const Category = mongoose.models.Category || mongoose.model<ICategory>("Category", categorySchema)
 
 export default Category

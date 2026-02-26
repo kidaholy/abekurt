@@ -76,6 +76,7 @@
         "browseMenu": "Browse Menu",
         "kitchen": "Kitchen",
         "logout": "LOGOUT",
+        "transfers": "Internal Transfers",
         "hi": "Hi"
     },
     "adminMenu": {
@@ -235,7 +236,8 @@
         "updateProfile": "Update Profile",
         "admin": "Admin",
         "chef": "Chef",
-        "cashier": "Cashier"
+        "cashier": "Cashier",
+        "storeKeeper": "Store Keeper"
     },
     "adminReports": {
         "title": "Analytics",

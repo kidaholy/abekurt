@@ -11,9 +11,24 @@ import {
     Plus, Search, Trash2, Edit2, Calendar,
     DollarSign, TrendingUp, History,
     ChevronRight, Package, PlusCircle,
-    Wrench, AlertTriangle, ChevronDown, ChevronUp
+    Wrench, AlertTriangle, ChevronDown, ChevronUp,
+    ArrowRightLeft, Check, X as CloseIcon, Clock,
+    CheckCircle2, XCircle, Filter
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+
+interface TransferRequest {
+    _id: string
+    stockId: { _id: string; name: string; unit: string; storeQuantity: number; quantity: number }
+    quantity: number
+    status: 'pending' | 'approved' | 'denied'
+    requestedBy: { name: string }
+    handledBy?: { name: string }
+    denialReason?: string
+    notes?: string
+    createdAt: string
+    updatedAt: string
+}
 
 interface DailyExpense {
     _id: string
@@ -27,6 +42,7 @@ interface DailyExpense {
 
 interface OperationalExpense {
     _id: string
+    name?: string
     date: string
     category: string
     amount: number
@@ -77,7 +93,14 @@ interface FixedAsset {
 }
 
 export default function StorePage() {
-    const [activeTab, setActiveTab] = useState<"inventory" | "categories" | "fixed-assets" | "expenses">("inventory")
+    const { token, user } = useAuth()
+    const [activeTab, setActiveTab] = useState<"inventory" | "categories" | "fixed-assets" | "expenses" | "transfers">("inventory")
+
+    useEffect(() => {
+        if (user?.role === "store_keeper") {
+            setActiveTab("transfers")
+        }
+    }, [user])
     const [expenses, setExpenses] = useState<DailyExpense[]>([])
     const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([])
     const [stockItems, setStockItems] = useState<StockItem[]>([])
@@ -120,6 +143,16 @@ export default function StorePage() {
     const [dismissQuantity, setDismissQuantity] = useState("")
     const [dismissValue, setDismissValue] = useState("")
     const [expandedAsset, setExpandedAsset] = useState<string | null>(null)
+
+    // Transfer requests state
+    const [transferRequests, setTransferRequests] = useState<TransferRequest[]>([])
+    const [transfersLoading, setTransfersLoading] = useState(false)
+    const [transferFilterStatus, setTransferFilterStatus] = useState("all")
+    const [transferSearch, setTransferSearch] = useState("")
+    const [showTransferRequestForm, setShowTransferRequestForm] = useState(false)
+    const [transferRequestSaving, setTransferRequestSaving] = useState(false)
+    const [newTransferRequest, setNewTransferRequest] = useState({ stockId: "", quantity: "", notes: "" })
+    const [denialModal, setDenialModal] = useState<{ isOpen: boolean; requestId: string; reason: string }>({ isOpen: false, requestId: "", reason: "" })
     const [assetFormData, setAssetFormData] = useState({
         name: "",
         category: "Kitchen Equipment",
@@ -138,6 +171,7 @@ export default function StorePage() {
 
     const [operationalExpenseFormData, setOperationalExpenseFormData] = useState({
         date: new Date().toISOString().split('T')[0],
+        name: "",
         category: "",
         amount: "",
         description: ""
@@ -156,7 +190,6 @@ export default function StorePage() {
         showStatus: true
     })
 
-    const { token } = useAuth()
     const { t } = useLanguage()
     const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
 
@@ -169,6 +202,7 @@ export default function StorePage() {
             fetchAssetCategories()
             fetchExpenseCategories()
             fetchFixedAssets()
+            fetchTransferRequests()
         }
 
         const timeout = setTimeout(() => {
@@ -740,7 +774,10 @@ export default function StorePage() {
         setSaveLoading(true)
         try {
             const amount = Number(transferAmount)
-            const response = await fetch('/api/store/transfer', {
+            const isStoreKeeper = user?.role === 'store_keeper'
+            const endpoint = isStoreKeeper ? '/api/inventory/transfers' : '/api/store/transfer'
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -759,8 +796,10 @@ export default function StorePage() {
                 setTransferringItem(null)
                 setTransferAmount("")
                 notify({
-                    title: "Transfer Successful",
-                    message: `Moved ${amount} ${transferringItem.unit} to active (POS) stock.`,
+                    title: isStoreKeeper ? "Transfer Requested" : "Transfer Successful",
+                    message: isStoreKeeper
+                        ? `Request for ${amount} ${transferringItem.unit} sent to admin.`
+                        : `Moved ${amount} ${transferringItem.unit} to active (POS) stock.`,
                     type: "success"
                 })
             } else {
@@ -781,6 +820,54 @@ export default function StorePage() {
         } finally {
             setSaveLoading(false)
         }
+    }
+
+    const fetchTransferRequests = async (status?: string) => {
+        setTransfersLoading(true)
+        try {
+            const q = (status || transferFilterStatus) !== "all" ? `?status=${status || transferFilterStatus}` : ""
+            const res = await fetch(`/api/inventory/transfers${q}`, { headers: { Authorization: `Bearer ${token}` } })
+            if (res.ok) setTransferRequests(await res.json())
+        } catch (e) { console.error("Failed to fetch transfers", e) }
+        finally { setTransfersLoading(false) }
+    }
+
+    const handleCreateTransferRequest = async () => {
+        setTransferRequestSaving(true)
+        try {
+            const res = await fetch("/api/inventory/transfers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ stockId: newTransferRequest.stockId, quantity: parseFloat(newTransferRequest.quantity), notes: newTransferRequest.notes })
+            })
+            if (res.ok) {
+                setShowTransferRequestForm(false)
+                setNewTransferRequest({ stockId: "", quantity: "", notes: "" })
+                fetchTransferRequests()
+            } else {
+                const err = await res.json()
+                notify({ title: "Request Failed", message: err.message || "Failed to create request", type: "error" })
+            }
+        } catch (e) { console.error("Error creating transfer", e) }
+        finally { setTransferRequestSaving(false) }
+    }
+
+    const handleTransferAction = async (id: string, action: 'approved' | 'denied', reason?: string) => {
+        try {
+            const res = await fetch(`/api/admin/inventory/transfers/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ action, denialReason: reason })
+            })
+            if (res.ok) {
+                setDenialModal({ isOpen: false, requestId: "", reason: "" })
+                fetchTransferRequests()
+                notify({ title: action === 'approved' ? "Transfer Approved" : "Request Denied", message: `Transfer request has been ${action}.`, type: action === 'approved' ? "success" : "error" })
+            } else {
+                const err = await res.json()
+                notify({ title: "Action Failed", message: err.message, type: "error" })
+            }
+        } catch (e) { console.error(`Error during ${action}`, e) }
     }
 
     const openTransferModal = (item: StockItem) => {
@@ -883,6 +970,7 @@ export default function StorePage() {
     const resetOperationalExpenseForm = () => {
         setOperationalExpenseFormData({
             date: new Date().toISOString().split('T')[0],
+            name: "",
             category: expenseCategories.length > 0 ? expenseCategories[0].name : "",
             amount: "",
             description: ""
@@ -915,7 +1003,7 @@ export default function StorePage() {
     }
 
     return (
-        <ProtectedRoute requiredRoles={["admin"]}>
+        <ProtectedRoute requiredRoles={["admin", "store_keeper"]}>
             <div className="min-h-screen bg-gray-50 p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
                     <BentoNavbar />
@@ -954,47 +1042,49 @@ export default function StorePage() {
                                 </div>
                             </motion.div>
 
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 }}
-                                className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
-                            >
-                                <h2 className="text-lg font-bold text-gray-900 mb-2">Bulk Actions</h2>
-                                <p className="text-gray-500 text-sm mb-4">Add new items to the store or record daily purchases.</p>
-                                <div className="space-y-3">
-                                    <button
-                                        onClick={() => { resetStockForm(); setShowStockForm(true); }}
-                                        className="w-full bg-[#8B4513] text-white py-3 rounded-lg font-medium hover:bg-[#5D4037] transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Plus className="w-4 h-4" /> Add New Item
-                                    </button>
-                                    <button
-                                        onClick={() => { resetExpenseForm(); setShowForm(true); }}
-                                        className="w-full bg-white text-[#8B4513] border border-[#8B4513] py-3 rounded-lg font-medium hover:bg-[#8B4513]/5 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <DollarSign className="w-4 h-4" /> Record Purchase
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('categories')}
-                                        className="w-full bg-slate-50 text-slate-600 border border-slate-200 py-3 rounded-lg font-medium hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <PlusCircle className="w-4 h-4" /> Manage Categories
-                                    </button>
-                                    <button
-                                        onClick={() => { resetOperationalExpenseForm(); setShowOperationalExpenseForm(true); }}
-                                        className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-lg font-medium hover:bg-red-100 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <DollarSign className="w-4 h-4" /> Add Op. Expense
-                                    </button>
-                                    <button
-                                        onClick={() => { resetAssetForm(); setShowAssetForm(true); }}
-                                        className="w-full bg-amber-600 text-white py-3 rounded-lg font-medium hover:bg-amber-700 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Wrench className="w-4 h-4" /> Add Fixed Asset
-                                    </button>
-                                </div>
-                            </motion.div>
+                            {user?.role === "admin" && (
+                                <motion.div
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.1 }}
+                                    className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+                                >
+                                    <h2 className="text-lg font-bold text-gray-900 mb-2">Bulk Actions</h2>
+                                    <p className="text-gray-500 text-sm mb-4">Add new items to the store or record daily purchases.</p>
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={() => { resetStockForm(); setShowStockForm(true); }}
+                                            className="w-full bg-[#8B4513] text-white py-3 rounded-lg font-medium hover:bg-[#5D4037] transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Plus className="w-4 h-4" /> Add New Item
+                                        </button>
+                                        <button
+                                            onClick={() => { resetExpenseForm(); setShowForm(true); }}
+                                            className="w-full bg-white text-[#8B4513] border border-[#8B4513] py-3 rounded-lg font-medium hover:bg-[#8B4513]/5 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <DollarSign className="w-4 h-4" /> Record Purchase
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('categories')}
+                                            className="w-full bg-slate-50 text-slate-600 border border-slate-200 py-3 rounded-lg font-medium hover:bg-slate-100 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <PlusCircle className="w-4 h-4" /> Manage Categories
+                                        </button>
+                                        <button
+                                            onClick={() => { resetOperationalExpenseForm(); setShowOperationalExpenseForm(true); }}
+                                            className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-lg font-medium hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <DollarSign className="w-4 h-4" /> Add Op. Expense
+                                        </button>
+                                        <button
+                                            onClick={() => { resetAssetForm(); setShowAssetForm(true); }}
+                                            className="w-full bg-amber-600 text-white py-3 rounded-lg font-medium hover:bg-amber-700 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Wrench className="w-4 h-4" /> Add Fixed Asset
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
                         </div>
 
                         {/* Main Content */}
@@ -1028,6 +1118,13 @@ export default function StorePage() {
                                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'expenses' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                     >
                                         Expenses
+                                    </button>
+                                    <button
+                                        onClick={() => { setActiveTab('transfers'); fetchTransferRequests(); }}
+                                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'transfers' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        <ArrowRightLeft className="h-3.5 w-3.5" />
+                                        Transfers
                                     </button>
                                 </div>
                             </div>
@@ -1101,18 +1198,22 @@ export default function StorePage() {
                                                                         >
                                                                             <ChevronRight size={12} /> Transfer
                                                                         </button>
-                                                                        <button
-                                                                            onClick={() => openRestockModal(item)}
-                                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase border border-blue-200"
-                                                                        >
-                                                                            <PlusCircle size={12} /> Restock
-                                                                        </button>
-                                                                        <button onClick={() => handleEditStock(item)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
-                                                                            <Edit2 size={16} />
-                                                                        </button>
-                                                                        <button onClick={() => deleteStockItem(item._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
-                                                                            <Trash2 size={16} />
-                                                                        </button>
+                                                                        {user?.role === "admin" && (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={() => openRestockModal(item)}
+                                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase border border-blue-200"
+                                                                                >
+                                                                                    <PlusCircle size={12} /> Restock
+                                                                                </button>
+                                                                                <button onClick={() => handleEditStock(item)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
+                                                                                    <Edit2 size={16} />
+                                                                                </button>
+                                                                                <button onClick={() => deleteStockItem(item._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
+                                                                                    <Trash2 size={16} />
+                                                                                </button>
+                                                                            </>
+                                                                        )}
                                                                     </div>
                                                                 </td>
                                                             </tr>
@@ -1179,20 +1280,24 @@ export default function StorePage() {
                                                                             )}
                                                                         </div>
                                                                         <div className="flex items-center gap-1">
-                                                                            {asset.status !== 'fully_dismissed' && (
-                                                                                <button
-                                                                                    onClick={() => openDismissModal(asset)}
-                                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase border border-red-200"
-                                                                                >
-                                                                                    <AlertTriangle size={12} /> Dismiss
-                                                                                </button>
+                                                                            {user?.role === "admin" && (
+                                                                                <>
+                                                                                    {asset.status !== 'fully_dismissed' && (
+                                                                                        <button
+                                                                                            onClick={() => openDismissModal(asset)}
+                                                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase border border-red-200"
+                                                                                        >
+                                                                                            <AlertTriangle size={12} /> Dismiss
+                                                                                        </button>
+                                                                                    )}
+                                                                                    <button onClick={() => handleEditAsset(asset)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
+                                                                                        <Edit2 size={16} />
+                                                                                    </button>
+                                                                                    <button onClick={() => deleteFixedAsset(asset._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
+                                                                                        <Trash2 size={16} />
+                                                                                    </button>
+                                                                                </>
                                                                             )}
-                                                                            <button onClick={() => handleEditAsset(asset)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400">
-                                                                                <Edit2 size={16} />
-                                                                            </button>
-                                                                            <button onClick={() => deleteFixedAsset(asset._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
-                                                                                <Trash2 size={16} />
-                                                                            </button>
                                                                             {asset.dismissals.length > 0 && (
                                                                                 <button
                                                                                     onClick={() => setExpandedAsset(isExpanded ? null : asset._id)}
@@ -1265,52 +1370,56 @@ export default function StorePage() {
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    <form onSubmit={handleSaveCategory} className="flex gap-3">
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Category Name (e.g. Vegetables)"
-                                                            value={newCategory.name}
-                                                            onChange={(e) => setNewCategory({ name: e.target.value })}
-                                                            className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-[#8B4513]/5"
-                                                            required
-                                                        />
-                                                        <button
-                                                            type="submit"
-                                                            disabled={saveLoading || !newCategory.name}
-                                                            className="bg-[#8B4513] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 hover:bg-[#A0522D] transition-all shadow-lg shadow-[#8B4513]/20"
-                                                        >
-                                                            {saveLoading ? "Saving..." : (editingCategory ? "Update" : "Add")}
-                                                        </button>
-                                                        {editingCategory && (
+                                                    {user?.role === "admin" && (
+                                                        <form onSubmit={handleSaveCategory} className="flex gap-3">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Category Name (e.g. Vegetables)"
+                                                                value={newCategory.name}
+                                                                onChange={(e) => setNewCategory({ name: e.target.value })}
+                                                                className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-[#8B4513]/5"
+                                                                required
+                                                            />
                                                             <button
-                                                                type="button"
-                                                                onClick={() => { setEditingCategory(null); setNewCategory({ name: "" }) }}
-                                                                className="bg-white text-gray-400 border border-gray-200 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-50"
+                                                                type="submit"
+                                                                disabled={saveLoading || !newCategory.name}
+                                                                className="bg-[#8B4513] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-50 hover:bg-[#A0522D] transition-all shadow-lg shadow-[#8B4513]/20"
                                                             >
-                                                                Cancel
+                                                                {saveLoading ? "Saving..." : (editingCategory ? "Update" : "Add")}
                                                             </button>
-                                                        )}
-                                                    </form>
+                                                            {editingCategory && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => { setEditingCategory(null); setNewCategory({ name: "" }) }}
+                                                                    className="bg-white text-gray-400 border border-gray-200 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-50"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            )}
+                                                        </form>
+                                                    )}
                                                 </div>
 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {(categoryType === 'stock' ? categories : categoryType === 'fixed-asset' ? assetCategories : expenseCategories).map((cat) => (
                                                         <div key={cat._id} className="p-4 bg-white border border-gray-100 rounded-2xl flex justify-between items-center group hover:border-[#8B4513] hover:shadow-md transition-all">
                                                             <div className="font-black text-lg text-gray-800">{cat.name}</div>
-                                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button
-                                                                    onClick={() => { setEditingCategory(cat); setNewCategory({ name: cat.name }) }}
-                                                                    className="text-gray-300 hover:text-[#8B4513] transition-colors p-2 rounded-lg hover:bg-[#8B4513]/5"
-                                                                >
-                                                                    <Edit2 size={16} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteCategory(cat._id)}
-                                                                    className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            </div>
+                                                            {user?.role === "admin" && (
+                                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        onClick={() => { setEditingCategory(cat); setNewCategory({ name: cat.name }) }}
+                                                                        className="text-gray-300 hover:text-[#8B4513] transition-colors p-2 rounded-lg hover:bg-[#8B4513]/5"
+                                                                    >
+                                                                        <Edit2 size={16} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteCategory(cat._id)}
+                                                                        className="text-gray-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                     {(categoryType === 'stock' ? categories : categoryType === 'fixed-asset' ? assetCategories : expenseCategories).length === 0 && (
@@ -1328,6 +1437,7 @@ export default function StorePage() {
                                                     <thead>
                                                         <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                                                             <th className="pb-4 pl-4">Date</th>
+                                                            <th className="pb-4">Name</th>
                                                             <th className="pb-4">Category</th>
                                                             <th className="pb-4">Amount</th>
                                                             <th className="pb-4">Description</th>
@@ -1339,6 +1449,9 @@ export default function StorePage() {
                                                             <tr key={expense._id} className="group hover:bg-gray-50/50 transition-colors">
                                                                 <td className="py-5 pl-4">
                                                                     <p className="font-bold text-slate-800">{new Date(expense.date).toLocaleDateString()}</p>
+                                                                </td>
+                                                                <td className="py-5">
+                                                                    <p className="font-black text-slate-800">{expense.name || <span className="text-gray-300 italic">—</span>}</p>
                                                                 </td>
                                                                 <td className="py-5 text-sm font-bold text-gray-600">
                                                                     {expense.category}
@@ -1353,26 +1466,29 @@ export default function StorePage() {
                                                                     {expense.description}
                                                                 </td>
                                                                 <td className="py-5 text-right pr-4">
-                                                                    <div className="flex justify-end gap-2">
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setEditingOperationalExpense(expense);
-                                                                                setOperationalExpenseFormData({
-                                                                                    date: new Date(expense.date).toISOString().split('T')[0],
-                                                                                    category: expense.category,
-                                                                                    amount: expense.amount.toString(),
-                                                                                    description: expense.description || ""
-                                                                                });
-                                                                                setShowOperationalExpenseForm(true);
-                                                                            }}
-                                                                            className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
-                                                                        >
-                                                                            <Edit2 size={16} />
-                                                                        </button>
-                                                                        <button onClick={() => deleteOperationalExpense(expense._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
-                                                                            <Trash2 size={16} />
-                                                                        </button>
-                                                                    </div>
+                                                                    {user?.role === "admin" && (
+                                                                        <div className="flex justify-end gap-2">
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setEditingOperationalExpense(expense);
+                                                                                    setOperationalExpenseFormData({
+                                                                                        date: new Date(expense.date).toISOString().split('T')[0],
+                                                                                        name: expense.name || "",
+                                                                                        category: expense.category,
+                                                                                        amount: expense.amount.toString(),
+                                                                                        description: expense.description || ""
+                                                                                    });
+                                                                                    setShowOperationalExpenseForm(true);
+                                                                                }}
+                                                                                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400"
+                                                                            >
+                                                                                <Edit2 size={16} />
+                                                                            </button>
+                                                                            <button onClick={() => deleteOperationalExpense(expense._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-300">
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -1385,6 +1501,89 @@ export default function StorePage() {
                                                         )}
                                                     </tbody>
                                                 </table>
+                                            </div>
+                                        )}
+
+                                        {activeTab === 'transfers' && (
+                                            <div className="space-y-4">
+                                                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+                                                    <div className="flex bg-gray-100/50 rounded-xl p-1">
+                                                        <button onClick={() => { setTransferFilterStatus("all"); fetchTransferRequests("all"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "all" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>All</button>
+                                                        <button onClick={() => { setTransferFilterStatus("pending"); fetchTransferRequests("pending"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "pending" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Pending</button>
+                                                        <button onClick={() => { setTransferFilterStatus("approved"); fetchTransferRequests("approved"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "approved" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Approved</button>
+                                                        <button onClick={() => { setTransferFilterStatus("denied"); fetchTransferRequests("denied"); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${transferFilterStatus === "denied" ? "bg-white text-emerald-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Denied</button>
+                                                    </div>
+                                                    <button onClick={() => setShowTransferRequestForm(true)} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-sm shadow-emerald-600/20">
+                                                        <Plus size={14} /> New Request
+                                                    </button>
+                                                </div>
+
+                                                {transfersLoading ? (
+                                                    <div className="flex flex-col items-center justify-center py-20 opacity-20">
+                                                        <History className="w-16 h-16 animate-spin-slow mb-4" />
+                                                        <p className="font-black uppercase tracking-widest text-xs">Loading Transfers...</p>
+                                                    </div>
+                                                ) : transferRequests.length === 0 ? (
+                                                    <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-gray-100 rounded-[2rem]">
+                                                        <Package className="h-12 w-12 text-gray-200 mb-4" />
+                                                        <h3 className="text-lg font-black text-gray-400">No Transfer Requests</h3>
+                                                        <p className="text-gray-400 text-xs font-bold mt-1 uppercase tracking-widest">
+                                                            No requests found for this filter
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="grid gap-4">
+                                                        {transferRequests.filter(req =>
+                                                            req.stockId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                                            req.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+                                                        ).map(req => (
+                                                            <div key={req._id} className="p-5 hover:bg-gray-50/50 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-gray-100 rounded-2xl group bg-white">
+                                                                <div className="flex gap-4 items-center">
+                                                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm ${req.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
+                                                                            req.status === 'denied' ? 'bg-red-50 text-red-600' :
+                                                                                'bg-amber-50 text-amber-600'
+                                                                        }`}>
+                                                                        <ArrowRightLeft className="h-5 w-5" />
+                                                                    </div>
+                                                                    <div className="space-y-1">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <h3 className="text-base font-black text-gray-900">{req.stockId?.name}</h3>
+                                                                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${req.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
+                                                                                    req.status === 'denied' ? 'bg-red-50 text-red-600' :
+                                                                                        'bg-amber-50 text-amber-600'
+                                                                                }`}>
+                                                                                {req.status}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                                            <span className="flex items-center gap-1"><Package className="h-3 w-3" /> {req.quantity} {req.stockId?.unit}</span>
+                                                                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(req.createdAt).toLocaleDateString()}</span>
+                                                                            <span className="text-gray-300">By {req.requestedBy?.name}</span>
+                                                                        </div>
+                                                                        {req.notes && <p className="text-xs text-gray-500 italic mt-1">{req.notes}</p>}
+                                                                        {req.status === 'denied' && req.denialReason && (
+                                                                            <p className="text-xs text-red-500 font-bold mt-1 flex items-center gap-1">
+                                                                                <AlertTriangle size={12} /> Reason: {req.denialReason}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex flex-col items-end gap-2">
+                                                                    {req.status === 'pending' && user?.role === 'admin' ? (
+                                                                        <div className="flex gap-2">
+                                                                            <button onClick={() => handleTransferAction(req._id, 'approved')} className="bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all">Approve</button>
+                                                                            <button onClick={() => setDenialModal({ isOpen: true, requestId: req._id, reason: "" })} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all">Deny</button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                                            {req.handledBy ? `Handled by ${req.handledBy.name}` : ''}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </>
@@ -1623,6 +1822,10 @@ export default function StorePage() {
                             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="relative bg-white rounded-[2rem] p-8 max-w-xl w-full">
                                 <h2 className="text-2xl font-black mb-6">{editingOperationalExpense ? 'Edit Operational Expense' : 'Add Operational Expense'}</h2>
                                 <form onSubmit={handleSaveOperationalExpense} className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Expense Name</label>
+                                        <input type="text" placeholder="e.g. Electricity Bill, Rent, Water" value={operationalExpenseFormData.name} onChange={e => setOperationalExpenseFormData({ ...operationalExpenseFormData, name: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" required />
+                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Date</label>
@@ -1659,6 +1862,67 @@ export default function StorePage() {
                                         <button type="submit" className="flex-[2] py-4 bg-red-600 text-white rounded-xl font-bold">{saveLoading ? "Saving..." : "Save Expense"}</button>
                                     </div>
                                 </form>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* Transfer Denial Modal */}
+                <AnimatePresence>
+                    {denialModal.isOpen && (
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDenialModal({ ...denialModal, isOpen: false })} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white w-full max-w-md rounded-[2rem] p-10 shadow-2xl">
+                                <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                                    <XCircle className="text-red-500 h-6 w-6" />
+                                    Deny Transfer Request
+                                </h3>
+                                <textarea placeholder="Reason for denial..." value={denialModal.reason} onChange={e => setDenialModal({ ...denialModal, reason: e.target.value })} className="w-full bg-gray-50 border-2 border-red-50 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-red-400 transition-all h-32 resize-none mb-4" />
+                                <div className="flex gap-3">
+                                    <button onClick={() => handleTransferAction(denialModal.requestId, 'denied', denialModal.reason)} disabled={!denialModal.reason} className="flex-1 bg-red-500 text-white py-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600 disabled:opacity-50 transition-all">Confirm Denial</button>
+                                    <button onClick={() => setDenialModal({ ...denialModal, isOpen: false })} className="px-6 border-2 border-gray-100 text-gray-400 rounded-xl font-bold text-xs">Cancel</button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+
+                {/* New Transfer Request Modal */}
+                <AnimatePresence>
+                    {showTransferRequestForm && (
+                        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowTransferRequestForm(false)} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-xl rounded-[2.5rem] p-10 shadow-2xl">
+                                <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-3 mb-8">
+                                    <ArrowRightLeft className="text-emerald-600 h-7 w-7" />
+                                    New Transfer Request
+                                </h2>
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Select Stock Item</label>
+                                        <div className="relative">
+                                            <select value={newTransferRequest.stockId} onChange={e => setNewTransferRequest({ ...newTransferRequest, stockId: e.target.value })} className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-emerald-500 transition-all appearance-none cursor-pointer">
+                                                <option value="">Choose item...</option>
+                                                {stockItems.filter(i => i.trackQuantity && (i.storeQuantity || 0) > 0).map(item => (
+                                                    <option key={item._id} value={item._id}>{item.name} (Store: {item.storeQuantity} {item.unit})</option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Quantity to Transfer</label>
+                                        <input type="number" placeholder="0.00" value={newTransferRequest.quantity} onChange={e => setNewTransferRequest({ ...newTransferRequest, quantity: e.target.value })} className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-emerald-500 transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Purpose / Notes</label>
+                                        <textarea placeholder="Why is this transfer needed?" value={newTransferRequest.notes} onChange={e => setNewTransferRequest({ ...newTransferRequest, notes: e.target.value })} className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-emerald-500 transition-all h-28 resize-none" />
+                                    </div>
+                                    <div className="flex gap-4 pt-2">
+                                        <button onClick={handleCreateTransferRequest} disabled={transferRequestSaving || !newTransferRequest.stockId || !newTransferRequest.quantity} className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-lg shadow-emerald-600/20">{transferRequestSaving ? "Submitting..." : "Submit Request"}</button>
+                                        <button onClick={() => setShowTransferRequestForm(false)} className="px-8 border-2 border-gray-100 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-50">Cancel</button>
+                                    </div>
+                                </div>
                             </motion.div>
                         </div>
                     )}

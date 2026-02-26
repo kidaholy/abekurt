@@ -42,15 +42,19 @@ export async function PUT(request: Request, context: any) {
         if (item.status === 'preparing') anyItemPreparing = true
       })
 
-      let newOverallStatus = orderToUpdate.status
-      if (status !== 'cancelled') {
+      if (status === 'cancelled') {
+        // Chef cancelling the whole order — mark everything cancelled
+        orderToUpdate.status = 'cancelled'
+        orderToUpdate.items.forEach((item: any) => { item.status = 'cancelled' })
+      } else {
+        let newOverallStatus = orderToUpdate.status
         if (allItemsReady) {
           newOverallStatus = status === 'completed' ? 'completed' : 'ready'
         } else if (anyItemPreparing || status === 'preparing') {
           newOverallStatus = 'preparing'
         }
+        orderToUpdate.status = newOverallStatus
       }
-      orderToUpdate.status = newOverallStatus
     } else {
       orderToUpdate.status = status
       orderToUpdate.items.forEach((item: any) => {
@@ -66,22 +70,22 @@ export async function PUT(request: Request, context: any) {
     await orderToUpdate.save()
 
     const orderNumber = orderToUpdate.orderNumber
-    ;(async () => {
-      try {
-        const statusMessages: Record<string, string> = {
-          preparing: `Order #${orderNumber} is now being prepared`,
-          ready: `Order #${orderNumber} is ready for pickup!`,
-          completed: `Order #${orderNumber} has been completed`,
-          cancelled: `Order #${orderNumber} has been cancelled by the kitchen`
-        }
-        if (statusMessages[status]) {
-          if (status === "ready" || status === "cancelled") {
-            addNotification(status === "ready" ? "success" : "warning", statusMessages[status], "cashier")
+      ; (async () => {
+        try {
+          const statusMessages: Record<string, string> = {
+            preparing: `Order #${orderNumber} is now being prepared`,
+            ready: `Order #${orderNumber} is ready for pickup!`,
+            completed: `Order #${orderNumber} has been completed`,
+            cancelled: `Order #${orderNumber} has been cancelled by the kitchen`
           }
-          addNotification(status === "cancelled" ? "warning" : "info", statusMessages[status], "admin")
-        }
-      } catch { /* silent */ }
-    })()
+          if (statusMessages[status]) {
+            if (status === "ready" || status === "cancelled") {
+              addNotification(status === "ready" ? "success" : "warning", statusMessages[status], "cashier")
+            }
+            addNotification(status === "cancelled" ? "warning" : "info", statusMessages[status], "admin")
+          }
+        } catch { /* silent */ }
+      })()
 
     return NextResponse.json({ ok: true, status: orderToUpdate.status })
   } catch (error: any) {

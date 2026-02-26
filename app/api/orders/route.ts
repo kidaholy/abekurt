@@ -184,8 +184,8 @@ export async function POST(request: Request) {
       MenuItem.find({ _id: { $in: menuItemIds } }).populate('stockItemId'),
       Stock.find({ _id: { $in: stockIds } }),
       Order.findOne({}, { orderNumber: 1 }).sort({ orderNumber: -1 }),
-      tableId ? Table.findById(tableId).populate("batchId") :
-        (tableNumber && tableNumber !== "Buy&Go" ? Table.findOne({ tableNumber }).populate("batchId") : null)
+      tableId ? Table.findById(tableId) :
+        (tableNumber && tableNumber !== "Buy&Go" ? Table.findOne({ tableNumber }) : null)
     ])
 
     // Validate sufficient stock quantities
@@ -219,11 +219,8 @@ export async function POST(request: Request) {
     let batchId = body.batchId || (decoded.role === 'cashier' ? decoded.batchId : undefined)
     let batchNumber = body.batchNumber || ""
 
-    if (tableData && tableData.batchId) {
-      batchId = tableData.batchId._id
-      batchNumber = tableData.batchId.batchNumber
-    } else if (batchId && !batchNumber) {
-      // Small optimization: only fetch batch if we don't have the number yet
+    if (batchId && !batchNumber) {
+      // Fetch batch number if we don't have it yet
       const batch = await Batch.findById(batchId).lean()
       if (batch) batchNumber = (batch as any).batchNumber
     }

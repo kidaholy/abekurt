@@ -214,7 +214,6 @@ export default function KitchenDisplayPage() {
     }
   }
 
-  const pendingOrders = orders.filter((o) => o.status === "pending")
   const preparingOrders = orders.filter((o) => o.status === "preparing")
   const readyOrders = orders.filter((o) => o.status === "ready")
 
@@ -261,11 +260,7 @@ export default function KitchenDisplayPage() {
             </div>
 
             {/* Stats Bar */}
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                <div className="text-3xl font-bold text-orange-600">{pendingOrders.length}</div>
-                <div className="text-sm text-gray-600 mt-1">Pending</div>
-              </div>
+            <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="text-3xl font-bold text-blue-600">{preparingOrders.length}</div>
                 <div className="text-sm text-gray-600 mt-1">Preparing</div>
@@ -284,7 +279,7 @@ export default function KitchenDisplayPage() {
                 <span className="text-2xl">🔔</span>
                 <div>
                   <p className="font-bold">New Order Incoming!</p>
-                  <p className="text-sm opacity-90">Check the pending queue</p>
+                  <p className="text-sm opacity-90">Check the preparing queue</p>
                 </div>
               </div>
               <button onClick={() => setNewOrderAlert(false)} className="text-xl hover:opacity-75">
@@ -300,16 +295,7 @@ export default function KitchenDisplayPage() {
               <p className="text-gray-600">Loading kitchen orders...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <OrderColumn
-                title="Pending"
-                color="orange"
-                orders={pendingOrders}
-                onStatusChange={handleStatusChange}
-                onCancelOrder={handleCancelOrder}
-                nextStatus="preparing"
-                t={t}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <OrderColumn
                 title="Preparing"
                 color="blue"
@@ -465,12 +451,14 @@ function OrderCard({
                 <span className="text-[10px] text-orange-600 font-black uppercase tracking-widest bg-orange-50 w-fit px-1.5 py-0.5 rounded shadow-sm border border-orange-100 mt-0.5">{item.category}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-tight shadow-sm border ${item.status === 'ready' ? 'bg-green-100 text-green-700 border-green-200' :
-                  item.status === 'preparing' ? 'bg-blue-600 text-white border-blue-700' :
-                    'bg-orange-50 text-orange-600 border-orange-200'
-                  }`}>
-                  {item.status || 'pending'}
-                </span>
+                {item.status && item.status !== 'pending' && (
+                  <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-tight shadow-sm border ${item.status === 'ready' ? 'bg-green-100 text-green-700 border-green-200' :
+                      item.status === 'preparing' ? 'bg-blue-600 text-white border-blue-700' :
+                        'bg-gray-100 text-gray-600 border-gray-200'
+                    }`}>
+                    {item.status}
+                  </span>
+                )}
                 <span className="font-bold bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs">
                   {item.quantity}
                 </span>
@@ -480,13 +468,13 @@ function OrderCard({
         </div>
 
         <div className="flex gap-2">
-          {order.status === "pending" && (
+          {order.status === "preparing" && (
             <>
               <button
-                onClick={() => onStatusChange(order._id, "preparing")}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
+                onClick={() => onStatusChange(order._id, "ready")}
+                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors"
               >
-                Start Prep
+                Mark Ready
               </button>
               <button
                 onClick={() => onCancelOrder(order._id)}
@@ -495,14 +483,6 @@ function OrderCard({
                 ✕
               </button>
             </>
-          )}
-          {order.status === "preparing" && (
-            <button
-              onClick={() => onStatusChange(order._id, "ready")}
-              className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors"
-            >
-              Mark Ready
-            </button>
           )}
           {order.status === "ready" && (
             <button

@@ -13,7 +13,7 @@ interface Order {
   orderNumber: string
   items: Array<{ name: string; quantity: number; price: number; menuId?: string }>
   totalAmount: number
-  status: "pending" | "preparing" | "ready" | "served" | "completed" | "cancelled"
+  status: "preparing" | "ready" | "served" | "completed" | "cancelled"
   createdAt: string
   customerName?: string
   tableNumber: string
@@ -180,9 +180,8 @@ export default function AdminOrdersPage() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "pending":
-        return { color: "bg-[#f5bc6b]/20 text-[#1a1a1a]", label: t("adminOrders.pending"), icon: "🕒" }
       case "preparing":
+      case "pending": // legacy DB records
         return { color: "bg-[#93c5fd]/20 text-blue-700", label: t("adminOrders.cooking"), icon: "🍳" }
       case "ready":
         return { color: "bg-[#2d5a41]/20 text-[#2d5a41]", label: t("adminOrders.ready"), icon: "✅" }
@@ -199,8 +198,7 @@ export default function AdminOrdersPage() {
 
   const stats = {
     all: orders.length,
-    pending: orders.filter(o => o.status === "pending").length,
-    preparing: orders.filter(o => o.status === "preparing").length,
+    preparing: orders.filter(o => (o.status as string) === "preparing" || (o.status as string) === "pending").length,
     ready: orders.filter(o => o.status === "ready").length,
     served: orders.filter(o => o.status === "served").length
   }
@@ -219,7 +217,6 @@ export default function AdminOrdersPage() {
                 <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 gap-3 scrollbar-hide">
                   {[
                     { id: "all", label: t("adminOrders.allOrders"), count: stats.all, emoji: "📋" },
-                    { id: "pending", label: t("adminOrders.pending"), count: stats.pending, emoji: "🕒" },
                     { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing, emoji: "🔥" },
                     { id: "ready", label: t("adminOrders.ready"), count: stats.ready, emoji: "✅" },
                     { id: "served", label: "Served", count: stats.served, emoji: "🍽️" }

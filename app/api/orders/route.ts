@@ -246,7 +246,7 @@ export async function POST(request: Request) {
       totalAmount,
       subtotal: subtotal || totalAmount,
       tax: tax || 0,
-      status: "pending" as const,
+      status: "preparing" as const,
       paymentMethod: paymentMethod || "cash",
       customerName: customerName || `Table ${tableNumber}`,
       tableNumber,

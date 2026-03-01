@@ -42,13 +42,14 @@ export async function GET(request: Request) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const limit = searchParams.get('limit')
+    const includeDeleted = searchParams.get('includeDeleted') === 'true'
 
     const decoded = await validateSession(request)
     // console.log("📋 User fetching orders:", decoded.email || decoded.id)
 
     await connectDB()
 
-    let query: any = {}
+    let query: any = includeDeleted ? {} : { isDeleted: { $ne: true } }
 
     if (startDate || endDate) {
       query.createdAt = {}
@@ -134,6 +135,7 @@ export async function GET(request: Request) {
       return {
         ...order,
         _id: order._id.toString(),
+        isDeleted: !!order.isDeleted,
         batchNumber,
         items
       };

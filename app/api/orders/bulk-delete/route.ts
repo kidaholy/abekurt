@@ -24,14 +24,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ message: "No orders to delete" }, { status: 400 })
     }
 
-    // Delete all orders
-    const result = await Order.deleteMany({})
+    // Soft delete all orders
+    const result = await Order.updateMany({}, { isDeleted: true, status: "cancelled" })
 
     // Send notification about bulk deletion
     try {
       addNotification(
         "warning",
-        `🗑️ All orders (${orderCount} total) have been deleted by admin`,
+        `🗑️ All active orders (${orderCount} total) have been moved to deleted history by admin`,
         "admin"
       )
       console.log(`Bulk deletion notification sent: ${orderCount} orders deleted`)
@@ -39,10 +39,10 @@ export async function DELETE(request: Request) {
       console.error("Failed to send bulk deletion notification:", error)
     }
 
-    console.log(`✅ Bulk deletion completed: ${result.deletedCount} orders deleted`)
+    console.log(`✅ Bulk deletion completed: ${result.modifiedCount} orders moved to history`)
     return NextResponse.json({
-      message: `Successfully deleted ${result.deletedCount} orders`,
-      deletedCount: result.deletedCount
+      message: `Successfully moved ${result.modifiedCount} orders to history`,
+      deletedCount: result.modifiedCount
     })
   } catch (error: any) {
     console.error("Bulk delete orders error:", error)

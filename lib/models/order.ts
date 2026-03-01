@@ -34,6 +34,7 @@ interface IOrder extends Document {
   servedAt?: Date
   delayMinutes?: number
   thresholdMinutes?: number
+  isDeleted?: boolean
 }
 
 const orderSchema = new Schema<IOrder>(
@@ -76,7 +77,8 @@ const orderSchema = new Schema<IOrder>(
     readyAt: { type: Date },
     servedAt: { type: Date },
     delayMinutes: { type: Number },
-    thresholdMinutes: { type: Number }
+    thresholdMinutes: { type: Number },
+    isDeleted: { type: Boolean, default: false, index: true }
   },
   { timestamps: true }
 )

@@ -21,6 +21,7 @@ interface Order {
   batchNumber?: string
   delayMinutes?: number
   thresholdMinutes?: number
+  isDeleted?: boolean
   servedAt?: string
   readyAt?: string
   kitchenAcceptedAt?: string
@@ -54,7 +55,7 @@ export default function AdminOrdersPage() {
   const fetchOrders = async () => {
     try {
       // Fetch recent orders (limit 100 to prevent large payloads during polling)
-      const res = await fetch("/api/orders?limit=100", {
+      const res = await fetch("/api/orders?limit=100&includeDeleted=true", {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -68,12 +69,13 @@ export default function AdminOrdersPage() {
     }
   }
 
+  // handleDeleteOrder now performs soft delete
   const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
     const confirmed = await confirm({
       title: "Delete Order",
-      message: `Are you sure you want to delete Order #${orderNumber}?\n\nThis action cannot be undone.`,
+      message: `Are you sure you want to move Order #${orderNumber} to deleted history?\n\nStock will be restored for active orders.`,
       type: "danger",
-      confirmText: "Delete Order",
+      confirmText: "Move to History",
       cancelText: "Cancel"
     })
 
@@ -89,17 +91,19 @@ export default function AdminOrdersPage() {
       })
 
       if (response.ok) {
-        // Remove order from local state
-        setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId))
+        // Update local state to show order as deleted
+        setOrders(prevOrders => prevOrders.map(order =>
+          order._id === orderId ? { ...order, isDeleted: true, status: "cancelled" } : order
+        ))
         notify({
-          title: "Order Deleted",
-          message: `Order #${orderNumber} has been deleted successfully.`,
+          title: "Moved to History",
+          message: `Order #${orderNumber} has been moved to deleted history.`,
           type: "success"
         })
       } else {
         const error = await response.json()
         notify({
-          title: "Delete Failed",
+          title: "Failed",
           message: error.message || "Failed to delete order",
           type: "error"
         })
@@ -175,9 +179,11 @@ export default function AdminOrdersPage() {
   }
 
   const filteredOrders = orders.filter((order) => {
-    const matchesFilter = filter === "all" ? true :
-      filter === "served" ? (order.status === "served" || order.status === "completed") :
-        order.status === filter
+    const isActuallyDeleted = !!order.isDeleted || order.status === "cancelled"
+    const matchesFilter = filter === "all" ? !isActuallyDeleted :
+      filter === "deleted" ? isActuallyDeleted :
+        filter === "served" ? (!isActuallyDeleted && (order.status === "served" || order.status === "completed")) :
+          (!isActuallyDeleted && order.status === filter)
     const matchesSearch =
       order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -204,9 +210,10 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const preparingOrders = orders.filter(o => (o.status as string) === 'preparing' || (o.status as string) === 'pending')
-  const readyOrders = orders.filter(o => o.status === 'ready')
-  const servedOrders = orders.filter(o => o.status === 'served' || o.status === 'completed')
+  const preparingOrders = orders.filter(o => !o.isDeleted && o.status !== 'cancelled' && ((o.status as string) === 'preparing' || (o.status as string) === 'pending'))
+  const readyOrders = orders.filter(o => !o.isDeleted && o.status !== 'cancelled' && o.status === 'ready')
+  const servedOrders = orders.filter(o => !o.isDeleted && o.status !== 'cancelled' && (o.status === 'served' || o.status === 'completed'))
+  const deletedHistory = orders.filter(o => !!o.isDeleted || o.status === 'cancelled')
 
   const stats = {
     all: { count: orders.length, time: 0 },
@@ -237,6 +244,10 @@ export default function AdminOrdersPage() {
           return acc
         }, 0) / servedOrders.length)
         : 0
+    },
+    deleted: {
+      count: deletedHistory.length,
+      time: 0
     }
   }
 
@@ -285,10 +296,11 @@ export default function AdminOrdersPage() {
                 <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">{t("adminOrders.title")}</h2>
                 <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 gap-3 scrollbar-hide">
                   {[
-                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all.count, time: null, emoji: "📋" },
+                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all.count - stats.deleted.count, time: null, emoji: "📋" },
                     { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing.count, time: stats.preparing.time, emoji: "🔥" },
                     { id: "ready", label: t("adminOrders.ready"), count: stats.ready.count, time: stats.ready.time, emoji: "✅" },
-                    { id: "served", label: "Served", count: stats.served.count, time: stats.served.time, emoji: "🍽️" }
+                    { id: "served", label: "Served", count: stats.served.count, time: stats.served.time, emoji: "🍽️" },
+                    { id: "deleted", label: "Deleted History", count: stats.deleted.count, time: null, emoji: "🗑️" }
                   ].map(item => (
                     <button
                       key={item.id}
@@ -441,18 +453,27 @@ export default function AdminOrdersPage() {
                             <div className="text-sm font-bold text-gray-400">{t("adminOrders.totalAmount")}</div>
                             <div className="flex items-center gap-3">
                               <div className="text-3xl font-black text-[#8B4513]">{order.totalAmount.toFixed(0)} {t("common.currencyBr")}</div>
-                              <button
-                                onClick={() => handleDeleteOrder(order._id, order.orderNumber)}
-                                disabled={deleting === order._id}
-                                className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white p-2 rounded-lg transition-all shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
-                                title="Delete Order"
-                              >
-                                {deleting === order._id ? (
-                                  <span className="animate-spin text-sm">⏳</span>
-                                ) : (
-                                  <span className="text-sm">🗑️</span>
+                              <div className="flex gap-2">
+                                {!order.isDeleted && (
+                                  <button
+                                    onClick={() => handleDeleteOrder(order._id, order.orderNumber)}
+                                    disabled={deleting === order._id}
+                                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white p-2 rounded-lg transition-all shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
+                                    title="Move to Deleted History"
+                                  >
+                                    {deleting === order._id ? (
+                                      <span className="animate-spin text-xs">⏳</span>
+                                    ) : (
+                                      "🗑️"
+                                    )}
+                                  </button>
                                 )}
-                              </button>
+                                {order.isDeleted && (
+                                  <span className="text-xs font-bold text-red-400 uppercase tracking-widest bg-red-50 px-3 py-1 rounded-full border border-red-100">
+                                    Deleted
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -465,7 +486,6 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        {/* Confirmation and Notification Cards */}
         <ConfirmationCard
           isOpen={confirmationState.isOpen}
           onClose={closeConfirmation}
@@ -488,7 +508,6 @@ export default function AdminOrdersPage() {
           duration={notificationState.options.duration}
         />
       </div>
-    </ProtectedRoute>
+    </ProtectedRoute >
   )
 }
-

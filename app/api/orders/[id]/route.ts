@@ -187,16 +187,16 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             console.log(`📡 Restored stock for deleted order #${orderToDelete.orderNumber}`)
         }
 
-        await Order.findByIdAndDelete(id)
+        await Order.findByIdAndUpdate(id, { isDeleted: true, status: "cancelled" })
 
         // Send cancellation notification
         addNotification(
             "info",
-            `🗑️ Order #${orderToDelete.orderNumber} has been deleted and stock restored`,
+            `🗑️ Order #${orderToDelete.orderNumber} has been moved to deleted history`,
             "admin"
         )
 
-        return NextResponse.json({ message: "Order deleted successfully" })
+        return NextResponse.json({ message: "Order moved to history successfully" })
     } catch (error: any) {
         console.error("❌ Delete order error:", error)
         return NextResponse.json({ message: error.message || "Failed to delete order" }, { status: 500 })

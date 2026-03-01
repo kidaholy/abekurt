@@ -17,6 +17,7 @@ interface AdminSettings {
   app_name: string
   app_tagline: string
   vat_rate: string
+  enable_cashier_printing: string
 }
 
 export default function AdminSettingsPage() {
@@ -28,7 +29,8 @@ export default function AdminSettingsPage() {
     logo_url: "",
     app_name: "Prime Addis",
     app_tagline: "Coffee Management",
-    vat_rate: "0.08"
+    vat_rate: "0.08",
+    enable_cashier_printing: "true"
   })
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -59,7 +61,8 @@ export default function AdminSettingsPage() {
         logo_url: settings.logo_url || "",
         app_name: settings.app_name || "Prime Addis",
         app_tagline: settings.app_tagline || "Coffee Management",
-        vat_rate: settings.vat_rate || "0.08"
+        vat_rate: settings.vat_rate || "0.08",
+        enable_cashier_printing: settings.enable_cashier_printing || "true"
       })
     }
   }, [settings])
@@ -251,7 +254,8 @@ export default function AdminSettingsPage() {
         handleSaveSetting("logo_url", formData.logo_url, "url", t("adminSettings.applicationLogoUrl")),
         handleSaveSetting("app_name", formData.app_name, "string", t("adminSettings.applicationName")),
         handleSaveSetting("app_tagline", formData.app_tagline, "string", t("adminSettings.applicationTagline")),
-        handleSaveSetting("vat_rate", formData.vat_rate, "number", "Value Added Tax (VAT) rate (e.g., 0.15 for 15%)")
+        handleSaveSetting("vat_rate", formData.vat_rate, "number", "Value Added Tax (VAT) rate (e.g., 0.15 for 15%)"),
+        handleSaveSetting("enable_cashier_printing", formData.enable_cashier_printing, "boolean", "Enable or disable automatic receipt printing in the cashier POS")
       ])
 
       // Refresh settings in context
@@ -616,6 +620,46 @@ export default function AdminSettingsPage() {
                         <Info className="w-3 h-3" />
                         {t("adminSettings.vatRateHint")}
                       </p>
+                    </div>
+
+                    {/* Cashier Printing Toggle */}
+                    <div className="space-y-4 p-8 bg-gray-50 rounded-[2.5rem] border-2 border-[#8B4513]/5 shadow-inner">
+                      <div className="flex items-center justify-between gap-6">
+                        <div className="flex-1 space-y-2">
+                          <label className="text-base font-black text-gray-800 uppercase tracking-tight flex items-center gap-2">
+                            🖨️ Cashier Printing
+                            {formData.enable_cashier_printing === "true" ? (
+                              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 animate-pulse">ENABLED</span>
+                            ) : (
+                              <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full border border-gray-300">DISABLED</span>
+                            )}
+                          </label>
+                          <p className="text-xs text-gray-500 font-bold leading-relaxed">
+                            {formData.enable_cashier_printing === "true"
+                              ? "The system WILL automatically open the print dialog after every checkout."
+                              : "the system will SKIP the print dialog. Orders will be saved but not printed automatically."}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({
+                              ...formData,
+                              enable_cashier_printing: formData.enable_cashier_printing === "true" ? "false" : "true"
+                            })}
+                            className={`relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-300 shadow-lg focus:outline-none ${formData.enable_cashier_printing === "true" ? "bg-green-600 ring-4 ring-green-100" : "bg-gray-300 ring-4 ring-gray-100"
+                              }`}
+                          >
+                            <span
+                              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-xl transition-transform duration-300 ${formData.enable_cashier_printing === "true" ? "translate-x-9" : "translate-x-1"
+                                }`}
+                            />
+                          </button>
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${formData.enable_cashier_printing === "true" ? "text-green-600" : "text-gray-400"}`}>
+                            {formData.enable_cashier_printing === "true" ? "Printing ON" : "Printing OFF"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Save Button */}

@@ -7,6 +7,7 @@ interface AppSettings {
   app_name: string
   app_tagline: string
   vat_rate: string
+  enable_cashier_printing?: string
 }
 
 interface SettingsContextType {
@@ -22,13 +23,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     logo_url: "",
     app_name: "Prime Addis",
     app_tagline: "Coffee Management",
-    vat_rate: "0.08"
+    vat_rate: "0.08",
+    enable_cashier_printing: "true"
   })
   const [loading, setLoading] = useState(true)
 
   const refreshSettings = async () => {
     try {
-      const response = await fetch("/api/settings/public")
+      const response = await fetch("/api/settings/public", { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setSettings(data)
@@ -42,6 +44,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshSettings()
+
+    // 🔄 Sync settings when window gains focus (helps with multi-tab usage)
+    const handleFocus = () => refreshSettings()
+    window.addEventListener("focus", handleFocus)
+    return () => window.removeEventListener("focus", handleFocus)
   }, [])
 
   return (

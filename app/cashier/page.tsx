@@ -264,6 +264,12 @@ export default function CashierPOSPage() {
         localStorage.setItem('newOrderCreated', Date.now().toString())
 
         setTimeout(() => {
+          // Check if printing is enabled in settings
+          if (settings.enable_cashier_printing === "false") {
+            setShowOrderAnimation(false)
+            return
+          }
+
           // Isolated Iframe Printing
           const receiptHtml = getReceiptHTML({
             orderNumber: data.orderNumber,

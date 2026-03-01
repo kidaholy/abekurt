@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { BentoNavbar } from "@/components/bento-navbar"
 import { useAuth } from "@/context/auth-context"
@@ -25,6 +25,7 @@ interface Order {
   isDeleted?: boolean
   servedAt?: string
   readyAt?: string
+  updatedAt?: string
   kitchenAcceptedAt?: string
 }
 
@@ -37,12 +38,35 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [deleting, setDeleting] = useState<string | null>(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const notifiedOrderIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     fetchOrders()
     const interval = setInterval(fetchOrders, 3000)
     return () => clearInterval(interval)
-  }, [])
+  }, [token]) // Re-fetch if token changes
+
+  // Auto-notification for DELAYS
+  useEffect(() => {
+    if (orders.length === 0) return
+
+    orders.forEach(order => {
+      // We only notify for active orders (preparing/ready) that just became delayed
+      if (order.isDeleted || order.status === 'cancelled' || order.status === 'served' || order.status === 'completed') return
+
+      const metrics = getOrderMetrics(order)
+      if (metrics.delay > 0 && !notifiedOrderIds.current.has(order._id)) {
+        // Trigger notification
+        notify({
+          title: "Preparation Delay!",
+          message: `Order #${order.orderNumber} (Table ${order.tableNumber}) has exceeded its target time by ${metrics.delay}m.`,
+          type: "warning"
+        })
+        // Mark as notified
+        notifiedOrderIds.current.add(order._id)
+      }
+    })
+  }, [orders])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -215,17 +239,31 @@ export default function AdminOrdersPage() {
     const threshold = o.thresholdMinutes || 20
     const start = new Date(o.createdAt).getTime()
 
+    // For completed orders, prioritize stored snapshots to "stop the count" accurately
+    if (isCompleted) {
+      if (o.totalPreparationTime !== undefined) {
+        const totalTaken = o.totalPreparationTime
+        const delay = Math.max(0, totalTaken - threshold)
+        return { totalTaken, delay, threshold, isCompleted, isReady }
+      }
+      if (o.delayMinutes !== undefined) {
+        const delay = o.delayMinutes
+        const totalTaken = threshold + delay
+        return { totalTaken, delay, threshold, isCompleted, isReady }
+      }
+    }
+
     // Determine end time for calculation
+    // IMPORTANT: For completed orders, we NEVER fallback to Date.now() 
+    // to prevent the timer from ticking after service.
+    // If specific timestamps are missing, 'updatedAt' provides the exact moment of service.
     const end = isCompleted
-      ? new Date(o.servedAt || Date.now()).getTime()
+      ? new Date(o.servedAt || o.readyAt || o.updatedAt || o.createdAt).getTime()
       : isReady
-        ? new Date(o.readyAt || Date.now()).getTime()
+        ? new Date(o.readyAt || o.updatedAt || o.createdAt).getTime()
         : Date.now()
 
-    const totalTaken = o.totalPreparationTime !== undefined && isCompleted
-      ? o.totalPreparationTime
-      : Math.floor((end - start) / 60000)
-
+    const totalTaken = Math.floor((end - start) / 60000)
     const delay = Math.max(0, totalTaken - threshold)
     return { totalTaken, delay, threshold, isCompleted, isReady }
   }
@@ -236,28 +274,42 @@ export default function AdminOrdersPage() {
   const deletedHistory = orders.filter(o => !!o.isDeleted || o.status === 'cancelled')
 
   const stats = {
-    all: { count: orders.length, time: 0 },
+    all: {
+      count: orders.length,
+      time: orders.length > 0 ? Math.floor(orders.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / orders.length) : 0,
+      delay: orders.length > 0 ? Math.floor(orders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / orders.length) : 0
+    },
     preparing: {
       count: preparingOrders.length,
       time: preparingOrders.length > 0
         ? Math.floor(preparingOrders.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / preparingOrders.length)
+        : 0,
+      delay: preparingOrders.length > 0
+        ? Math.floor(preparingOrders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / preparingOrders.length)
         : 0
     },
     ready: {
       count: readyOrders.length,
       time: readyOrders.length > 0
         ? Math.floor(readyOrders.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / readyOrders.length)
+        : 0,
+      delay: readyOrders.length > 0
+        ? Math.floor(readyOrders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / readyOrders.length)
         : 0
     },
     served: {
       count: servedOrders.length,
       time: servedOrders.length > 0
         ? Math.floor(servedOrders.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / servedOrders.length)
+        : 0,
+      delay: servedOrders.length > 0
+        ? Math.floor(servedOrders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / servedOrders.length)
         : 0
     },
     deleted: {
       count: deletedHistory.length,
-      time: 0
+      time: 0,
+      delay: 0
     }
   }
 
@@ -272,7 +324,7 @@ export default function AdminOrdersPage() {
             if (o.isDeleted || o.status === 'cancelled' || o.status === 'served' || o.status === 'completed') return false
             return getOrderMetrics(o).delay > 0
           }).length > 0 && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-[30px] p-6 shadow-lg animate-pulse">
+              <div className="bg-red-50 border-2 border-red-200 rounded-[30px] p-6 shadow-lg">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="bg-red-500 text-white p-3 rounded-2xl shadow-md">
                     <Clock className="h-6 w-6" />
@@ -287,16 +339,17 @@ export default function AdminOrdersPage() {
                     if (o.isDeleted || o.status === 'cancelled' || o.status === 'served' || o.status === 'completed') return false
                     return getOrderMetrics(o).delay > 0
                   }).map(o => {
-                    const { delay, threshold } = getOrderMetrics(o)
+                    const { delay, threshold, isCompleted } = getOrderMetrics(o)
 
                     return (
-                      <div key={o._id} className="bg-white border-2 border-red-100 px-5 py-3 rounded-2xl flex items-center gap-3 shadow-sm">
+                      <div key={o._id} className="bg-white border-2 border-red-100 px-5 py-3 rounded-2xl flex items-center gap-3 shadow-sm relative overflow-hidden group">
+                        {isCompleted && <div className="absolute top-0 right-0 bg-green-500 text-white text-[8px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-widest">Served</div>}
                         <span className="font-black text-red-600 text-lg">#{o.orderNumber}</span>
                         <div className="flex flex-col">
                           <span className="text-[10px] font-black bg-red-50 text-red-700 px-2.5 py-1 rounded-full border border-red-100 uppercase tracking-tighter">
                             ⏱️ {delay}m delay
                           </span>
-                          <span className="text-[9px] font-bold text-gray-400 mt-0.5 ml-1 italic lowercase">exceeded {threshold}m target</span>
+                          <span className="text-[9px] font-bold text-gray-400 mt-0.5 ml-1 italic lowercase">{isCompleted ? `finished in ${threshold + delay}m` : `exceeded ${threshold}m target`}</span>
                         </div>
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest border-l-2 border-gray-100 pl-3 ml-1">{o.tableNumber}</span>
                       </div>
@@ -313,11 +366,11 @@ export default function AdminOrdersPage() {
                 <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">{t("adminOrders.title")}</h2>
                 <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 gap-3 scrollbar-hide">
                   {[
-                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all.count - stats.deleted.count, time: null, emoji: "📋" },
-                    { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing.count, time: stats.preparing.time, emoji: "🔥" },
-                    { id: "ready", label: t("adminOrders.ready"), count: stats.ready.count, time: stats.ready.time, emoji: "✅" },
-                    { id: "served", label: "Served", count: stats.served.count, time: stats.served.time, emoji: "🍽️" },
-                    { id: "deleted", label: "Deleted History", count: stats.deleted.count, time: null, emoji: "🗑️" }
+                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all.count - stats.deleted.count, time: stats.all.time, delay: stats.all.delay, emoji: "📋" },
+                    { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing.count, time: stats.preparing.time, delay: stats.preparing.delay, emoji: "🔥" },
+                    { id: "ready", label: t("adminOrders.ready"), count: stats.ready.count, time: stats.ready.time, delay: stats.ready.delay, emoji: "✅" },
+                    { id: "served", label: "Served", count: stats.served.count, time: stats.served.time, delay: stats.served.delay, emoji: "🍽️" },
+                    { id: "deleted", label: "Deleted History", count: stats.deleted.count, time: null, delay: null, emoji: "🗑️" }
                   ].map(item => (
                     <button
                       key={item.id}
@@ -332,11 +385,18 @@ export default function AdminOrdersPage() {
                           <span className="text-lg md:text-xl">{item.emoji}</span>
                           <span className="whitespace-nowrap">{item.label}</span>
                         </span>
-                        {item.time !== null && (
-                          <span className={`text-[10px] font-black uppercase tracking-tighter ml-7 md:ml-8 ${filter === item.id ? 'text-white/60' : 'text-orange-500'}`}>
-                            {item.time}m avg
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2 ml-7 md:ml-8">
+                          {item.time !== null && (
+                            <span className={`text-[9px] font-black uppercase tracking-tighter ${filter === item.id ? 'text-white/60' : 'text-orange-500'}`}>
+                              {item.time}m avg
+                            </span>
+                          )}
+                          {item.delay !== null && item.delay > 0 && (
+                            <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${filter === item.id ? 'bg-white/10 text-white' : 'bg-red-50 text-red-500'}`}>
+                              +{item.delay}m
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <span className={`ml-3 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-black ${filter === item.id ? "bg-white/20 text-white" : "bg-gray-200 text-gray-500"}`}>
                         {item.count}

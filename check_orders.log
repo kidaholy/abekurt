@@ -1,0 +1,114 @@
+🌐 Global DNS servers set to Google DNS (8.8.8.8, 8.8.4.4)
+Connecting to Atlas...
+Connected successfully
+--- Found 10 Served/Completed Orders ---
+Order #: 019
+Status: completed
+CreatedAt: Sun Mar 01 2026 14:41:51 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 15
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 25m, Delay: 10m -> DELAY
+---------------------------
+Order #: 018
+Status: completed
+CreatedAt: Sun Mar 01 2026 14:35:15 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 10
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 31m, Delay: 21m -> DELAY
+---------------------------
+Order #: 017
+Status: completed
+CreatedAt: Sun Mar 01 2026 14:10:43 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 15
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 56m, Delay: 41m -> DELAY
+---------------------------
+Order #: 016
+Status: completed
+CreatedAt: Sun Mar 01 2026 14:08:05 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 10
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 59m, Delay: 49m -> DELAY
+---------------------------
+Order #: 013
+Status: completed
+CreatedAt: Sun Mar 01 2026 12:06:20 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 10
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 180m, Delay: 170m -> DELAY
+---------------------------
+Order #: 012
+Status: completed
+CreatedAt: Sun Mar 01 2026 11:42:29 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 20
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 204m, Delay: 184m -> DELAY
+---------------------------
+Order #: 011
+Status: completed
+CreatedAt: Sun Mar 01 2026 11:32:24 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 10
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 214m, Delay: 204m -> DELAY
+---------------------------
+Order #: 009
+Status: completed
+CreatedAt: Sun Mar 01 2026 11:29:15 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 15
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 217m, Delay: 202m -> DELAY
+---------------------------
+Order #: 008
+Status: completed
+CreatedAt: Sun Mar 01 2026 11:11:30 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 20
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 235m, Delay: 215m -> DELAY
+---------------------------
+Order #: 007
+Status: completed
+CreatedAt: Sun Mar 01 2026 11:00:35 GMT+0300 (East Africa Time)
+ServedAt: undefined
+ReadyAt: undefined
+TotalPrep: undefined
+DelayMins: undefined
+Threshold: 20
+FRONTEND LOGIC -> Total: 0m, Delay: 0m -> ON TIME
+IF SERVEDAT MISSING -> Total: 246m, Delay: 226m -> DELAY
+---------------------------

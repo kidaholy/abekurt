@@ -96,8 +96,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             (previousStatus !== "served" && previousStatus !== "completed")) {
 
             order.servedAt = now
-            const startTimestamp = order.kitchenAcceptedAt || order.createdAt
-            const createdAt = new Date(startTimestamp)
+            const createdAt = new Date(order.createdAt)
             const durationMs = now.getTime() - createdAt.getTime()
             const totalMinutes = Math.floor(durationMs / 60000)
 

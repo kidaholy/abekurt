@@ -208,6 +208,28 @@ export default function AdminOrdersPage() {
     }
   }
 
+  // Unified Performance Metric Helper
+  const getOrderMetrics = (o: Order) => {
+    const isCompleted = o.status === 'served' || o.status === 'completed'
+    const isReady = o.status === 'ready'
+    const threshold = o.thresholdMinutes || 20
+    const start = new Date(o.createdAt).getTime()
+
+    // Determine end time for calculation
+    const end = isCompleted
+      ? new Date(o.servedAt || Date.now()).getTime()
+      : isReady
+        ? new Date(o.readyAt || Date.now()).getTime()
+        : Date.now()
+
+    const totalTaken = o.totalPreparationTime !== undefined && isCompleted
+      ? o.totalPreparationTime
+      : Math.floor((end - start) / 60000)
+
+    const delay = Math.max(0, totalTaken - threshold)
+    return { totalTaken, delay, threshold, isCompleted, isReady }
+  }
+
   const preparingOrders = orders.filter(o => !o.isDeleted && o.status !== 'cancelled' && ((o.status as string) === 'preparing' || (o.status as string) === 'pending'))
   const readyOrders = orders.filter(o => !o.isDeleted && o.status !== 'cancelled' && o.status === 'ready')
   const servedOrders = orders.filter(o => !o.isDeleted && o.status !== 'cancelled' && (o.status === 'served' || o.status === 'completed'))
@@ -218,30 +240,19 @@ export default function AdminOrdersPage() {
     preparing: {
       count: preparingOrders.length,
       time: preparingOrders.length > 0
-        ? Math.floor(preparingOrders.reduce((acc, o) => {
-          const start = o.kitchenAcceptedAt || o.createdAt
-          return acc + (Date.now() - new Date(start).getTime())
-        }, 0) / preparingOrders.length / 60000)
+        ? Math.floor(preparingOrders.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / preparingOrders.length)
         : 0
     },
     ready: {
       count: readyOrders.length,
       time: readyOrders.length > 0
-        ? Math.floor(readyOrders.reduce((acc, o) => {
-          const start = o.readyAt || o.kitchenAcceptedAt || o.createdAt
-          return acc + (Date.now() - new Date(start).getTime())
-        }, 0) / readyOrders.length / 60000)
+        ? Math.floor(readyOrders.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / readyOrders.length)
         : 0
     },
     served: {
       count: servedOrders.length,
       time: servedOrders.length > 0
-        ? Math.floor(servedOrders.reduce((acc, o) => {
-          if (o.totalPreparationTime !== undefined) return acc + o.totalPreparationTime
-          if (o.delayMinutes) return acc + o.delayMinutes
-          if (o.servedAt) return acc + (new Date(o.servedAt).getTime() - new Date(o.createdAt).getTime()) / 60000
-          return acc
-        }, 0) / servedOrders.length)
+        ? Math.floor(servedOrders.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / servedOrders.length)
         : 0
     },
     deleted: {
@@ -257,10 +268,10 @@ export default function AdminOrdersPage() {
           <BentoNavbar />
 
           {/* Active Delay Alerts */}
-          {orders.filter(o =>
-            (o.status === 'preparing' || o.status === 'pending' || o.status === 'ready') &&
-            Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000) > (o.thresholdMinutes || 20)
-          ).length > 0 && (
+          {orders.filter(o => {
+            if (o.isDeleted || o.status === 'cancelled' || o.status === 'served' || o.status === 'completed') return false
+            return getOrderMetrics(o).delay > 0
+          }).length > 0 && (
               <div className="bg-red-50 border-2 border-red-200 rounded-[30px] p-6 shadow-lg animate-pulse">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="bg-red-500 text-white p-3 rounded-2xl shadow-md">
@@ -272,18 +283,25 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {orders.filter(o =>
-                    (o.status === 'preparing' || o.status === 'pending' || o.status === 'ready') &&
-                    Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000) > (o.thresholdMinutes || 20)
-                  ).map(o => (
-                    <div key={o._id} className="bg-white border-2 border-red-100 px-5 py-3 rounded-2xl flex items-center gap-3 shadow-sm">
-                      <span className="font-black text-red-600 text-lg">#{o.orderNumber}</span>
-                      <span className="text-sm font-black bg-red-50 text-red-700 px-3 py-1 rounded-full border border-red-100">
-                        {Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000)}m / {o.thresholdMinutes || 20}m
-                      </span>
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{o.tableNumber}</span>
-                    </div>
-                  ))}
+                  {orders.filter(o => {
+                    if (o.isDeleted || o.status === 'cancelled' || o.status === 'served' || o.status === 'completed') return false
+                    return getOrderMetrics(o).delay > 0
+                  }).map(o => {
+                    const { delay, threshold } = getOrderMetrics(o)
+
+                    return (
+                      <div key={o._id} className="bg-white border-2 border-red-100 px-5 py-3 rounded-2xl flex items-center gap-3 shadow-sm">
+                        <span className="font-black text-red-600 text-lg">#{o.orderNumber}</span>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-black bg-red-50 text-red-700 px-2.5 py-1 rounded-full border border-red-100 uppercase tracking-tighter">
+                            ⏱️ {delay}m delay
+                          </span>
+                          <span className="text-[9px] font-bold text-gray-400 mt-0.5 ml-1 italic lowercase">exceeded {threshold}m target</span>
+                        </div>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest border-l-2 border-gray-100 pl-3 ml-1">{o.tableNumber}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -430,69 +448,50 @@ export default function AdminOrdersPage() {
                           {/* Right: Timing, Pricing & Actions */}
                           <div className="flex flex-col sm:flex-row lg:flex-row items-start sm:items-center gap-4 lg:gap-6 lg:w-fit">
 
-                            {/* Timing Logic */}
+                            {/* Performance & Timing Badge */}
                             <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1.5 text-[10px] font-black text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-lg border border-orange-100 italic whitespace-nowrap">
-                                <Clock className="h-3 w-3" />
-                                {(order.status === 'served' || order.status === 'completed')
-                                  ? `Served in ${order.totalPreparationTime !== undefined ? order.totalPreparationTime : (order.delayMinutes || Math.floor((new Date(order.servedAt || Date.now()).getTime() - new Date(order.createdAt).getTime()) / 60000))}m`
-                                  : order.status === 'ready'
-                                    ? `Ready since ${Math.floor((Date.now() - new Date(order.readyAt || order.createdAt).getTime()) / 60000)}m`
-                                    : (() => {
-                                      const start = order.kitchenAcceptedAt || order.createdAt
-                                      const duration = Math.floor((Date.now() - new Date(start).getTime()) / 60000)
-                                      const threshold = order.thresholdMinutes || 20
-
-                                      if (duration < threshold) {
-                                        return (
-                                          <span className="flex items-center gap-1 text-emerald-600">
-                                            <span>⏳</span>
-                                            <span>{threshold - duration}m left</span>
-                                          </span>
-                                        )
-                                      } else {
-                                        return (
-                                          <span className="flex items-center gap-1 text-red-500 font-bold">
-                                            <span>⚠️</span>
-                                            <span>{duration - threshold}m delay</span>
-                                          </span>
-                                        )
-                                      }
-                                    })()
-                                }
-                              </div>
-
-                              {/* Delay / On-Time Badges */}
                               {(() => {
-                                const isCompleted = order.status === 'served' || order.status === 'completed'
-                                const threshold = order.thresholdMinutes || 20
+                                const { totalTaken, delay, threshold, isCompleted, isReady } = getOrderMetrics(order)
 
-                                let displayDelay = 0
-                                if (isCompleted) {
-                                  if (order.delayMinutes !== undefined && order.delayMinutes > 0) {
-                                    displayDelay = order.delayMinutes
-                                  } else {
-                                    const totalTaken = order.totalPreparationTime !== undefined
-                                      ? order.totalPreparationTime
-                                      : (order.servedAt ? Math.floor((new Date(order.servedAt).getTime() - new Date(order.createdAt).getTime()) / 60000) : 0)
-                                    if (totalTaken > threshold) displayDelay = totalTaken - threshold
-                                  }
-                                } else {
-                                  const totalSoFar = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)
-                                  if (totalSoFar > threshold) displayDelay = totalSoFar - threshold
+                                // Color Scheme Logic
+                                let colorClass = "emerald"
+                                let icon = "✨"
+                                let label = isCompleted ? "On Time" : (isReady ? "READY" : "COOKING")
+
+                                if (delay > 0) {
+                                  colorClass = delay <= 10 ? "amber" : "rose"
+                                  icon = delay <= 10 ? "⚠️" : "🚨"
+                                  label = `${delay}m delay`
                                 }
 
-                                if (displayDelay > 0) return (
-                                  <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter border border-red-200 whitespace-nowrap">
-                                    ⏱️ {displayDelay}m delay
-                                  </span>
+                                const colorStyles = {
+                                  emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+                                  amber: "bg-amber-50 text-amber-600 border-amber-100",
+                                  rose: "bg-rose-50 text-rose-600 border-rose-100"
+                                }
+
+                                return (
+                                  <div className={`group flex items-center gap-3 p-1.5 pr-4 rounded-2xl border transition-all duration-300 hover:shadow-sm ${colorStyles[colorClass as keyof typeof colorStyles]}`}>
+                                    {/* Status Pill */}
+                                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider shadow-sm bg-white/80 backdrop-blur-sm border-inherit`}>
+                                      <span className="scale-110">{isCompleted ? icon : <Clock className="h-3 w-3 animate-pulse" />}</span>
+                                      <span>{label}</span>
+                                    </div>
+
+                                    {/* Metrics */}
+                                    <div className="flex flex-col">
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="text-xs font-black tracking-tight leading-none">
+                                          {isCompleted ? `${totalTaken}m` : (totalTaken < threshold ? `${threshold - totalTaken}m left` : `${totalTaken - threshold}m delay`)}
+                                        </span>
+                                        {!isCompleted && totalTaken >= threshold && <span className="text-[8px] font-bold opacity-60 uppercase">late</span>}
+                                      </div>
+                                      <span className="text-[9px] font-bold opacity-50 leading-tight mt-0.5 whitespace-nowrap lowercase">
+                                        vs {threshold}m target
+                                      </span>
+                                    </div>
+                                  </div>
                                 )
-                                if (isCompleted) return (
-                                  <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter border border-green-200 whitespace-nowrap">
-                                    ✨ On Time
-                                  </span>
-                                )
-                                return null
                               })()}
                             </div>
 

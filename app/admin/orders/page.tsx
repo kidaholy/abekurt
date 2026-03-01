@@ -22,6 +22,8 @@ interface Order {
   delayMinutes?: number
   thresholdMinutes?: number
   servedAt?: string
+  readyAt?: string
+  kitchenAcceptedAt?: string
 }
 
 export default function AdminOrdersPage() {
@@ -173,7 +175,9 @@ export default function AdminOrdersPage() {
   }
 
   const filteredOrders = orders.filter((order) => {
-    const matchesFilter = filter === "all" ? true : order.status === filter
+    const matchesFilter = filter === "all" ? true :
+      filter === "served" ? (order.status === "served" || order.status === "completed") :
+        order.status === filter
     const matchesSearch =
       order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -200,11 +204,40 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const preparingOrders = orders.filter(o => (o.status as string) === 'preparing' || (o.status as string) === 'pending')
+  const readyOrders = orders.filter(o => o.status === 'ready')
+  const servedOrders = orders.filter(o => o.status === 'served' || o.status === 'completed')
+
   const stats = {
-    all: orders.length,
-    preparing: orders.filter(o => (o.status as string) === "preparing" || (o.status as string) === "pending").length,
-    ready: orders.filter(o => o.status === "ready").length,
-    served: orders.filter(o => o.status === "served").length
+    all: { count: orders.length, time: 0 },
+    preparing: {
+      count: preparingOrders.length,
+      time: preparingOrders.length > 0
+        ? Math.floor(preparingOrders.reduce((acc, o) => {
+          const start = o.kitchenAcceptedAt || o.createdAt
+          return acc + (Date.now() - new Date(start).getTime())
+        }, 0) / preparingOrders.length / 60000)
+        : 0
+    },
+    ready: {
+      count: readyOrders.length,
+      time: readyOrders.length > 0
+        ? Math.floor(readyOrders.reduce((acc, o) => {
+          const start = o.readyAt || o.kitchenAcceptedAt || o.createdAt
+          return acc + (Date.now() - new Date(start).getTime())
+        }, 0) / readyOrders.length / 60000)
+        : 0
+    },
+    served: {
+      count: servedOrders.length,
+      time: servedOrders.length > 0
+        ? Math.floor(servedOrders.reduce((acc, o) => {
+          if (o.delayMinutes) return acc + o.delayMinutes
+          if (o.servedAt) return acc + (new Date(o.servedAt).getTime() - new Date(o.createdAt).getTime()) / 60000
+          return acc
+        }, 0) / servedOrders.length)
+        : 0
+    }
   }
 
   return (
@@ -252,10 +285,10 @@ export default function AdminOrdersPage() {
                 <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">{t("adminOrders.title")}</h2>
                 <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 gap-3 scrollbar-hide">
                   {[
-                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all, emoji: "📋" },
-                    { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing, emoji: "🔥" },
-                    { id: "ready", label: t("adminOrders.ready"), count: stats.ready, emoji: "✅" },
-                    { id: "served", label: "Served", count: stats.served, emoji: "🍽️" }
+                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all.count, time: null, emoji: "📋" },
+                    { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing.count, time: stats.preparing.time, emoji: "🔥" },
+                    { id: "ready", label: t("adminOrders.ready"), count: stats.ready.count, time: stats.ready.time, emoji: "✅" },
+                    { id: "served", label: "Served", count: stats.served.count, time: stats.served.time, emoji: "🍽️" }
                   ].map(item => (
                     <button
                       key={item.id}
@@ -265,11 +298,18 @@ export default function AdminOrdersPage() {
                         : "bg-gray-50 text-gray-600 hover:bg-gray-100"
                         }`}
                     >
-                      <span className="flex items-center gap-2 md:gap-3">
-                        <span className="text-lg md:text-xl">{item.emoji}</span>
-                        <span className="whitespace-nowrap">{item.label}</span>
-                      </span>
-                      <span className={`ml-3 px-2 py-0.5 rounded-full text-[10px] md:text-xs ${filter === item.id ? "bg-white/20" : "bg-gray-200 text-gray-500"}`}>
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="flex items-center gap-2 md:gap-3">
+                          <span className="text-lg md:text-xl">{item.emoji}</span>
+                          <span className="whitespace-nowrap">{item.label}</span>
+                        </span>
+                        {item.time !== null && (
+                          <span className={`text-[10px] font-black uppercase tracking-tighter ml-7 md:ml-8 ${filter === item.id ? 'text-white/60' : 'text-orange-500'}`}>
+                            {item.time}m avg
+                          </span>
+                        )}
+                      </div>
+                      <span className={`ml-3 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-black ${filter === item.id ? "bg-white/20 text-white" : "bg-gray-200 text-gray-500"}`}>
                         {item.count}
                       </span>
                     </button>
@@ -363,8 +403,10 @@ export default function AdminOrdersPage() {
                                 <div className="flex items-center gap-1 text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 italic">
                                   <Clock className="h-3 w-3" />
                                   {(order.status === 'served' || order.status === 'completed')
-                                    ? `Served in ${order.delayMinutes || 0}m`
-                                    : `Active: ${Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)}m`
+                                    ? `Served in ${order.delayMinutes || Math.floor((new Date(order.servedAt || Date.now()).getTime() - new Date(order.createdAt).getTime()) / 60000)}m`
+                                    : order.status === 'ready'
+                                      ? `Ready since ${Math.floor((Date.now() - new Date(order.readyAt || order.createdAt).getTime()) / 60000)}m`
+                                      : `Cooking: ${Math.floor((Date.now() - new Date(order.kitchenAcceptedAt || order.createdAt).getTime()) / 60000)}m`
                                   }
                                 </div>
                               </div>

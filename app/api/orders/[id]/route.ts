@@ -81,6 +81,59 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             console.log(`📡 Restored stock for cancelled order #${order.orderNumber}`)
         }
 
+        // Set timestamps and calculate delay
+        const now = new Date()
+
+        if (status === "preparing" && previousStatus !== "preparing") {
+            order.kitchenAcceptedAt = now
+        }
+
+        if (status === "ready" && previousStatus !== "ready") {
+            order.readyAt = now
+        }
+
+        if ((status === "served" || status === "completed") &&
+            (previousStatus !== "served" && previousStatus !== "completed")) {
+
+            order.servedAt = now
+            const startTimestamp = order.kitchenAcceptedAt || order.createdAt
+            const createdAt = new Date(startTimestamp)
+            const delayMs = now.getTime() - createdAt.getTime()
+            const delayMinutes = Math.floor(delayMs / 60000)
+            order.delayMinutes = delayMinutes
+
+            // Calculate dynamic threshold from menu items
+            const menuItemIds = order.items.map((item: any) => item.menuItemId)
+            const menuItems = await MenuItem.find({ menuItemId: { $in: menuItemIds } }).lean()
+
+            const itemPrepTimes = menuItems.map((mi: any) => mi.preparationTime || 0)
+            const maxPrepTime = itemPrepTimes.length > 0 ? Math.max(...itemPrepTimes) : 0
+
+            // Get global fallback from settings (default 20 mins)
+            const thresholdSetting = await Settings.findOne({ key: "PREPARATION_TIME_THRESHOLD" })
+            const globalFallback = thresholdSetting ? parseInt(thresholdSetting.value) : 20
+
+            // Use max of item prep times, but only use fallback if no prep times are defined (> 0)
+            const dynamicThreshold = maxPrepTime > 0 ? maxPrepTime : globalFallback
+            order.thresholdMinutes = dynamicThreshold
+
+            console.log(`⏱️ Order #${order.orderNumber} served in ${delayMinutes}m. Target: ${dynamicThreshold}m`)
+
+            if (delayMinutes > dynamicThreshold) {
+                addNotification(
+                    "warning",
+                    `⚠️ Delay Alert: Order #${order.orderNumber} took ${delayMinutes} minutes to serve! (Threshold: ${dynamicThreshold}m)`,
+                    "admin"
+                )
+            }
+
+            addNotification(
+                "success",
+                `💰 Order #${order.orderNumber} ${status} - Revenue: ${order.totalAmount} Br`,
+                "admin"
+            )
+        }
+
         // Save updated order
         const updatedOrder = await order.save()
 
@@ -99,47 +152,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
                 `${statusMessages[status as keyof typeof statusMessages]} - Order #${order.orderNumber}`,
                 (status === "ready" || status === "served") ? "cashier" : "chef"
             )
-
-            if (status === "completed" || status === "served") {
-                // Calculate delay
-                const servedAt = new Date()
-                order.servedAt = servedAt
-                const createdAt = new Date(order.createdAt)
-                const delayMs = servedAt.getTime() - createdAt.getTime()
-                const delayMinutes = Math.floor(delayMs / 60000)
-                order.delayMinutes = delayMinutes
-
-                // Calculate dynamic threshold from menu items
-                const menuItemIds = order.items.map((item: any) => item.menuItemId)
-                const menuItems = await MenuItem.find({ menuItemId: { $in: menuItemIds } }).lean()
-
-                const itemPrepTimes = menuItems.map((mi: any) => mi.preparationTime || 0)
-                const maxPrepTime = itemPrepTimes.length > 0 ? Math.max(...itemPrepTimes) : 0
-
-                // Get global fallback from settings (default 20 mins)
-                const thresholdSetting = await Settings.findOne({ key: "PREPARATION_TIME_THRESHOLD" })
-                const globalFallback = thresholdSetting ? parseInt(thresholdSetting.value) : 20
-
-                // Use max of item prep times, but at least the global fallback if no prep times are defined
-                const dynamicThreshold = maxPrepTime > 0 ? maxPrepTime : globalFallback
-                order.thresholdMinutes = dynamicThreshold
-
-                console.log(`⏱️ Order #${order.orderNumber} served in ${delayMinutes}m. Dynamic Threshold: ${dynamicThreshold}m (Max Prep: ${maxPrepTime}m, Fallback: ${globalFallback}m)`)
-
-                if (delayMinutes > dynamicThreshold) {
-                    addNotification(
-                        "warning",
-                        `⚠️ Delay Alert: Order #${order.orderNumber} took ${delayMinutes} minutes to serve! (Threshold: ${dynamicThreshold}m)`,
-                        "admin"
-                    )
-                }
-
-                addNotification(
-                    "success",
-                    `💰 Order #${order.orderNumber} ${status} - Revenue: ${order.totalAmount} Br`,
-                    "admin"
-                )
-            }
         }
 
         const serializedOrder = {

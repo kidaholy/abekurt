@@ -7,6 +7,7 @@ import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
 import { useConfirmation } from "@/hooks/use-confirmation"
+import { Clock } from "lucide-react"
 
 interface Order {
   _id: string
@@ -18,6 +19,9 @@ interface Order {
   customerName?: string
   tableNumber: string
   batchNumber?: string
+  delayMinutes?: number
+  thresholdMinutes?: number
+  servedAt?: string
 }
 
 export default function AdminOrdersPage() {
@@ -209,6 +213,38 @@ export default function AdminOrdersPage() {
         <div className="max-w-7xl mx-auto space-y-6">
           <BentoNavbar />
 
+          {/* Active Delay Alerts */}
+          {orders.filter(o =>
+            (o.status === 'preparing' || o.status === 'pending' || o.status === 'ready') &&
+            Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000) > (o.thresholdMinutes || 20)
+          ).length > 0 && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-[30px] p-6 shadow-lg animate-pulse">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="bg-red-500 text-white p-3 rounded-2xl shadow-md">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-red-700 uppercase tracking-tight">🚨 Action Required: Preparation Delays</h3>
+                    <p className="text-sm font-bold text-red-600/80 italic">The following orders have exceeded their preparation threshold!</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {orders.filter(o =>
+                    (o.status === 'preparing' || o.status === 'pending' || o.status === 'ready') &&
+                    Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000) > (o.thresholdMinutes || 20)
+                  ).map(o => (
+                    <div key={o._id} className="bg-white border-2 border-red-100 px-5 py-3 rounded-2xl flex items-center gap-3 shadow-sm">
+                      <span className="font-black text-red-600 text-lg">#{o.orderNumber}</span>
+                      <span className="text-sm font-black bg-red-50 text-red-700 px-3 py-1 rounded-full border border-red-100">
+                        {Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000)}m / {o.thresholdMinutes || 20}m
+                      </span>
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{o.tableNumber}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Sidebar - Filters & Stats */}
             <div className="lg:col-span-3 flex flex-col gap-4 lg:sticky lg:top-4">
@@ -320,12 +356,29 @@ export default function AdminOrdersPage() {
                                 )}
                                 <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">{order.tableNumber}</span>
                               </div>
-                              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </p>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                  {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                                <div className="flex items-center gap-1 text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 italic">
+                                  <Clock className="h-3 w-3" />
+                                  {(order.status === 'served' || order.status === 'completed')
+                                    ? `Served in ${order.delayMinutes || 0}m`
+                                    : `Active: ${Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)}m`
+                                  }
+                                </div>
+                              </div>
                             </div>
                             <span className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold ${status.color}`}>
                               <span>{status.icon}</span>
+                              {order.delayMinutes !== undefined && (
+                                <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase ${order.delayMinutes > (order.thresholdMinutes || 20) ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-gray-100 text-gray-500'}`}>
+                                  ⏱️ {order.delayMinutes}m delay
+                                  {order.thresholdMinutes && (
+                                    <span className="ml-1 opacity-50">/ {order.thresholdMinutes}m</span>
+                                  )}
+                                </span>
+                              )}
                               {status.label}
                             </span>
                           </div>

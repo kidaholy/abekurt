@@ -32,6 +32,8 @@ interface IOrder extends Document {
   kitchenAcceptedAt?: Date
   readyAt?: Date
   servedAt?: Date
+  delayMinutes?: number
+  thresholdMinutes?: number
 }
 
 const orderSchema = new Schema<IOrder>(
@@ -72,7 +74,9 @@ const orderSchema = new Schema<IOrder>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     kitchenAcceptedAt: { type: Date },
     readyAt: { type: Date },
-    servedAt: { type: Date }
+    servedAt: { type: Date },
+    delayMinutes: { type: Number },
+    thresholdMinutes: { type: Number }
   },
   { timestamps: true }
 )

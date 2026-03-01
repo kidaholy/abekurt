@@ -5,6 +5,7 @@ import Order from "@/lib/models/order"
 import User from "@/lib/models/user"
 import MenuItem from "@/lib/models/menu-item"
 import Stock from "@/lib/models/stock"
+import Settings from "@/lib/models/settings"
 import { addNotification } from "@/lib/notifications"
 import { calculateStockConsumption, applyStockAdjustment } from "@/lib/stock-logic"
 import { validateSession } from "@/lib/auth"
@@ -100,6 +101,39 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             )
 
             if (status === "completed" || status === "served") {
+                // Calculate delay
+                const servedAt = new Date()
+                order.servedAt = servedAt
+                const createdAt = new Date(order.createdAt)
+                const delayMs = servedAt.getTime() - createdAt.getTime()
+                const delayMinutes = Math.floor(delayMs / 60000)
+                order.delayMinutes = delayMinutes
+
+                // Calculate dynamic threshold from menu items
+                const menuItemIds = order.items.map((item: any) => item.menuItemId)
+                const menuItems = await MenuItem.find({ menuItemId: { $in: menuItemIds } }).lean()
+
+                const itemPrepTimes = menuItems.map((mi: any) => mi.preparationTime || 0)
+                const maxPrepTime = itemPrepTimes.length > 0 ? Math.max(...itemPrepTimes) : 0
+
+                // Get global fallback from settings (default 20 mins)
+                const thresholdSetting = await Settings.findOne({ key: "PREPARATION_TIME_THRESHOLD" })
+                const globalFallback = thresholdSetting ? parseInt(thresholdSetting.value) : 20
+
+                // Use max of item prep times, but at least the global fallback if no prep times are defined
+                const dynamicThreshold = maxPrepTime > 0 ? maxPrepTime : globalFallback
+                order.thresholdMinutes = dynamicThreshold
+
+                console.log(`⏱️ Order #${order.orderNumber} served in ${delayMinutes}m. Dynamic Threshold: ${dynamicThreshold}m (Max Prep: ${maxPrepTime}m, Fallback: ${globalFallback}m)`)
+
+                if (delayMinutes > dynamicThreshold) {
+                    addNotification(
+                        "warning",
+                        `⚠️ Delay Alert: Order #${order.orderNumber} took ${delayMinutes} minutes to serve! (Threshold: ${dynamicThreshold}m)`,
+                        "admin"
+                    )
+                }
+
                 addNotification(
                     "success",
                     `💰 Order #${order.orderNumber} ${status} - Revenue: ${order.totalAmount} Br`,

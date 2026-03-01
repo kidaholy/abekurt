@@ -254,6 +254,7 @@ export async function POST(request: Request) {
       batchId,
       batchNumber,
       createdBy: decoded.id,
+      thresholdMinutes: Math.max(...linkedMenuItems.map(m => m.preparationTime || 20), 20)
     }
 
     console.log("💾 Creating order in database:", orderData)

@@ -234,7 +234,7 @@ export default function AdminOrdersPage() {
 
   // Unified Performance Metric Helper
   const getOrderMetrics = (o: Order) => {
-    const isCompleted = o.status === 'served' || o.status === 'completed'
+    const isCompleted = o.status === 'served' || o.status === 'completed' || o.status === 'cancelled' || !!o.isDeleted
     const isReady = o.status === 'ready'
     const threshold = o.thresholdMinutes || 20
     const start = new Date(o.createdAt).getTime()
@@ -254,9 +254,6 @@ export default function AdminOrdersPage() {
     }
 
     // Determine end time for calculation
-    // IMPORTANT: For completed orders, we NEVER fallback to Date.now() 
-    // to prevent the timer from ticking after service.
-    // If specific timestamps are missing, 'updatedAt' provides the exact moment of service.
     const end = isCompleted
       ? new Date(o.servedAt || o.readyAt || o.updatedAt || o.createdAt).getTime()
       : isReady
@@ -308,8 +305,12 @@ export default function AdminOrdersPage() {
     },
     deleted: {
       count: deletedHistory.length,
-      time: 0,
-      delay: 0
+      time: deletedHistory.length > 0
+        ? Math.floor(deletedHistory.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / deletedHistory.length)
+        : 0,
+      delay: deletedHistory.length > 0
+        ? Math.floor(deletedHistory.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / deletedHistory.length)
+        : 0
     }
   }
 
@@ -370,7 +371,7 @@ export default function AdminOrdersPage() {
                     { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing.count, time: stats.preparing.time, delay: stats.preparing.delay, emoji: "🔥" },
                     { id: "ready", label: t("adminOrders.ready"), count: stats.ready.count, time: stats.ready.time, delay: stats.ready.delay, emoji: "✅" },
                     { id: "served", label: "Served", count: stats.served.count, time: stats.served.time, delay: stats.served.delay, emoji: "🍽️" },
-                    { id: "deleted", label: "Deleted History", count: stats.deleted.count, time: null, delay: null, emoji: "🗑️" }
+                    { id: "deleted", label: "Deleted History", count: stats.deleted.count, time: stats.deleted.time, delay: stats.deleted.delay, emoji: "🗑️" }
                   ].map(item => (
                     <button
                       key={item.id}

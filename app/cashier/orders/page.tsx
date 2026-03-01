@@ -26,12 +26,13 @@ interface Order {
   batchNumber?: string
   createdAt: string
   updatedAt: string
+  isDeleted?: boolean
 }
 
 export default function CashierOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState<"all" | "preparing" | "completed" | "cancelled">("all")
+  const [filterStatus, setFilterStatus] = useState<"all" | "preparing" | "completed">("all")
   const { token, user } = useAuth()
   const { t } = useLanguage()
 
@@ -66,13 +67,17 @@ export default function CashierOrdersPage() {
     }
   }
 
-  const filteredOrders = filterStatus === "all" ? orders : orders.filter((o) => o.status === filterStatus)
+  const isDeletedOrder = (o: Order) => !!o.isDeleted || o.status === "cancelled"
+
+  const filteredOrders = filterStatus === "all"
+    ? orders.filter(o => !isDeletedOrder(o))
+    : orders.filter((o) => o.status === filterStatus && !isDeletedOrder(o))
 
   const stats = {
-    total: orders.length,
-    preparing: orders.filter((o) => (o.status as string) === "preparing" || (o.status as string) === "pending").length,
-    completed: orders.filter((o) => o.status === "completed").length,
-    revenue: orders.filter((o) => o.status === "completed").reduce((sum, o) => sum + o.totalAmount, 0),
+    total: orders.filter(o => !isDeletedOrder(o)).length,
+    preparing: orders.filter((o) => !isDeletedOrder(o) && ((o.status as string) === "preparing" || (o.status as string) === "pending")).length,
+    completed: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").length,
+    revenue: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").reduce((sum, o) => sum + o.totalAmount, 0),
   }
 
   const getStatusColor = (status: string) => {
@@ -126,7 +131,7 @@ export default function CashierOrdersPage() {
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <CardTitle className="text-xl font-bold text-gray-900">Sales History</CardTitle>
                 <div className="flex gap-2">
-                  {["all", "preparing", "completed", "cancelled"].map((s) => (
+                  {["all", "preparing", "completed"].map((s) => (
                     <button
                       key={s}
                       onClick={() => setFilterStatus(s as any)}

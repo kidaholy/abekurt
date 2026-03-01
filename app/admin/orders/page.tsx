@@ -7,20 +7,21 @@ import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
 import { useConfirmation } from "@/hooks/use-confirmation"
-import { Clock } from "lucide-react"
+import { Clock, Trash2 } from "lucide-react"
 
 interface Order {
   _id: string
   orderNumber: string
-  items: Array<{ name: string; quantity: number; price: number; menuId?: string }>
+  items: Array<{ name: string; quantity: number; price: number; menuId?: string; preparationTime?: number }>
   totalAmount: number
-  status: "preparing" | "ready" | "served" | "completed" | "cancelled"
+  status: "pending" | "preparing" | "ready" | "served" | "completed" | "cancelled"
   createdAt: string
   customerName?: string
   tableNumber: string
   batchNumber?: string
   delayMinutes?: number
   thresholdMinutes?: number
+  totalPreparationTime?: number
   isDeleted?: boolean
   servedAt?: string
   readyAt?: string
@@ -32,7 +33,6 @@ export default function AdminOrdersPage() {
   const { t } = useLanguage()
   const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
   const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -64,8 +64,6 @@ export default function AdminOrdersPage() {
       }
     } catch (error) {
       console.error("Failed to fetch orders:", error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -239,6 +237,7 @@ export default function AdminOrdersPage() {
       count: servedOrders.length,
       time: servedOrders.length > 0
         ? Math.floor(servedOrders.reduce((acc, o) => {
+          if (o.totalPreparationTime !== undefined) return acc + o.totalPreparationTime
           if (o.delayMinutes) return acc + o.delayMinutes
           if (o.servedAt) return acc + (new Date(o.servedAt).getTime() - new Date(o.createdAt).getTime()) / 60000
           return acc
@@ -382,89 +381,136 @@ export default function AdminOrdersPage() {
                     )}
                   </div>
                 </div>
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center py-32">
-                    <div className="text-6xl animate-bounce mb-4">🍩</div>
-                    <p className="text-gray-400 font-bold">{t("adminOrders.scanningOrders")}</p>
-                  </div>
-                ) : filteredOrders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                   <div className="text-center py-32">
                     <div className="text-8xl mb-6 opacity-20">🍃</div>
                     <h3 className="text-2xl font-bold text-gray-400">{t("adminOrders.quietForNow")}</h3>
                     <p className="text-gray-400">{t("adminOrders.noOrdersFound")}</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-4">
                     {filteredOrders.map((order) => {
                       const status = getStatusConfig(order.status)
                       return (
-                        <div key={order._id} className="bg-gray-50 rounded-xl p-5 border border-gray-200 hover:border-[#8B4513]/30 hover:shadow-md transition-all flex flex-col">
-                          <div className="flex justify-between items-start mb-6">
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="text-xl font-bold text-gray-800">#{order.orderNumber}</h3>
-                                {order.batchNumber && (
-                                  <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">Batch #{order.batchNumber}</span>
-                                )}
-                                <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">{order.tableNumber}</span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                  {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                                <div className="flex items-center gap-1 text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 italic">
-                                  <Clock className="h-3 w-3" />
-                                  {(order.status === 'served' || order.status === 'completed')
-                                    ? `Served in ${order.delayMinutes || Math.floor((new Date(order.servedAt || Date.now()).getTime() - new Date(order.createdAt).getTime()) / 60000)}m`
-                                    : order.status === 'ready'
-                                      ? `Ready since ${Math.floor((Date.now() - new Date(order.readyAt || order.createdAt).getTime()) / 60000)}m`
-                                      : `Cooking: ${Math.floor((Date.now() - new Date(order.kitchenAcceptedAt || order.createdAt).getTime()) / 60000)}m`
-                                  }
-                                </div>
-                              </div>
-                            </div>
-                            <span className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold ${status.color}`}>
-                              <span>{status.icon}</span>
-                              {order.delayMinutes !== undefined && (
-                                <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase ${order.delayMinutes > (order.thresholdMinutes || 20) ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-gray-100 text-gray-500'}`}>
-                                  ⏱️ {order.delayMinutes}m delay
-                                  {order.thresholdMinutes && (
-                                    <span className="ml-1 opacity-50">/ {order.thresholdMinutes}m</span>
-                                  )}
-                                </span>
+                        <div key={order._id} className="bg-gray-50 rounded-2xl p-4 md:p-5 border border-gray-200 hover:border-[#8B4513]/30 hover:shadow-md transition-all flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
+
+                          {/* Left: Order Identifier & Status */}
+                          <div className="flex-shrink-0 lg:w-48">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-xl font-black text-gray-800">#{order.orderNumber}</h3>
+                              {order.batchNumber && (
+                                <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase">B#{order.batchNumber}</span>
                               )}
-                              {status.label}
-                            </span>
+                              <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase">{order.tableNumber}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${status.color}`}>
+                                <span>{status.icon}</span>
+                                {status.label}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="flex-1 space-y-3 mb-6 bg-white/50 rounded-[30px] p-5">
-                            {order.items.map((item, idx) => (
-                              <div key={idx} className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600 font-bold">
-                                  <span className="text-[#8B4513]">{item.quantity}×</span> {item.name}
-                                  {item.menuId && <span className="text-gray-400 font-mono text-xs ml-1">({item.menuId})</span>}
-                                </span>
-                                <span className="font-bold text-gray-400">{(item.price * item.quantity).toFixed(0)} {t("common.currencyBr")}</span>
+                          {/* Middle: Items Summary - Compact Flex Wrap */}
+                          <div className="flex-1 min-w-0 bg-white/40 rounded-xl p-3 border border-gray-100/50">
+                            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                              {order.items.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 text-xs">
+                                  <span className="text-[#8B4513] font-black">{item.quantity}×</span>
+                                  <span className="text-gray-700 font-bold truncate max-w-[140px]">{item.name}</span>
+                                  {item.preparationTime && <span className="text-gray-400 text-[9px] italic">({item.preparationTime}m)</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Right: Timing, Pricing & Actions */}
+                          <div className="flex flex-col sm:flex-row lg:flex-row items-start sm:items-center gap-4 lg:gap-6 lg:w-fit">
+
+                            {/* Timing Logic */}
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 text-[10px] font-black text-orange-600 bg-orange-50 px-2.5 py-1.5 rounded-lg border border-orange-100 italic whitespace-nowrap">
+                                <Clock className="h-3 w-3" />
+                                {(order.status === 'served' || order.status === 'completed')
+                                  ? `Served in ${order.totalPreparationTime !== undefined ? order.totalPreparationTime : (order.delayMinutes || Math.floor((new Date(order.servedAt || Date.now()).getTime() - new Date(order.createdAt).getTime()) / 60000))}m`
+                                  : order.status === 'ready'
+                                    ? `Ready since ${Math.floor((Date.now() - new Date(order.readyAt || order.createdAt).getTime()) / 60000)}m`
+                                    : (() => {
+                                      const start = order.kitchenAcceptedAt || order.createdAt
+                                      const duration = Math.floor((Date.now() - new Date(start).getTime()) / 60000)
+                                      const threshold = order.thresholdMinutes || 20
+
+                                      if (duration < threshold) {
+                                        return (
+                                          <span className="flex items-center gap-1 text-emerald-600">
+                                            <span>⏳</span>
+                                            <span>{threshold - duration}m left</span>
+                                          </span>
+                                        )
+                                      } else {
+                                        return (
+                                          <span className="flex items-center gap-1 text-red-500 font-bold">
+                                            <span>⚠️</span>
+                                            <span>{duration - threshold}m delay</span>
+                                          </span>
+                                        )
+                                      }
+                                    })()
+                                }
                               </div>
-                            ))}
-                          </div>
 
-                          <div className="flex justify-between items-center pt-2">
-                            <div className="text-sm font-bold text-gray-400">{t("adminOrders.totalAmount")}</div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-3xl font-black text-[#8B4513]">{order.totalAmount.toFixed(0)} {t("common.currencyBr")}</div>
+                              {/* Delay / On-Time Badges */}
+                              {(() => {
+                                const isCompleted = order.status === 'served' || order.status === 'completed'
+                                const threshold = order.thresholdMinutes || 20
+
+                                let displayDelay = 0
+                                if (isCompleted) {
+                                  if (order.delayMinutes !== undefined && order.delayMinutes > 0) {
+                                    displayDelay = order.delayMinutes
+                                  } else {
+                                    const totalTaken = order.totalPreparationTime !== undefined
+                                      ? order.totalPreparationTime
+                                      : (order.servedAt ? Math.floor((new Date(order.servedAt).getTime() - new Date(order.createdAt).getTime()) / 60000) : 0)
+                                    if (totalTaken > threshold) displayDelay = totalTaken - threshold
+                                  }
+                                } else {
+                                  const totalSoFar = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000)
+                                  if (totalSoFar > threshold) displayDelay = totalSoFar - threshold
+                                }
+
+                                if (displayDelay > 0) return (
+                                  <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter border border-red-200 whitespace-nowrap">
+                                    ⏱️ {displayDelay}m delay
+                                  </span>
+                                )
+                                if (isCompleted) return (
+                                  <span className="bg-green-100 text-green-600 px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter border border-green-200 whitespace-nowrap">
+                                    ✨ On Time
+                                  </span>
+                                )
+                                return null
+                              })()}
+                            </div>
+
+                            {/* Total Amount & Primary Action */}
+                            <div className="flex items-center gap-4 ml-auto">
+                              <div className="text-2xl font-black text-[#8B4513] whitespace-nowrap">{order.totalAmount.toFixed(0)} <span className="text-xs font-bold text-gray-400">{t("common.currencyBr")}</span></div>
                               <div className="flex gap-2">
                                 {!order.isDeleted && (
                                   <button
                                     onClick={() => handleDeleteOrder(order._id, order.orderNumber)}
                                     disabled={deleting === order._id}
-                                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white p-2 rounded-lg transition-all shadow-md hover:shadow-lg transform hover:scale-105 disabled:transform-none"
-                                    title="Move to Deleted History"
+                                    className="bg-red-50 hover:bg-red-100 text-red-500 p-2.5 rounded-xl transition-all border border-red-100 shadow-sm hover:shadow active:scale-95 disabled:opacity-50"
+                                    title="Move to History"
                                   >
                                     {deleting === order._id ? (
                                       <span className="animate-spin text-xs">⏳</span>
                                     ) : (
-                                      "🗑️"
+                                      <Trash2 className="h-5 w-5" />
                                     )}
                                   </button>
                                 )}

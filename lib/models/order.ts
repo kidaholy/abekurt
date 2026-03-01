@@ -11,6 +11,7 @@ interface IOrderItem {
   notes?: string
   category?: string
   initialStatus?: string
+  preparationTime?: number
 }
 
 interface IOrder extends Document {
@@ -34,6 +35,7 @@ interface IOrder extends Document {
   servedAt?: Date
   delayMinutes?: number
   thresholdMinutes?: number
+  totalPreparationTime?: number
   isDeleted?: boolean
 }
 
@@ -55,7 +57,8 @@ const orderSchema = new Schema<IOrder>(
         modifiers: [{ type: String }],
         notes: { type: String },
         category: { type: String },
-        initialStatus: { type: String }
+        initialStatus: { type: String },
+        preparationTime: { type: Number }
       },
     ],
     totalAmount: { type: Number, required: true },
@@ -78,6 +81,7 @@ const orderSchema = new Schema<IOrder>(
     servedAt: { type: Date },
     delayMinutes: { type: Number },
     thresholdMinutes: { type: Number },
+    totalPreparationTime: { type: Number },
     isDeleted: { type: Boolean, default: false, index: true }
   },
   { timestamps: true }

@@ -20,7 +20,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const body = await request.json()
         const { status } = body
 
-        const order = await Order.findById(id)
+        const order = await (Order as any).findById(id)
         if (!order) {
             return NextResponse.json({ message: "Order not found" }, { status: 404 })
         }
@@ -98,31 +98,40 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             order.servedAt = now
             const startTimestamp = order.kitchenAcceptedAt || order.createdAt
             const createdAt = new Date(startTimestamp)
-            const delayMs = now.getTime() - createdAt.getTime()
-            const delayMinutes = Math.floor(delayMs / 60000)
-            order.delayMinutes = delayMinutes
+            const durationMs = now.getTime() - createdAt.getTime()
+            const totalMinutes = Math.floor(durationMs / 60000)
 
-            // Calculate dynamic threshold from menu items
-            const menuItemIds = order.items.map((item: any) => item.menuItemId)
-            const menuItems = await MenuItem.find({ menuItemId: { $in: menuItemIds } }).lean()
+            // Store the total time taken
+            order.totalPreparationTime = totalMinutes
 
-            const itemPrepTimes = menuItems.map((mi: any) => mi.preparationTime || 0)
-            const maxPrepTime = itemPrepTimes.length > 0 ? Math.max(...itemPrepTimes) : 0
+            // Calculate/Ensure threshold
+            let dynamicThreshold = order.thresholdMinutes
 
-            // Get global fallback from settings (default 20 mins)
-            const thresholdSetting = await Settings.findOne({ key: "PREPARATION_TIME_THRESHOLD" })
-            const globalFallback = thresholdSetting ? parseInt(thresholdSetting.value) : 20
+            if (!dynamicThreshold) {
+                const menuItemIds = order.items.map((item: any) => item.menuItemId)
+                const menuItems = await (MenuItem as any).find({ _id: { $in: menuItemIds } }).lean()
 
-            // Use max of item prep times, but only use fallback if no prep times are defined (> 0)
-            const dynamicThreshold = maxPrepTime > 0 ? maxPrepTime : globalFallback
-            order.thresholdMinutes = dynamicThreshold
+                const itemPrepTimes = menuItems.map((mi: any) => (mi as any).preparationTime || 0)
+                const maxPrepTime = itemPrepTimes.length > 0 ? Math.max(...itemPrepTimes) : 0
 
-            console.log(`⏱️ Order #${order.orderNumber} served in ${delayMinutes}m. Target: ${dynamicThreshold}m`)
+                // Get global fallback from settings (default 20 mins)
+                const thresholdSetting = await (Settings as any).findOne({ key: "PREPARATION_TIME_THRESHOLD" })
+                const globalFallback = thresholdSetting ? parseInt(thresholdSetting.value) : 20
 
-            if (delayMinutes > dynamicThreshold) {
+                dynamicThreshold = maxPrepTime > 0 ? maxPrepTime : globalFallback
+                order.thresholdMinutes = dynamicThreshold
+            }
+
+            // Calculate excess delay
+            const excessDelay = Math.max(0, totalMinutes - dynamicThreshold)
+            order.delayMinutes = excessDelay
+
+            console.log(`⏱️ Order #${order.orderNumber} served. Total: ${totalMinutes}m, Target: ${dynamicThreshold}m, Delay: ${excessDelay}m`)
+
+            if (excessDelay > 0) {
                 addNotification(
                     "warning",
-                    `⚠️ Delay Alert: Order #${order.orderNumber} took ${delayMinutes} minutes to serve! (Threshold: ${dynamicThreshold}m)`,
+                    `⚠️ Delay Alert: Order #${order.orderNumber} took ${totalMinutes} minutes to serve! (${excessDelay}m over target of ${dynamicThreshold}m)`,
                     "admin"
                 )
             }
@@ -174,7 +183,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
         const { id } = await params
 
-        const orderToDelete = await Order.findById(id)
+        const orderToDelete = await (Order as any).findById(id)
         if (!orderToDelete) {
             return NextResponse.json({ message: "Order not found" }, { status: 404 })
         }
@@ -187,7 +196,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             console.log(`📡 Restored stock for deleted order #${orderToDelete.orderNumber}`)
         }
 
-        await Order.findByIdAndUpdate(id, { isDeleted: true, status: "cancelled" })
+        await (Order as any).findByIdAndUpdate(id, { isDeleted: true, status: "cancelled" })
 
         // Send cancellation notification
         addNotification(

@@ -236,6 +236,7 @@ export async function POST(request: Request) {
           ...item,
           menuId: menu?.menuId,
           category: menu?.category, // Store category for kitchen routing
+          preparationTime: menu?.preparationTime || 0,
           status: "pending",
           modifiers: item.modifiers || [],
           notes: item.notes || ""
@@ -256,7 +257,7 @@ export async function POST(request: Request) {
       batchId,
       batchNumber,
       createdBy: decoded.id,
-      thresholdMinutes: Math.max(...linkedMenuItems.map(m => m.preparationTime || 0)) || 20
+      thresholdMinutes: Math.max(...linkedMenuItems.map(m => m.preparationTime || 10)) || 10
     }
 
     console.log("💾 Creating order in database:", orderData)

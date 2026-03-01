@@ -1,5 +1,16 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Fix for DNS resolution issues with MongoDB Atlas
+try {
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+    console.log("🌐 Global DNS servers set to Google DNS (8.8.8.8, 8.8.4.4)");
+} catch (e) {
+    console.warn("⚠️ Failed to set global DNS servers:", e);
+}
+
 require('dotenv').config({ path: '.env' });
+
 
 const MONGODB_URI = process.env.MONGODB_URI;
 

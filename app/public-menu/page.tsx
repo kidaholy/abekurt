@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel"
+import { cn } from "@/lib/utils"
 
 // Category icon mapping
 const getCategoryIcon = (category: string) => {
@@ -142,8 +144,8 @@ export default function PublicMenuPage() {
                                     key={tab}
                                     onClick={() => { setMainCategoryFilter(tab); setCategoryFilter('all') }}
                                     className={`flex items-center gap-2 px-8 py-3 rounded-full font-extrabold text-base transition-all duration-300 shadow-md ${mainCategoryFilter === tab
-                                            ? 'bg-[#8B4513] text-white shadow-xl scale-105 ring-2 ring-[#D2691E]/50'
-                                            : 'bg-white text-gray-500 hover:bg-amber-50 hover:text-[#8B4513] border border-gray-200'
+                                        ? 'bg-[#8B4513] text-white shadow-xl scale-105 ring-2 ring-[#D2691E]/50'
+                                        : 'bg-white text-gray-500 hover:bg-amber-50 hover:text-[#8B4513] border border-gray-200'
                                         }`}
                                 >
                                     {tab === 'Food' ? '🍽️' : '🥤'} {tab}
@@ -154,22 +156,38 @@ export default function PublicMenuPage() {
                             ))}
                         </div>
 
-                        {/* Sub-category Pills */}
-                        <div className="mb-8 overflow-x-auto pb-3 hide-scrollbar">
-                            <div className="flex gap-2 justify-center flex-wrap">
-                                {categories.map((cat: string) => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => setCategoryFilter(cat)}
-                                        className={`px-5 py-2.5 rounded-full font-bold whitespace-nowrap text-sm transition-all duration-300 border ${categoryFilter === cat
-                                                ? "bg-[#D2691E] text-white shadow-lg scale-105 border-[#D2691E]"
-                                                : "bg-white text-gray-500 hover:bg-amber-50 hover:text-[#8B4513] border-gray-200"
-                                            }`}
-                                    >
-                                        {cat === "all" ? "✨ All" : `${getCategoryIcon(cat)} ${cat}`}
-                                    </button>
-                                ))}
-                            </div>
+                        {/* Sub-category Slider (Slide View) */}
+                        <div className="mb-8 relative px-10">
+                            <Carousel
+                                opts={{
+                                    align: "start",
+                                    containScroll: "trimSnaps",
+                                }}
+                                className="w-full"
+                            >
+                                <CarouselContent className="-ml-2">
+                                    {categories.map((cat: string) => (
+                                        <CarouselItem key={cat} className="pl-2 basis-auto">
+                                            <button
+                                                onClick={() => setCategoryFilter(cat)}
+                                                className={cn(
+                                                    "flex items-center gap-2 px-5 py-2.5 rounded-full font-bold whitespace-nowrap text-sm transition-all duration-300 border shadow-sm",
+                                                    categoryFilter === cat
+                                                        ? "bg-[#8B4513] text-white border-[#8B4513] shadow-md scale-105"
+                                                        : "bg-white text-gray-500 hover:bg-amber-50 hover:text-[#8B4513] border-gray-200"
+                                                )}
+                                            >
+                                                <span>{cat === "all" ? "✨" : getCategoryIcon(cat)}</span>
+                                                <span>{cat === "all" ? "All" : cat}</span>
+                                            </button>
+                                        </CarouselItem>
+                                    ))}
+                                </CarouselContent>
+                                <div className="hidden md:block">
+                                    <CarouselPrevious className="-left-12 size-8 bg-white/80 hover:bg-white text-[#8B4513] border-none shadow-md" />
+                                    <CarouselNext className="-right-12 size-8 bg-white/80 hover:bg-white text-[#8B4513] border-none shadow-md" />
+                                </div>
+                            </Carousel>
                         </div>
 
                         {/* Empty */}
@@ -181,10 +199,10 @@ export default function PublicMenuPage() {
                             </div>
                         )}
 
-                        {/* Menu Grid */}
+                        {/* Menu Items (List View) */}
                         {filteredItems.length > 0 && (
                             <motion.div
-                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                                className="flex flex-col gap-4"
                                 layout
                             >
                                 <AnimatePresence mode="popLayout">
@@ -192,73 +210,63 @@ export default function PublicMenuPage() {
                                         <motion.div
                                             key={item._id}
                                             layout
-                                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            transition={{ duration: 0.3, delay: idx * 0.05 }}
-                                            className="group bg-white rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:-translate-y-1"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.2, delay: idx * 0.03 }}
+                                            className="group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 flex items-center p-3 gap-4"
                                         >
-                                            {/* Image */}
-                                            <div className="relative w-full h-44 bg-gradient-to-br from-amber-100 to-orange-100 overflow-hidden">
+                                            {/* Compact Image */}
+                                            <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-amber-50 flex items-center justify-center">
                                                 {item.image ? (
                                                     <Image
                                                         src={item.image}
                                                         alt={item.name}
                                                         fill
                                                         className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                                        sizes="100px"
                                                     />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <span className="text-6xl opacity-60 group-hover:scale-110 transition-transform duration-300">
-                                                            {getCategoryIcon(item.category)}
-                                                        </span>
-                                                    </div>
+                                                    <span className="text-4xl opacity-40">
+                                                        {getCategoryIcon(item.category)}
+                                                    </span>
                                                 )}
 
-                                                {/* Price Badge */}
-                                                <div className="absolute top-3 right-3 bg-[#8B4513] text-white px-3 py-1.5 rounded-full text-sm font-extrabold shadow-lg">
-                                                    {item.price} Br
-                                                </div>
-
-                                                {/* Category Icon */}
-                                                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm w-9 h-9 rounded-full flex items-center justify-center text-lg shadow-sm">
-                                                    {getCategoryIcon(item.category)}
-                                                </div>
-
-                                                {/* Menu ID */}
-                                                {item.menuId && (
-                                                    <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-2 py-0.5 rounded-md text-xs font-mono">
-                                                        #{item.menuId}
-                                                    </div>
-                                                )}
-
-                                                {/* Hover overlay */}
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                                {/* Price Overlay for Mobile accessibility if needed, but we put it on right */}
                                             </div>
 
-                                            {/* Content */}
-                                            <div className="p-4">
-                                                <div className="inline-block px-2.5 py-0.5 bg-amber-100 text-[#8B4513] text-xs rounded-full font-semibold mb-2">
-                                                    {item.category}
+                                            {/* Details */}
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex justify-between items-start mb-0.5">
+                                                    <h3 className="text-base font-bold text-gray-800 transition-colors group-hover:text-[#8B4513] truncate pr-2">
+                                                        {item.name}
+                                                    </h3>
+                                                    <span className="text-base font-extrabold text-[#8B4513] whitespace-nowrap">
+                                                        {item.price} Br
+                                                    </span>
                                                 </div>
-                                                <h3 className="text-lg font-bold text-gray-800 group-hover:text-[#8B4513] transition-colors mb-1">
-                                                    {item.name}
-                                                </h3>
+
                                                 {item.description && (
-                                                    <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                                                    <p className="text-xs text-gray-500 line-clamp-2 mb-2 leading-relaxed">
                                                         {item.description}
                                                     </p>
                                                 )}
 
-                                                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                                                    <span className="text-xl font-extrabold text-[#8B4513]">{item.price} Br</span>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="inline-flex items-center px-2 py-0.5 bg-amber-50 text-[#8B4513] text-[10px] font-bold rounded-md border border-amber-100/50 uppercase tracking-tighter">
+                                                        {item.category}
+                                                    </span>
                                                     {item.preparationTime && (
-                                                        <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">
+                                                        <span className="flex items-center gap-1 text-[10px] text-gray-400 font-medium">
                                                             ⏱ {item.preparationTime} min
                                                         </span>
                                                     )}
                                                 </div>
+                                            </div>
+
+                                            {/* Selection Indicator/Arrow */}
+                                            <div className="text-amber-200 group-hover:text-[#8B4513] transition-colors pr-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                                             </div>
                                         </motion.div>
                                     ))}

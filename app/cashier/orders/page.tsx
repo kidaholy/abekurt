@@ -158,55 +158,57 @@ export default function CashierOrdersPage() {
                   <p className="text-gray-500 font-medium">No orders found</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-x-auto -mx-6 md:mx-0">
+                  <table className="w-full min-w-[600px] md:min-w-0">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Order #</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Batch</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Table</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Items</th>
-                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
-                        <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
-                        <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Time</th>
+                      <tr className="border-b border-gray-200 bg-gray-50/50">
+                        <th className="text-left py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Order</th>
+                        <th className="text-left py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Context</th>
+                        <th className="text-left py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Items</th>
+                        <th className="text-right py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Amount</th>
+                        <th className="text-center py-4 px-6 text-[10px] font-black uppercase tracking-widest text-gray-500">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredOrders.map((order) => (
                         <tr key={order._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="py-4 px-4">
-                            <span className="text-sm font-medium text-gray-900">#{order.orderNumber}</span>
+                          <td className="py-4 px-6">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black text-gray-900">#{order.orderNumber}</span>
+                              <span className="text-[10px] text-gray-400 font-bold">
+                                {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <span className="text-sm font-medium text-purple-600">{order.batchNumber ? `Batch #${order.batchNumber}` : '—'}</span>
+                          <td className="py-4 px-6">
+                            <div className="flex flex-col gap-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-black border border-purple-100 w-fit">
+                                {order.batchNumber ? `Batch #${order.batchNumber}` : 'Global'}
+                              </span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-black border border-blue-100 w-fit">
+                                Table {order.tableNumber}
+                              </span>
+                            </div>
                           </td>
-                          <td className="py-4 px-4">
-                            <span className="text-sm font-medium text-blue-600">{order.tableNumber}</span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="text-sm text-gray-600">
+                          <td className="py-4 px-6">
+                            <div className="text-xs text-gray-600">
                               {order.items.slice(0, 2).map((item, idx) => (
-                                <div key={idx}>
-                                  {item.name} x{item.quantity}
+                                <div key={idx} className="truncate max-w-[120px]">
+                                  {item.name} <span className="text-gray-400 font-bold">×{item.quantity}</span>
                                 </div>
                               ))}
                               {order.items.length > 2 && (
-                                <div className="text-xs text-gray-400">+{order.items.length - 2} more</div>
+                                <div className="text-[10px] text-gray-400 font-black uppercase mt-1">+{order.items.length - 2} more items</div>
                               )}
                             </div>
                           </td>
-                          <td className="py-4 px-4 text-right">
-                            <span className="text-sm font-bold text-gray-900">{order.totalAmount.toFixed(0)} ETB</span>
+                          <td className="py-4 px-6 text-right">
+                            <span className="text-sm font-black text-[#2d5a41]">{order.totalAmount.toFixed(0)} ETB</span>
                           </td>
-                          <td className="py-4 px-4 text-center">
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                          <td className="py-4 px-6 text-center">
+                            <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase ${getStatusColor(order.status)}`}>
                               {order.status}
                             </span>
-                          </td>
-                          <td className="py-4 px-4 text-right">
-                            <div className="text-sm text-gray-600">
-                              {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
                           </td>
                         </tr>
                       ))}

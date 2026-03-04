@@ -358,15 +358,17 @@ export default function CashierPOSPage() {
                   <ShoppingCart className="h-8 w-8 text-blue-600" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">POS System</h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Welcome, {user?.name}
+                  <h1 className="text-xl md:text-3xl font-bold text-gray-900">POS System</h1>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <p className="text-xs md:text-sm text-gray-600">
+                      Welcome, {user?.name}
+                    </p>
                     {user?.batchNumber && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold bg-[#2d5a41] text-white shadow-sm border border-[#2d5a41]/20 animate-pulse">
                         Batch #{user.batchNumber}
                       </span>
                     )}
-                  </p>
+                  </div>
                 </div>
               </div>
               <div className="text-right">

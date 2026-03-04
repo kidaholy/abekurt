@@ -250,9 +250,14 @@ export function CartSidebar({
 
         {/* Paper Size Selection */}
         <div className="flex items-center justify-between gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-100">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            Print Size
-          </label>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              Print Size
+            </label>
+            {getSelectedBatchDisplay() && (
+              <span className="text-[10px] text-[#2d5a41] font-black uppercase mt-0.5">{getSelectedBatchDisplay()}</span>
+            )}
+          </div>
           <div className="flex gap-1">
             {[80, 58].map((size) => (
               <button
@@ -270,49 +275,63 @@ export function CartSidebar({
         </div>
       </div>
 
-      {/* Items */}
-      <div className={`flex-1 overflow-y-auto ${isEmbedded ? 'py-2' : 'p-4'} space-y-3 custom-scrollbar`}>
+      {/* Items - Mobile Optimized Table View */}
+      <div className={`flex-1 overflow-y-auto ${isEmbedded ? 'py-2' : 'p-4'} custom-scrollbar`}>
         {items.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
             <div className="text-6xl mb-4 opacity-20">🛒</div>
             <p className="font-bold">{t("cashier.cartEmpty")}</p>
           </div>
         ) : (
-          items.map((item, idx) => (
-            <div
-              key={item.id}
-              className="bg-gray-50 rounded-[25px] p-4 flex gap-3 border border-gray-100 hover:border-[#2d5a41]/30 transition-all animate-slide-in-up"
-              style={{ animationDelay: `${idx * 50}ms` }}
-            >
-              <div className="flex-1">
-                <h3 className="font-bold text-sm text-gray-800">
-                  {item.menuId ? `#${item.menuId} ` : ""}{item.name}
-                </h3>
-                <p className="text-xs text-gray-500 font-bold">{item.price} {t("common.currencyBr")}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onQuantityChange(item.id, Math.max(1, item.quantity - 1))}
-                  className="w-8 h-8 bg-white shadow-sm border border-gray-200 rounded-full flex items-center justify-center text-sm hover:bg-gray-100 transition-all font-bold"
-                >
-                  −
-                </button>
-                <span className="w-6 text-center font-bold text-gray-800">{item.quantity}</span>
-                <button
-                  onClick={() => onQuantityChange(item.id, item.quantity + 1)}
-                  className="w-8 h-8 bg-[#2d5a41] text-white shadow-md rounded-full flex items-center justify-center text-sm hover:bg-black transition-all font-bold"
-                >
-                  +
-                </button>
-                <button
-                  onClick={() => onRemove(item.id)}
-                  className="ml-2 w-8 h-8 text-red-400 hover:text-red-500 transition-colors flex items-center justify-center"
-                >
-                  ✕
-                </button>
-              </div>
+          <div className="space-y-2">
+            {/* Headers for table-like view (only visible on mobile or small viewports) */}
+            <div className="px-4 py-2 flex text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 mb-2">
+              <span className="flex-1">Item</span>
+              <span className="w-20 text-center">Qty</span>
+              <span className="w-16 text-right">Price</span>
             </div>
-          ))
+            
+            {items.map((item, idx) => (
+              <div
+                key={item.id}
+                className="bg-white hover:bg-gray-50 rounded-xl p-3 flex items-center gap-3 border border-gray-100 hover:border-[#2d5a41]/30 transition-all animate-slide-in-up"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-xs text-gray-800 truncate">
+                    {item.menuId ? `#${item.menuId} ` : ""}{item.name}
+                  </h3>
+                  <p className="text-[10px] text-gray-400 font-bold">{item.price} {t("common.currencyBr")}</p>
+                </div>
+                
+                <div className="flex items-center bg-gray-100 rounded-full p-1 gap-1">
+                  <button
+                    onClick={() => onQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                    className="w-6 h-6 bg-white shadow-sm rounded-full flex items-center justify-center text-xs hover:bg-gray-200 transition-all font-bold text-gray-600"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center font-bold text-xs text-gray-800">{item.quantity}</span>
+                  <button
+                    onClick={() => onQuantityChange(item.id, item.quantity + 1)}
+                    className="w-6 h-6 bg-[#2d5a41] text-white shadow-md rounded-full flex items-center justify-center text-xs hover:bg-black transition-all font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="w-16 text-right">
+                  <span className="text-xs font-black text-[#2d5a41]">{(item.price * item.quantity).toFixed(0)}</span>
+                  <button
+                    onClick={() => onRemove(item.id)}
+                    className="ml-2 text-red-400 hover:text-red-500 transition-colors inline-block"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

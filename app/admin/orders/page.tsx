@@ -7,7 +7,10 @@ import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
 import { useConfirmation } from "@/hooks/use-confirmation"
-import { Clock, Trash2 } from "lucide-react"
+import { Clock, Trash2, Calendar as CalendarIcon } from "lucide-react"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { format } from "date-fns"
 
 interface Order {
   _id: string
@@ -36,15 +39,17 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const [timeRange, setTimeRange] = useState<string>("today")
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [deleting, setDeleting] = useState<string | null>(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const notifiedOrderIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     fetchOrders()
-    const interval = setInterval(fetchOrders, 3000)
+    const interval = setInterval(fetchOrders, 30000) // Increase interval for management view
     return () => clearInterval(interval)
-  }, [token]) // Re-fetch if token changes
+  }, [token, timeRange, selectedDate])
 
   // Auto-notification for DELAYS
   useEffect(() => {
@@ -76,10 +81,51 @@ export default function AdminOrdersPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
+  const getOrdersUrl = (range: string) => {
+    let url = "/api/orders"
+    const now = new Date()
+    let startDate: Date | null = null
+
+    if (range === 'custom' && selectedDate) {
+      startDate = selectedDate
+    } else if (range === 'today') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    } else if (range === 'week') {
+      startDate = new Date(now)
+      startDate.setDate(now.getDate() - 7)
+      startDate.setHours(0, 0, 0, 0)
+    } else if (range === 'month') {
+      startDate = new Date(now)
+      startDate.setDate(now.getDate() - 30)
+      startDate.setHours(0, 0, 0, 0)
+    } else if (range === 'year') {
+      startDate = new Date(now)
+      startDate.setDate(now.getDate() - 365)
+      startDate.setHours(0, 0, 0, 0)
+    }
+
+    if (startDate) {
+      const ISO_START = new Date(startDate)
+      ISO_START.setHours(0, 0, 0, 0)
+      url += `?startDate=${ISO_START.toISOString()}`
+
+      if (range === 'custom') {
+        const ISO_END = new Date(startDate)
+        ISO_END.setHours(23, 59, 59, 999)
+        url += `&endDate=${ISO_END.toISOString()}`
+      }
+    }
+
+    // Add includeDeleted for admin view
+    url += (url.includes('?') ? '&' : '?') + "includeDeleted=true&limit=200"
+
+    return url
+  }
+
   const fetchOrders = async () => {
     try {
-      // Fetch recent orders (limit 100 to prevent large payloads during polling)
-      const res = await fetch("/api/orders?limit=100&includeDeleted=true", {
+      const url = getOrdersUrl(timeRange)
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -419,31 +465,70 @@ export default function AdminOrdersPage() {
             {/* Main Content - Order List */}
             <div className="lg:col-span-9">
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 min-h-[600px]">
-                {/* Header with Bulk Delete Button */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-8">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">{t("adminOrders.orderManagement")}</h2>
-                    <p className="text-gray-500 text-sm mt-1">
-                      {filteredOrders.length} {filter !== 'all' ? t(`adminOrders.${filter}`) : ''} {t("adminOrders.ordersCount")}
-                    </p>
+                {/* Combined Header: Title, Filters, Search & Delete */}
+                <div className="flex flex-col gap-8 mb-8">
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">{t("adminOrders.orderManagement")}</h2>
+                      <p className="text-gray-500 text-sm mt-1">
+                        {filteredOrders.length} {filter !== 'all' ? t(`adminOrders.${filter}`) : ''} {t("adminOrders.ordersCount")}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto scrollbar-hide flex-1 sm:flex-none">
+                        {["today", "week", "month", "year"].map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => setTimeRange(r)}
+                            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all whitespace-nowrap ${timeRange === r ? "bg-[#8B4513] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                          >{r}</button>
+                        ))}
+
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all whitespace-nowrap flex items-center gap-2 ${timeRange === 'custom' ? "bg-[#8B4513] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                            >
+                              <CalendarIcon size={12} />
+                              {timeRange === 'custom' && selectedDate ? format(selectedDate, "MMM dd, yyyy") : "Specific Date"}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 bg-white border-2 border-gray-100 shadow-2xl rounded-2xl z-50" align="end">
+                            <Calendar
+                              mode="single"
+                              selected={selectedDate}
+                              onSelect={(date) => {
+                                setSelectedDate(date)
+                                setTimeRange('custom')
+                              }}
+                              initialFocus
+                              captionLayout="dropdown"
+                              fromYear={2020}
+                              toYear={new Date().getFullYear() + 2}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                    <div className="relative w-full sm:w-64">
+                  <div className="flex flex-col sm:flex-row gap-4 w-full justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                    <div className="relative w-full sm:w-80">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                       <input
                         type="text"
                         placeholder="Search batch, table, order..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl text-sm font-bold focus:border-[#2d5a41] focus:ring-0 transition-all outline-none"
+                        className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-100 rounded-2xl text-sm font-bold focus:border-[#8B4513] focus:ring-0 transition-all outline-none shadow-sm"
                       />
                     </div>
                     {orders.length > 0 && (
                       <button
                         onClick={handleBulkDeleteOrders}
                         disabled={bulkDeleting}
-                        className="bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center gap-2 whitespace-nowrap"
+                        className="w-full sm:w-auto bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center gap-2 whitespace-nowrap"
                       >
                         {bulkDeleting ? (
                           <>
@@ -459,7 +544,10 @@ export default function AdminOrdersPage() {
                       </button>
                     )}
                   </div>
-                </div>
+                </div> {/* Closes the div at line 469 */}
+
+                {/* The div that was here at line 548 has been removed */}
+
                 {filteredOrders.length === 0 ? (
                   <div className="text-center py-32">
                     <div className="text-8xl mb-6 opacity-20">🍃</div>
@@ -614,6 +702,6 @@ export default function AdminOrdersPage() {
           duration={notificationState.options.duration}
         />
       </div>
-    </ProtectedRoute >
+    </ProtectedRoute>
   )
 }

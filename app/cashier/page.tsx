@@ -41,6 +41,7 @@ export default function CashierPOSPage() {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
   const [tableNumber, setTableNumber] = useState("")
   const [isButcherOrder, setIsButcherOrder] = useState(false)
+  const [isDrinksOrder, setIsDrinksOrder] = useState(false)
   const [showMobileCart, setShowMobileCart] = useState(false)
   const [paperWidth, setPaperWidth] = useState(80)
   const [selectedBatchId, setSelectedBatchId] = useState<string>("")
@@ -149,6 +150,15 @@ export default function CashierPOSPage() {
     )
   }, [cartItems])
 
+  const isDrinksOnly = useMemo(() => {
+    return cartItems.length > 0 && cartItems.every(item =>
+      item.category === "Drinks" ||
+      item.category === "Beverages" ||
+      item.category === "Coffee" ||
+      item.category === "Juice"
+    )
+  }, [cartItems])
+
   useEffect(() => {
     // Refresh user profile to ensure we have the latest floor assignment
     const refreshUserProfile = async () => {
@@ -211,7 +221,7 @@ export default function CashierPOSPage() {
   const handleCheckout = async () => {
     if (cartItems.length === 0) return
 
-    if (!isButcherOrder && !isMeatOnly && !tableNumber) {
+    if (!isButcherOrder && !isMeatOnly && !isDrinksOrder && !isDrinksOnly && !tableNumber) {
       notify({
         title: "Table Required",
         message: "Please select a table number before checking out.",
@@ -224,6 +234,9 @@ export default function CashierPOSPage() {
     const totalAmount = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
     const subtotal = totalAmount / (1 + vatRate)
     const tax = totalAmount - subtotal
+
+    // Determine table number based on order type
+    const finalTableNumber = isButcherOrder ? "Buy&Go" : isDrinksOrder ? "Drinks" : tableNumber
 
     setIsCheckoutLoading(true)
     try {
@@ -245,7 +258,7 @@ export default function CashierPOSPage() {
           tax,
           paymentMethod: "cash",
           status: "pending",
-          tableNumber: isButcherOrder ? "Buy&Go" : tableNumber,
+          tableNumber: finalTableNumber,
           batchId: selectedBatchId || user?.batchId
         }),
       })
@@ -258,6 +271,8 @@ export default function CashierPOSPage() {
         setShowOrderAnimation(true)
         setCartItems([]) // Clear cart immediately for next order
         setTableNumber("") // Clear table reset
+        setIsButcherOrder(false) // Reset butcher order
+        setIsDrinksOrder(false) // Reset drinks order
         setIsCheckoutLoading(false) // Stop loader early since animation is showing
 
         // Sync with other tabs
@@ -273,7 +288,7 @@ export default function CashierPOSPage() {
           // Isolated Iframe Printing
           const receiptHtml = getReceiptHTML({
             orderNumber: data.orderNumber,
-            tableNumber: isButcherOrder ? "Buy&Go" : tableNumber,
+            tableNumber: finalTableNumber,
             items: cartItems.map(item => ({
               menuId: item.menuId,
               name: item.name,
@@ -463,8 +478,11 @@ export default function CashierPOSPage() {
                   tableNumber={tableNumber}
                   setTableNumber={setTableNumber}
                   isMeatOnly={isMeatOnly}
+                  isDrinksOnly={isDrinksOnly}
                   isButcherOrder={isButcherOrder}
                   setIsButcherOrder={setIsButcherOrder}
+                  isDrinksOrder={isDrinksOrder}
+                  setIsDrinksOrder={setIsDrinksOrder}
                   paperWidth={paperWidth}
                   setPaperWidth={setPaperWidth}
                   assignedBatchId={selectedBatchId || user?.batchId}
@@ -533,8 +551,11 @@ export default function CashierPOSPage() {
                     tableNumber={tableNumber}
                     setTableNumber={setTableNumber}
                     isMeatOnly={isMeatOnly}
+                    isDrinksOnly={isDrinksOnly}
                     isButcherOrder={isButcherOrder}
                     setIsButcherOrder={setIsButcherOrder}
+                    isDrinksOrder={isDrinksOrder}
+                    setIsDrinksOrder={setIsDrinksOrder}
                     paperWidth={paperWidth}
                     setPaperWidth={setPaperWidth}
                     assignedBatchId={selectedBatchId || user?.batchId}

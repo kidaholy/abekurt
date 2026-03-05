@@ -28,8 +28,11 @@ interface CartSidebarProps {
   tableNumber: string
   setTableNumber: (val: string) => void
   isMeatOnly?: boolean
+  isDrinksOnly?: boolean
   isButcherOrder?: boolean
   setIsButcherOrder?: (val: boolean) => void
+  isDrinksOrder?: boolean
+  setIsDrinksOrder?: (val: boolean) => void
   paperWidth: number
   setPaperWidth: (val: number) => void
   assignedBatchId?: string
@@ -47,8 +50,11 @@ export function CartSidebar({
   tableNumber,
   setTableNumber,
   isMeatOnly = false,
+  isDrinksOnly = false,
   isButcherOrder = false,
   setIsButcherOrder,
+  isDrinksOrder = false,
+  setIsDrinksOrder,
   paperWidth,
   setPaperWidth,
   assignedBatchId,
@@ -144,6 +150,8 @@ export function CartSidebar({
               setIsButcherOrder(newValue);
               if (newValue) {
                 setTableNumber("");
+                // Also disable drinks if butcher is enabled
+                if (setIsDrinksOrder) setIsDrinksOrder(false);
               }
             }}
             className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all border-2 ${isButcherOrder
@@ -155,17 +163,44 @@ export function CartSidebar({
               <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${isButcherOrder ? "bg-[#8B4513] border-[#8B4513]" : "border-gray-300"}`}>
                 {isButcherOrder && <span className="text-white text-[10px]">✓</span>}
               </div>
-              <span className="text-xs font-black uppercase tracking-widest">Butcher Selection</span>
+              <span className="text-xs font-black uppercase tracking-widest">🥩 Butcher Selection</span>
             </div>
             {isButcherOrder && <span className="text-[10px] font-bold opacity-60">Buy & Go</span>}
           </button>
         )}
 
-        {!isButcherOrder ? (
+        {/* Drinks Option Toggle */}
+        {setIsDrinksOrder && (
+          <button
+            onClick={() => {
+              const newValue = !isDrinksOrder;
+              setIsDrinksOrder(newValue);
+              if (newValue) {
+                setTableNumber("");
+                // Also disable butcher if drinks is enabled
+                if (setIsButcherOrder) setIsButcherOrder(false);
+              }
+            }}
+            className={`w-full p-3 rounded-2xl flex items-center justify-between transition-all border-2 ${isDrinksOrder
+              ? "bg-amber-50 border-amber-400 text-amber-700"
+              : "bg-gray-50 border-gray-100 text-gray-500 hover:border-gray-200"
+              }`}
+          >
+            <div className="flex items-center gap-2">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${isDrinksOrder ? "bg-amber-500 border-amber-500" : "border-gray-300"}`}>
+                {isDrinksOrder && <span className="text-white text-[10px]">✓</span>}
+              </div>
+              <span className="text-xs font-black uppercase tracking-widest">🥤 Drinks Only</span>
+            </div>
+            {isDrinksOrder && <span className="text-[10px] font-bold opacity-60">To Go</span>}
+          </button>
+        )}
+
+        {!isButcherOrder && !isDrinksOrder ? (
           <div className="animate-fade-in">
             <div className="w-full">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">
-                Table # {isMeatOnly && <span className="text-emerald-500 lowercase">(Optional)</span>}
+                Table # {(isMeatOnly || isDrinksOnly) && <span className="text-emerald-500 lowercase">(Optional)</span>}
               </label>
 
               <Dialog open={isTableModalOpen} onOpenChange={setIsTableModalOpen}>
@@ -237,8 +272,8 @@ export function CartSidebar({
               </Dialog>
             </div>
           </div>
-        ) : (
-          <div className="bg-emerald-50 border-2 border-dashed border-emerald-200 rounded-2xl p-4 text-center animate-pulse">
+        ) : isButcherOrder ? (
+          <div className="bg-emerald-50 border-2 border-dashed border-emerald-200 rounded-2xl p-4 text-center">
             <p className="text-emerald-700 text-xs font-black uppercase tracking-widest">
               🥩 Meat Buy & Go Order
             </p>
@@ -246,7 +281,16 @@ export function CartSidebar({
               No waiter or table required for this mode.
             </p>
           </div>
-        )}
+        ) : isDrinksOrder ? (
+          <div className="bg-amber-50 border-2 border-dashed border-amber-300 rounded-2xl p-4 text-center">
+            <p className="text-amber-700 text-xs font-black uppercase tracking-widest">
+              🥤 Drinks To Go
+            </p>
+            <p className="text-amber-600 text-[10px] font-bold mt-1">
+              No table required for drinks order.
+            </p>
+          </div>
+        ) : null}
 
         {/* Paper Size Selection */}
         <div className="flex items-center justify-between gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-100">

@@ -96,7 +96,23 @@ export async function GET(request: Request) {
         }
         const dailyExpenses = await DailyExpense.find(expenseQuery).lean()
         const totalOtherExpenses = dailyExpenses.reduce((sum, exp) => sum + (exp.otherExpenses || 0), 0)
-        const totalExpenses = totalOtherExpenses
+
+        // 📉 PERIOD-SPECIFIC STOCK INVESTMENT
+        const stocksWithHistory = await Stock.find({
+            "restockHistory.date": { $gte: startDate, $lte: endDate }
+        }).select('restockHistory').lean()
+
+        let periodStockInvestment = 0
+        stocksWithHistory.forEach((stock: any) => {
+            (stock.restockHistory || []).forEach((entry: any) => {
+                const entryDate = new Date(entry.date)
+                if (entryDate >= startDate && entryDate <= endDate) {
+                    periodStockInvestment += (entry.totalPurchaseCost || 0)
+                }
+            })
+        })
+
+        const totalExpenses = totalOtherExpenses + periodStockInvestment
         const periodNetProfit = totalRevenue - totalExpenses
 
         // 📊 LIFETIME CUMULATIVE METRICS (Stay constant across filters)
@@ -125,6 +141,7 @@ export async function GET(request: Request) {
                 cancelledOrders,
                 paymentStats,
                 totalOtherExpenses,
+                periodStockInvestment,
                 totalExpenses,
                 periodNetProfit,
                 lifetimeRevenue,

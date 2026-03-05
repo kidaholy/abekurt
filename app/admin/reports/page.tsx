@@ -7,7 +7,10 @@ import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { useSettings } from "@/context/settings-context"
 import { ReportExporter, type ComprehensiveSection } from "@/lib/export-utils"
-import { Download, FileText, Printer, CheckCircle, Clock, ShoppingCart, AlertTriangle, Package, ChevronRight } from "lucide-react"
+import { Download, FileText, Printer, CheckCircle, Clock, ShoppingCart, AlertTriangle, Package, ChevronRight, Calendar as CalendarIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { format } from "date-fns"
 
 const SLIDES = [
     { id: "financial", label: "Financial Summary", icon: FileText, color: "#8B4513", bg: "bg-[#8B4513]" },
@@ -28,6 +31,7 @@ export default function ReportsPage() {
     const [stockItems, setStockItems] = useState<any[]>([])
     const [periodData, setPeriodData] = useState<any>(null)
     const [stockUsageData, setStockUsageData] = useState<any>(null)
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
 
     // Context
     const { token } = useAuth()
@@ -36,16 +40,26 @@ export default function ReportsPage() {
 
     useEffect(() => {
         if (token) fetchAllData()
-    }, [token, timeRange])
+    }, [token, timeRange, selectedDate])
 
     const fetchAllData = async () => {
         setLoading(true)
         try {
+            let salesUrl = `/api/reports/sales?period=${timeRange}`
+            let ordersUrl = getOrdersUrl(timeRange)
+
+            if (timeRange === 'custom' && selectedDate) {
+                const startDateStr = new Date(selectedDate.setHours(0, 0, 0, 0)).toISOString()
+                const endDateStr = new Date(selectedDate.setHours(23, 59, 59, 999)).toISOString()
+                salesUrl += `&startDate=${startDateStr}&endDate=${endDateStr}`
+                ordersUrl = `/api/orders?startDate=${startDateStr}&endDate=${endDateStr}`
+            }
+
             const [salesRes, stockRes, usageRes, ordersRes] = await Promise.all([
-                fetch(`/api/reports/sales?period=${timeRange}`, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(salesUrl, { headers: { Authorization: `Bearer ${token}` } }),
                 fetch(`/api/stock`, { headers: { Authorization: `Bearer ${token}` } }),
                 fetch(`/api/reports/stock-usage?period=${timeRange}`, { headers: { Authorization: `Bearer ${token}` } }),
-                fetch(getOrdersUrl(timeRange), { headers: { Authorization: `Bearer ${token}` } })
+                fetch(ordersUrl, { headers: { Authorization: `Bearer ${token}` } })
             ])
             if (salesRes.ok) setPeriodData(await salesRes.json())
             if (stockRes.ok) setStockItems(await stockRes.json())
@@ -62,11 +76,36 @@ export default function ReportsPage() {
         let url = "/api/orders"
         const now = new Date()
         let startDate: Date | null = null
-        if (range === 'today') startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        else if (range === 'week') { startDate = new Date(now); startDate.setDate(now.getDate() - 7); startDate.setHours(0, 0, 0, 0) }
-        else if (range === 'month') { startDate = new Date(now); startDate.setDate(now.getDate() - 30); startDate.setHours(0, 0, 0, 0) }
-        else if (range === 'year') { startDate = new Date(now); startDate.setDate(now.getDate() - 365); startDate.setHours(0, 0, 0, 0) }
-        if (startDate) url += `?startDate=${startDate.toISOString()}`
+
+        if (range === 'custom' && selectedDate) {
+            startDate = selectedDate
+        } else if (range === 'today') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        } else if (range === 'week') {
+            startDate = new Date(now)
+            startDate.setDate(now.getDate() - 7)
+            startDate.setHours(0, 0, 0, 0)
+        } else if (range === 'month') {
+            startDate = new Date(now)
+            startDate.setDate(now.getDate() - 30)
+            startDate.setHours(0, 0, 0, 0)
+        } else if (range === 'year') {
+            startDate = new Date(now)
+            startDate.setDate(now.getDate() - 365)
+            startDate.setHours(0, 0, 0, 0)
+        }
+
+        if (startDate) {
+            const ISO_START = new Date(startDate)
+            ISO_START.setHours(0, 0, 0, 0)
+            url += `?startDate=${ISO_START.toISOString()}`
+
+            if (range === 'custom') {
+                const ISO_END = new Date(startDate)
+                ISO_END.setHours(23, 59, 59, 999)
+                url += `&endDate=${ISO_END.toISOString()}`
+            }
+        }
         return url
     }
 
@@ -83,16 +122,19 @@ export default function ReportsPage() {
     // Calculations
     const salesSummary = periodData?.summary || {}
     const totalRevenue = salesSummary.totalRevenue || 0
-    const totalInvestment = salesSummary.lifetimeTotalInvestment || 0
-    const netWorth = salesSummary.lifetimeNetWorth || 0
+    const periodInvestment = salesSummary.totalExpenses || 0
+    const periodProfit = salesSummary.periodNetProfit || 0
+    const lifetimeInvestment = salesSummary.lifetimeTotalInvestment || 0
+    const lifetimeNetWorth = salesSummary.lifetimeNetWorth || 0
     const filteredOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     // Export functions
     const exportFinancialReport = () => {
         const data = [
             { Metric: "Total Revenue", Type: "INCOME", Amount: `${totalRevenue.toLocaleString()} ETB`, Description: "Total completed orders value for this period" },
-            { Metric: "Total Investment", Type: "EXPENSE", Amount: `${totalInvestment.toLocaleString()} ETB`, Description: "Lifetime cumulative investment" },
-            { Metric: "NET WORTH (Profit)", Type: "RESULT", Amount: `${netWorth.toLocaleString()} ETB`, Description: "Global business standing" }
+            { Metric: "Period Investment", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Specific investment (Restocks + Expenses) for this period" },
+            { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Investment for this period" },
+            { Metric: "LIFETIME NET WORTH", Type: "RESULT", Amount: `${lifetimeNetWorth.toLocaleString()} ETB`, Description: "Global business standing" }
         ]
         ReportExporter.exportToWord({ title: "Financial Summary Report", period: timeRange, headers: ["Metric", "Type", "Amount", "Description"], data, metadata: { companyName: settings.app_name || "Prime Addis" } })
     }
@@ -140,8 +182,9 @@ export default function ReportsPage() {
                 headers: ["Metric", "Type", "Amount", "Description"],
                 data: [
                     { Metric: "Total Revenue", Type: "INCOME", Amount: `${totalRevenue.toLocaleString()} ETB`, Description: "Total completed orders value" },
-                    { Metric: "Total Investment", Type: "EXPENSE", Amount: `${totalInvestment.toLocaleString()} ETB`, Description: "Lifetime cumulative investment" },
-                    { Metric: "NET WORTH (Profit)", Type: "RESULT", Amount: `${netWorth.toLocaleString()} ETB`, Description: "Lifetime Revenue - Investment" }
+                    { Metric: "Period Investment", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Period-specific investment" },
+                    { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Investment for this period" },
+                    { Metric: "LIFETIME NET WORTH", Type: "RESULT", Amount: `${lifetimeNetWorth.toLocaleString()} ETB`, Description: "Revenue - Investment since launch" }
                 ]
             },
             {
@@ -200,6 +243,31 @@ export default function ReportsPage() {
                                         className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all whitespace-nowrap ${timeRange === r ? "bg-[#8B4513] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
                                     >{r}</button>
                                 ))}
+
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button
+                                            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all whitespace-nowrap flex items-center gap-2 ${timeRange === 'custom' ? "bg-[#8B4513] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                                        >
+                                            <CalendarIcon size={12} />
+                                            {timeRange === 'custom' && selectedDate ? format(selectedDate, "MMM dd, yyyy") : "Specific Date"}
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 bg-white border-2 border-gray-100 shadow-2xl rounded-2xl z-50" align="end">
+                                        <Calendar
+                                            mode="single"
+                                            selected={selectedDate}
+                                            onSelect={(date) => {
+                                                setSelectedDate(date)
+                                                setTimeRange('custom')
+                                            }}
+                                            initialFocus
+                                            captionLayout="dropdown"
+                                            fromYear={2020}
+                                            toYear={new Date().getFullYear() + 2}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <button onClick={exportFullReport} className="bg-[#8B4513] text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-[#D2691E] transition-all flex items-center gap-2 whitespace-nowrap">
                                 <Download size={13} /> Export All
@@ -299,19 +367,25 @@ export default function ReportsPage() {
                                                         <td className="p-4 text-lg text-slate-800">Total Revenue</td>
                                                         <td className="p-4 text-center"><span className="bg-emerald-50 text-emerald-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">INCOME</span></td>
                                                         <td className="p-4 text-right text-lg font-black text-emerald-600">+{totalRevenue.toLocaleString()} ETB</td>
-                                                        <td className="p-4 text-gray-400 text-xs font-medium">Total completed orders value</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Total completed orders value for this period</td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50/50 transition-colors">
-                                                        <td className="p-4 text-lg text-slate-800">Total Investment</td>
+                                                        <td className="p-4 text-lg text-slate-800">Period Investment</td>
                                                         <td className="p-4 text-center"><span className="bg-red-50 text-red-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">EXPENSE</span></td>
-                                                        <td className="p-4 text-right text-lg font-black text-red-600">-{totalInvestment.toLocaleString()} ETB</td>
-                                                        <td className="p-4 text-gray-400 text-xs font-medium">Lifetime cumulative investment (Purchases + Operational Expenses)</td>
+                                                        <td className="p-4 text-right text-lg font-black text-red-600">-{periodInvestment.toLocaleString()} ETB</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Restocks + Expenses for selected period</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="p-4 text-lg text-slate-800">Period Net Profit</td>
+                                                        <td className="p-4 text-center"><span className="bg-blue-50 text-blue-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">PROFIT</span></td>
+                                                        <td className={`p-4 text-right text-lg font-black ${periodProfit >= 0 ? "text-blue-600" : "text-red-600"}`}>{periodProfit.toLocaleString()} ETB</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Revenue - Period Investment</td>
                                                     </tr>
                                                     <tr className="bg-slate-900 text-white">
-                                                        <td className="p-6 text-xl font-black">NET WORTH (Profit)</td>
-                                                        <td className="p-6 text-center"><span className="bg-white/20 text-white py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">RESULT</span></td>
-                                                        <td className={`p-6 text-right text-3xl font-black ${netWorth >= 0 ? "text-emerald-400" : "text-red-400"}`}>{netWorth.toLocaleString()} <span className="text-sm">ETB</span></td>
-                                                        <td className="p-6 text-white/50 text-sm font-medium italic">Lifetime Revenue - Total Investment</td>
+                                                        <td className="p-6 text-xl font-black">LIFETIME NET WORTH (Profit)</td>
+                                                        <td className="p-6 text-center"><span className="bg-white/20 text-white py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">GLOBAL</span></td>
+                                                        <td className={`p-6 text-right text-3xl font-black ${lifetimeNetWorth >= 0 ? "text-emerald-400" : "text-red-400"}`}>{lifetimeNetWorth.toLocaleString()} <span className="text-sm">ETB</span></td>
+                                                        <td className="p-6 text-white/50 text-sm font-medium italic">All time balance sheet</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -329,17 +403,24 @@ export default function ReportsPage() {
                                             <div className="p-4 rounded-2xl bg-red-50 border border-red-100">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Expense</span>
-                                                    <span className="text-[10px] font-bold text-red-600/60 uppercase">Total Investment</span>
+                                                    <span className="text-[10px] font-bold text-red-600/60 uppercase">Period Investment</span>
                                                 </div>
-                                                <p className="text-2xl font-black text-red-700">-{totalInvestment.toLocaleString()} <span className="text-xs">ETB</span></p>
+                                                <p className="text-2xl font-black text-red-700">-{periodInvestment.toLocaleString()} <span className="text-xs">ETB</span></p>
+                                            </div>
+                                            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Profit</span>
+                                                    <span className="text-[10px] font-bold text-blue-600/60 uppercase">Period Profit</span>
+                                                </div>
+                                                <p className={`text-2xl font-black ${periodProfit >= 0 ? "text-blue-700" : "text-red-700"}`}>{periodProfit.toLocaleString()} <span className="text-xs">ETB</span></p>
                                             </div>
                                             <div className="p-6 rounded-2xl bg-slate-900 text-white shadow-xl">
                                                 <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">Current Position</span>
+                                                    <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">Lifetime Balance</span>
                                                     <span className="bg-white/20 px-2 py-0.5 rounded text-[9px] font-black uppercase">Net Worth</span>
                                                 </div>
-                                                <p className={`text-4xl font-black ${netWorth >= 0 ? "text-emerald-400" : "text-red-400"}`}>{netWorth.toLocaleString()} <span className="text-lg">ETB</span></p>
-                                                <p className="text-white/40 text-[10px] mt-4 font-medium italic">Lifetime revenue minus all physical investment costs.</p>
+                                                <p className={`text-4xl font-black ${lifetimeNetWorth >= 0 ? "text-emerald-400" : "text-red-400"}`}>{lifetimeNetWorth.toLocaleString()} <span className="text-lg">ETB</span></p>
+                                                <p className="text-white/40 text-[10px] mt-4 font-medium italic">Cumulative revenue minus all physical investment costs.</p>
                                             </div>
                                         </div>
                                     </div>

@@ -10,6 +10,7 @@ interface IOrderItem {
   modifiers?: string[]
   notes?: string
   category?: string
+  mainCategory?: 'Food' | 'Drinks'
   initialStatus?: string
   preparationTime?: number
 }
@@ -57,6 +58,7 @@ const orderSchema = new Schema<IOrder>(
         modifiers: [{ type: String }],
         notes: { type: String },
         category: { type: String },
+        mainCategory: { type: String, enum: ['Food', 'Drinks'] },
         initialStatus: { type: String },
         preparationTime: { type: Number }
       },

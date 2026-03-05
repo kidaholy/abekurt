@@ -84,6 +84,7 @@ export default function StockUsageReportPage() {
 
   const exportCSV = () => {
     if (!reportData) return;
+    console.log("Exporting Stock Usage CSV...", reportData.stockAnalysis?.length, "items")
 
     const csvData = {
       title: "Stock Usage Report - Inventory Movement Analysis",
@@ -109,36 +110,32 @@ export default function StockUsageReportPage() {
       data: reportData.stockAnalysis.map((item: StockAnalysisItem) => ({
         "Item Name": item.name,
         Unit: item.unit,
-        "Opening Stock": item.openingStock,
-        Restocked: item.purchased,
-        Sold: item.consumed,
-        Adjustments: item.adjustments,
-        "Closing Stock": item.closingStock,
-        "Unit Cost": `${item.currentUnitCost} ብር`,
-        "Total Value": `${item.closingValue.toLocaleString()} ብር`,
-        "Usage Velocity": `${item.usageVelocity}/${reportData.periodDays}d`,
+        "Opening Stock": Number(item.openingStock || 0),
+        Restocked: Number(item.purchased || 0),
+        Sold: Number(item.consumed || 0),
+        Adjustments: Number(item.adjustments || 0),
+        "Closing Stock": Number(item.closingStock || 0),
+        "Unit Cost": `${(Number(item.currentUnitCost) || 0).toLocaleString()} ብር`,
+        "Total Value": `${(Number(item.closingValue) || 0).toLocaleString()} ብር`,
+        "Usage Velocity": `${(Number(item.usageVelocity) || 0).toFixed(2)}/${reportData.periodDays}d`,
         "Days Until Stock-Out": item.daysUntilStockOut || "N/A",
         Status: item.isLowStock
           ? "LOW STOCK"
           : item.isNearStockOut
-          ? "NEAR STOCK-OUT"
-          : "OK",
+            ? "NEAR STOCK-OUT"
+            : "OK",
       })),
       summary: {
-        "Total Opening Value": `${reportData.summary.totalOpeningValue.toLocaleString()} ብር`,
-        "Total Purchased Price": `${reportData.summary.totalPurchaseValue.toLocaleString()} ብር`,
-        "Total Other Expenses": `${reportData.summary.totalOtherExpenses.toLocaleString()} ብር`,
-        "Total Investment": `${reportData.summary.totalExpenses.toLocaleString()} ብር`,
-        "Total Consumed (COGS)": `${reportData.summary.totalConsumedValue.toLocaleString()} ብር`,
-        "Total Closing Value": `${reportData.summary.totalClosingValue.toLocaleString()} ብር`,
-        "Gross Profit": `${reportData.summary.grossProfit.toLocaleString()} ብር`,
-        "Gross Profit Margin": `${reportData.summary.grossProfitMargin.toFixed(
-          1
-        )}%`,
-        "Net Profit": `${reportData.summary.netProfit.toLocaleString()} ብር`,
-        "Net Profit Margin": `${reportData.summary.netProfitMargin.toFixed(
-          1
-        )}%`,
+        "Total Opening Value": `${(Number(reportData.summary?.totalOpeningValue) || 0).toLocaleString()} ብር`,
+        "Total Purchased Price": `${(Number(reportData.summary?.totalPurchaseValue) || 0).toLocaleString()} ብር`,
+        "Total Other Expenses": `${(Number(reportData.summary?.totalOtherExpenses) || 0).toLocaleString()} ብር`,
+        "Total Investment": `${(Number(reportData.summary?.totalExpenses) || 0).toLocaleString()} ብር`,
+        "Total Consumed (COGS)": `${(Number(reportData.summary?.totalConsumedValue) || 0).toLocaleString()} ብር`,
+        "Total Closing Value": `${(Number(reportData.summary?.totalClosingValue) || 0).toLocaleString()} ብር`,
+        "Gross Profit": `${(Number(reportData.summary?.grossProfit) || 0).toLocaleString()} ብር`,
+        "Gross Profit Margin": `${(Number(reportData.summary?.grossProfitMargin) || 0).toFixed(1)}%`,
+        "Net Profit": `${(Number(reportData.summary?.netProfit) || 0).toLocaleString()} ብር`,
+        "Net Profit Margin": `${(Number(reportData.summary?.netProfitMargin) || 0).toFixed(1)}%`,
       },
     };
 
@@ -242,11 +239,10 @@ export default function StockUsageReportPage() {
                   <button
                     key={f}
                     onClick={() => setFilter(f)}
-                    className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${
-                      filter === f
+                    className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${filter === f
                         ? "bg-[#8B4513] text-white shadow-md"
                         : "text-gray-500 hover:bg-gray-50"
-                    }`}
+                      }`}
                   >
                     {f}
                   </button>
@@ -475,13 +471,12 @@ export default function StockUsageReportPage() {
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <div
-                                  className={`w-3 h-3 rounded-full ${
-                                    item.status === "finished"
+                                  className={`w-3 h-3 rounded-full ${item.status === "finished"
                                       ? "bg-red-500"
                                       : item.isLowStock
-                                      ? "bg-orange-500"
-                                      : "bg-green-500"
-                                  }`}
+                                        ? "bg-orange-500"
+                                        : "bg-green-500"
+                                    }`}
                                 />
                                 <div>
                                   <p className="font-medium text-sm text-gray-900">
@@ -559,86 +554,86 @@ export default function StockUsageReportPage() {
               {/* Alerts Section */}
               {(reportData.alerts.lowStockItems.length > 0 ||
                 reportData.alerts.nearStockOutItems.length > 0) && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Low Stock Items */}
-                  {reportData.alerts.lowStockItems.length > 0 && (
-                    <div className="bg-white rounded-lg shadow-sm border border-red-200">
-                      <div className="px-6 py-4 border-b border-red-200 bg-red-50">
-                        <h3 className="text-lg font-bold text-red-800 flex items-center gap-2">
-                          <AlertTriangle size={20} />
-                          Low Stock Alerts
-                        </h3>
-                      </div>
-                      <div className="p-6 space-y-3">
-                        {reportData.alerts.lowStockItems.map(
-                          (item: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200"
-                            >
-                              <div>
-                                <p className="font-medium text-red-800">
-                                  {item.name}
-                                </p>
-                                <p className="text-sm text-red-600">
-                                  Below minimum limit
-                                </p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Low Stock Items */}
+                    {reportData.alerts.lowStockItems.length > 0 && (
+                      <div className="bg-white rounded-lg shadow-sm border border-red-200">
+                        <div className="px-6 py-4 border-b border-red-200 bg-red-50">
+                          <h3 className="text-lg font-bold text-red-800 flex items-center gap-2">
+                            <AlertTriangle size={20} />
+                            Low Stock Alerts
+                          </h3>
+                        </div>
+                        <div className="p-6 space-y-3">
+                          {reportData.alerts.lowStockItems.map(
+                            (item: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200"
+                              >
+                                <div>
+                                  <p className="font-medium text-red-800">
+                                    {item.name}
+                                  </p>
+                                  <p className="text-sm text-red-600">
+                                    Below minimum limit
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-red-600">
+                                    {item.currentStock} {item.unit}
+                                  </p>
+                                  <p className="text-xs text-red-500">
+                                    Min: {item.minLimit}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="text-right">
-                                <p className="font-bold text-red-600">
-                                  {item.currentStock} {item.unit}
-                                </p>
-                                <p className="text-xs text-red-500">
-                                  Min: {item.minLimit}
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        )}
+                            )
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Near Stock-Out Items */}
-                  {reportData.alerts.nearStockOutItems.length > 0 && (
-                    <div className="bg-white rounded-lg shadow-sm border border-orange-200">
-                      <div className="px-6 py-4 border-b border-orange-200 bg-orange-50">
-                        <h3 className="text-lg font-bold text-orange-800 flex items-center gap-2">
-                          <Clock size={20} />
-                          Near Stock-Out
-                        </h3>
-                      </div>
-                      <div className="p-6 space-y-3">
-                        {reportData.alerts.nearStockOutItems.map(
-                          (item: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className="flex justify-between items-center p-3 bg-orange-50 rounded-lg border border-orange-200"
-                            >
-                              <div>
-                                <p className="font-medium text-orange-800">
-                                  {item.name}
-                                </p>
-                                <p className="text-sm text-orange-600">
-                                  Will run out soon
-                                </p>
+                    {/* Near Stock-Out Items */}
+                    {reportData.alerts.nearStockOutItems.length > 0 && (
+                      <div className="bg-white rounded-lg shadow-sm border border-orange-200">
+                        <div className="px-6 py-4 border-b border-orange-200 bg-orange-50">
+                          <h3 className="text-lg font-bold text-orange-800 flex items-center gap-2">
+                            <Clock size={20} />
+                            Near Stock-Out
+                          </h3>
+                        </div>
+                        <div className="p-6 space-y-3">
+                          {reportData.alerts.nearStockOutItems.map(
+                            (item: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="flex justify-between items-center p-3 bg-orange-50 rounded-lg border border-orange-200"
+                              >
+                                <div>
+                                  <p className="font-medium text-orange-800">
+                                    {item.name}
+                                  </p>
+                                  <p className="text-sm text-orange-600">
+                                    Will run out soon
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-orange-600">
+                                    {item.currentStock} {item.unit}
+                                  </p>
+                                  <p className="text-xs text-orange-500">
+                                    {item.daysUntilStockOut} days left
+                                  </p>
+                                </div>
                               </div>
-                              <div className="text-right">
-                                <p className="font-bold text-orange-600">
-                                  {item.currentStock} {item.unit}
-                                </p>
-                                <p className="text-xs text-orange-500">
-                                  {item.daysUntilStockOut} days left
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        )}
+                            )
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
             </>
           )}
         </div>

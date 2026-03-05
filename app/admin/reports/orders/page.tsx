@@ -67,6 +67,7 @@ export default function OrdersReportPage() {
 
     const exportCSV = () => {
         if (!data) return
+        console.log("Exporting Orders CSV...", filteredOrders.length, "orders")
 
         const csvData = {
             title: "Orders Report",
@@ -78,16 +79,16 @@ export default function OrdersReportPage() {
                 "Time": new Date(order.createdAt).toLocaleTimeString(),
                 "Table": order.tableNumber || "N/A",
                 "Waiter": order.waiterName || "N/A",
-                "Items": order.items.length,
-                "Total Amount": `${order.totalAmount.toLocaleString()} ብር`,
-                "Status": order.status.toUpperCase()
+                "Items": order.items?.length || 0,
+                "Total Amount": `${(order.totalAmount || 0).toLocaleString()} ብር`,
+                "Status": (order.status || "").toUpperCase()
             })),
             summary: {
                 "Total Orders": filteredOrders.length.toString(),
-                "Total Revenue": `${data.summary.totalRevenue.toLocaleString()} ብር`,
-                "Average Order Value": `${data.summary.averageOrderValue.toFixed(2)} ብር`,
-                "Completed Orders": data.summary.completedOrders.toString(),
-                "Pending Orders": data.summary.pendingOrders.toString()
+                "Total Revenue": `${(data.summary?.totalRevenue || 0).toLocaleString()} ብር`,
+                "Average Order Value": `${(data.summary?.averageOrderValue || 0).toFixed(2)} ብር`,
+                "Completed Orders": (data.summary?.completedOrders || 0).toString(),
+                "Pending Orders": (data.summary?.pendingOrders || 0).toString()
             }
         }
 
@@ -198,9 +199,8 @@ export default function OrdersReportPage() {
                                     <button
                                         key={f}
                                         onClick={() => setFilter(f)}
-                                        className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${
-                                            filter === f ? "bg-[#8B4513] text-white shadow-md" : "text-gray-500 hover:bg-gray-50"
-                                        }`}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${filter === f ? "bg-[#8B4513] text-white shadow-md" : "text-gray-500 hover:bg-gray-50"
+                                            }`}
                                     >
                                         {f}
                                     </button>

@@ -8,16 +8,23 @@ export async function GET(request: Request) {
   try {
     const decoded = await validateSession(request)
 
+    const { searchParams } = new URL(request.url)
+    const fetchAll = searchParams.get('all') === 'true'
+
     await connectDB()
     // Force Stock model registration by using it
     console.log("Database connected for menu retrieval", Stock.modelName)
-    const menuItems = await MenuItem.find({ available: true })
+
+    // Prepare query based on 'all' flag
+    const query = fetchAll ? {} : { available: true }
+
+    const menuItems = await MenuItem.find(query)
       .populate('stockItemId')
       .lean()
 
-    // Filter out items where linked stock is finished
+    // Filter out items where linked stock is finished (unless fetchAll is true)
     const filteredItems = menuItems.filter((item: any) => {
-      if (item.stockItemId && item.stockItemId.status === 'finished') {
+      if (!fetchAll && item.stockItemId && item.stockItemId.status === 'finished') {
         return false
       }
       return true

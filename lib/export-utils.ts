@@ -39,35 +39,43 @@ export class ReportExporter {
     const { title, period, data, headers, summary } = exportData
 
     // Create CSV content
-    let csvContent = `${title} - ${period.toUpperCase()}\n`
-    csvContent += `Generated: ${new Date().toLocaleString()}\n\n`
+    let csvContent = `${title} - ${period.toUpperCase()}\r\n`
+    csvContent += `Generated: ${new Date().toLocaleString()}\r\n\r\n`
 
     // Add summary if provided
     if (summary) {
-      csvContent += 'SUMMARY\n'
+      csvContent += 'SUMMARY\r\n'
       Object.entries(summary).forEach(([key, value]) => {
-        csvContent += `${key},${value}\n`
+        const escapedKey = String(key).includes(',') || String(key).includes('"') || String(key).includes('\n')
+          ? `"${String(key).replace(/"/g, '""')}"`
+          : key
+        const escapedValue = String(value).includes(',') || String(value).includes('"') || String(value).includes('\n')
+          ? `"${String(value).replace(/"/g, '""')}"`
+          : value
+        csvContent += `${escapedKey},${escapedValue}\r\n`
       })
-      csvContent += '\n'
+      csvContent += '\r\n'
     }
 
     // Add headers
-    csvContent += headers.join(',') + '\n'
+    csvContent += headers.join(',') + '\r\n'
 
     // Add data rows
     data.forEach(row => {
       const csvRow = headers.map(header => {
-        const value = row[header] || ''
-        // Escape commas and quotes
-        return typeof value === 'string' && value.includes(',')
-          ? `"${value.replace(/"/g, '""')}"`
-          : value
+        const val = row[header]
+        const value = (val !== undefined && val !== null) ? val : ''
+        // Escape commas and quotes for strings, or convert numbers to string
+        const stringValue = String(value)
+        return stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')
+          ? `"${stringValue.replace(/"/g, '""')}"`
+          : stringValue
       })
-      csvContent += csvRow.join(',') + '\n'
+      csvContent += csvRow.join(',') + '\r\n'
     })
 
-    // Download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    // Download with BOM for Excel UTF-8 support
+    const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `${title.toLowerCase().replace(/\s+/g, '-')}-${period}-${new Date().toISOString().split('T')[0]}.csv`

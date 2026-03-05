@@ -109,6 +109,7 @@ export default function NetWorthReportPage() {
   const netWorth = totalRevenue - totalCompleteInvestment;
 
   const exportNetWorthCSV = () => {
+    console.log("Exporting Net Worth CSV...", { totalRevenue, totalCompleteInvestment, netWorth })
     const exportData = {
       title: "Net Worth Analysis Report",
       period: filter,
@@ -117,42 +118,41 @@ export default function NetWorthReportPage() {
         {
           Component: "Revenue",
           Type: "Income",
-          "Amount (ብር)": totalRevenue.toLocaleString(),
+          "Amount (ብር)": (Number(totalRevenue) || 0).toLocaleString(),
           Description: "Total sales revenue from orders",
         },
         {
           Component: "Total Investment",
           Type: "Expense",
-          "Amount (ብር)": `-${totalCompleteInvestment.toLocaleString()}`,
+          "Amount (ብር)": `-${(Number(totalCompleteInvestment) || 0).toLocaleString()}`,
           Description: "Total purchased price + other expenses + stock assets",
         },
         {
           Component: "Purchased Price",
           Type: "Investment",
-          "Amount (ብር)": `-${totalPurchasedPrice.toLocaleString()}`,
+          "Amount (ብር)": `-${(Number(totalPurchasedPrice) || 0).toLocaleString()}`,
           Description: "Cost of all purchased inventory items",
         },
         {
           Component: "Other Expenses",
           Type: "Expense",
-          "Amount (ብር)": `-${totalOtherExpenses.toLocaleString()}`,
+          "Amount (ብር)": `-${(Number(totalOtherExpenses) || 0).toLocaleString()}`,
           Description: "Additional operational expenses",
         },
         {
           Component: "Net Worth",
           Type: "Result",
-          "Amount (ብር)": netWorth.toLocaleString(),
+          "Amount (ብር)": (Number(netWorth) || 0).toLocaleString(),
           Description: "Revenue - Total Investment",
         },
       ],
       summary: {
-        "Total Revenue": `${totalRevenue.toLocaleString()} ብር`,
-        "Total Investment": `${totalCompleteInvestment.toLocaleString()} ብር`,
-        "Purchased Price": `${totalPurchasedPrice.toLocaleString()} ብር`,
-        "Other Expenses": `${totalOtherExpenses.toLocaleString()} ብር`,
-        "Net Worth": `${netWorth.toLocaleString()} ብር`,
-        "Profit Margin": `${totalRevenue > 0 ? ((netWorth / totalRevenue) * 100).toFixed(1) : 0
-          }%`,
+        "Total Revenue": `${(Number(totalRevenue) || 0).toLocaleString()} ብር`,
+        "Total Investment": `${(Number(totalCompleteInvestment) || 0).toLocaleString()} ብር`,
+        "Purchased Price": `${(Number(totalPurchasedPrice) || 0).toLocaleString()} ብር`,
+        "Other Expenses": `${(Number(totalOtherExpenses) || 0).toLocaleString()} ብር`,
+        "Net Worth": `${(Number(netWorth) || 0).toLocaleString()} ብር`,
+        "Profit Margin": `${totalRevenue > 0 ? ((Number(netWorth) / Number(totalRevenue)) * 100).toFixed(1) : 0}%`,
       },
     };
 

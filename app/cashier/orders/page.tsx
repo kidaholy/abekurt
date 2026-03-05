@@ -6,7 +6,7 @@ import { BentoNavbar } from "@/components/bento-navbar"
 import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ShoppingBag, Clock, DollarSign, CheckCircle, XCircle, RefreshCw } from 'lucide-react'
+import { ShoppingBag, Clock, DollarSign, CheckCircle, XCircle, RefreshCw, TrendingUp } from 'lucide-react'
 
 interface OrderItem {
   menuItemId: string
@@ -77,7 +77,10 @@ export default function CashierOrdersPage() {
     total: orders.filter(o => !isDeletedOrder(o)).length,
     preparing: orders.filter((o) => !isDeletedOrder(o) && ((o.status as string) === "preparing" || (o.status as string) === "pending")).length,
     completed: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").length,
-    revenue: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").reduce((sum, o) => sum + o.totalAmount, 0),
+    // Today's revenue includes all non-cancelled orders
+    revenue: orders.filter((o) => !isDeletedOrder(o)).reduce((sum, o) => sum + o.totalAmount, 0),
+    // Completed revenue for reference
+    completedRevenue: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").reduce((sum, o) => sum + o.totalAmount, 0),
   }
 
   const getStatusColor = (status: string) => {
@@ -98,7 +101,7 @@ export default function CashierOrdersPage() {
 
           {/* Header */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <ShoppingBag className="h-8 w-8 text-blue-600" />
@@ -115,12 +118,36 @@ export default function CashierOrdersPage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={fetchOrders}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <RefreshCw className="h-5 w-5 text-gray-600" />
-              </button>
+              <div className="flex items-center gap-4">
+                {/* Today's Revenue Card */}
+                <div className="bg-gradient-to-br from-emerald-50 to-green-100 rounded-xl p-4 border border-emerald-200 shadow-sm min-w-[180px]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                    <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Today's Revenue</span>
+                  </div>
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin text-emerald-600" />
+                      <span className="text-lg font-bold text-emerald-800">Loading...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-emerald-800">
+                        {stats.revenue.toLocaleString()} Br
+                      </div>
+                      <div className="text-xs text-emerald-600 mt-1">
+                        {stats.total} order{stats.total !== 1 ? 's' : ''} today
+                      </div>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={fetchOrders}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
             </div>
           </div>
 

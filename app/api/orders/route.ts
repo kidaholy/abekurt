@@ -236,6 +236,7 @@ export async function POST(request: Request) {
           ...item,
           menuId: menu?.menuId,
           category: menu?.category, // Store category for kitchen routing
+          mainCategory: menu?.mainCategory, // Persist for accurate reporting separation
           preparationTime: menu?.preparationTime || 0,
           status: "pending",
           modifiers: item.modifiers || [],

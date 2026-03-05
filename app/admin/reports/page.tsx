@@ -32,6 +32,7 @@ export default function ReportsPage() {
     const [periodData, setPeriodData] = useState<any>(null)
     const [stockUsageData, setStockUsageData] = useState<any>(null)
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+    const [menuItems, setMenuItems] = useState<any[]>([])
 
     // Context
     const { token } = useAuth()
@@ -55,16 +56,18 @@ export default function ReportsPage() {
                 ordersUrl = `/api/orders?startDate=${startDateStr}&endDate=${endDateStr}`
             }
 
-            const [salesRes, stockRes, usageRes, ordersRes] = await Promise.all([
+            const [salesRes, stockRes, usageRes, ordersRes, menuRes] = await Promise.all([
                 fetch(salesUrl, { headers: { Authorization: `Bearer ${token}` } }),
                 fetch(`/api/stock`, { headers: { Authorization: `Bearer ${token}` } }),
                 fetch(`/api/reports/stock-usage?period=${timeRange}`, { headers: { Authorization: `Bearer ${token}` } }),
-                fetch(ordersUrl, { headers: { Authorization: `Bearer ${token}` } })
+                fetch(ordersUrl, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`/api/menu?all=true`, { headers: { Authorization: `Bearer ${token}` } })
             ])
             if (salesRes.ok) setPeriodData(await salesRes.json())
             if (stockRes.ok) setStockItems(await stockRes.json())
             if (usageRes.ok) setStockUsageData(await usageRes.json())
             if (ordersRes.ok) setOrders(await ordersRes.json())
+            if (menuRes.ok) setMenuItems(await menuRes.json())
         } catch (error) {
             console.error("Failed to load report data:", error)
         } finally {
@@ -106,6 +109,8 @@ export default function ReportsPage() {
                 url += `&endDate=${ISO_END.toISOString()}`
             }
         }
+        // Add limit and includeDeleted to ensure we get enough data for reports
+        url += (url.includes('?') ? '&' : '?') + "includeDeleted=true&limit=1000"
         return url
     }
 
@@ -149,6 +154,108 @@ export default function ReportsPage() {
             "Date/Time": new Date(o.createdAt).toLocaleString()
         }))
         ReportExporter.exportToWord({ title: "Order History Report", period: timeRange, headers: ["Item Names", "Table", "Items (Qty)", "Total Payment", "Status", "Date/Time"], data, metadata: { companyName: settings.app_name || "Prime Addis" } })
+    }
+
+    const exportCategoryCSV = (mainCat: 'Food' | 'Drinks') => {
+        if (loading || (menuItems.length === 0 && orders.length > 0)) {
+            alert("Please wait for menu data to finish loading...")
+            return
+        }
+
+        console.log(`Exporting ${mainCat} CSV... Total orders: ${filteredOrders.length}`)
+
+        // 1. Build normalized category map for fallback
+        const catMap = new Map()
+        menuItems.forEach(m => {
+            if (m.category && m.mainCategory) {
+                catMap.set(m.category.trim().toLowerCase(), m.mainCategory.trim().toLowerCase())
+            }
+        })
+
+        const targetMainCat = mainCat.toLowerCase()
+
+        // 2. Flatten orders into items and filter by mainCategory
+        const flattenedData: any[] = []
+        filteredOrders.forEach(order => {
+            // Filter out cancelled/deleted for sales reports
+            if (order.status === 'cancelled' || order.isDeleted) return
+
+            order.items.forEach((item: any) => {
+                const itemCat = (item.category || "").trim().toLowerCase()
+                const mappedMainCat = catMap.get(itemCat) || 'food' // Default to food if unknown
+
+                // Prioritize persisted mainCategory, then mapped, then food
+                const itemMainCat = (item.mainCategory || mappedMainCat).trim().toLowerCase()
+
+                if (itemMainCat === targetMainCat) {
+                    const qty = Number(item.quantity) || 0
+                    const price = Number(item.price) || 0
+                    flattenedData.push({
+                        "Date": new Date(order.createdAt).toLocaleDateString(),
+                        "Time": new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        "Order#": (order.orderNumber || order._id.slice(-6)),
+                        "Table": order.tableNumber || "-",
+                        "Item": item.name,
+                        "Category": item.category || "-",
+                        "Qty": qty,
+                        "Unit Price": price,
+                        "Total": (qty * price)
+                    })
+                }
+            })
+        })
+
+        console.log(`Flattened ${mainCat} items: ${flattenedData.length}`)
+
+        if (flattenedData.length === 0) {
+            alert(`No ${mainCat} items found in completed/active orders for this period.`)
+            return
+        }
+
+        ReportExporter.exportToCSV({
+            title: `${mainCat} Sales Report`,
+            period: timeRange,
+            headers: ["Date", "Time", "Order#", "Table", "Item", "Category", "Qty", "Unit Price", "Total"],
+            data: flattenedData
+        })
+    }
+
+    const exportAllToCSV = () => {
+        console.log(`Exporting All orders CSV... Orders count: ${filteredOrders.length}`)
+        const flattenedData: any[] = []
+        filteredOrders.forEach(order => {
+            if (order.status === 'cancelled' || order.isDeleted) return
+
+            order.items.forEach((item: any) => {
+                const qty = Number(item.quantity) || 0
+                const price = Number(item.price) || 0
+                flattenedData.push({
+                    "Date": new Date(order.createdAt).toLocaleDateString(),
+                    "Time": new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    "Order#": (order.orderNumber || order._id.slice(-6)),
+                    "Table": order.tableNumber || "-",
+                    "Item": item.name,
+                    "Category": item.category || "-",
+                    "Qty": qty,
+                    "Unit Price": price,
+                    "Total": (qty * price)
+                })
+            })
+        })
+
+        console.log(`Total flattened items: ${flattenedData.length}`)
+
+        if (flattenedData.length === 0) {
+            alert("No orders found to export.")
+            return
+        }
+
+        ReportExporter.exportToCSV({
+            title: "All Sales Report",
+            period: timeRange,
+            headers: ["Date", "Time", "Order#", "Table", "Item", "Category", "Qty", "Unit Price", "Total"],
+            data: flattenedData
+        })
     }
 
     const exportInventoryReport = () => {
@@ -439,9 +546,20 @@ export default function ReportsPage() {
                                                     <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">{filteredOrders.length} Orders · {timeRange}</p>
                                                 </div>
                                             </div>
-                                            <button onClick={exportOrdersReport} className="flex items-center gap-2 text-[#D2691E] hover:text-[#8B4513] font-bold text-sm transition-colors">
-                                                <Download size={16} /> Export
-                                            </button>
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                                <button onClick={() => exportCategoryCSV('Food')} className="flex items-center gap-2 text-emerald-600 hover:text-emerald-800 font-bold text-[10px] sm:text-xs transition-all bg-emerald-50 px-2 sm:px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm active:scale-95">
+                                                    <Download size={12} className="sm:w-3.5 sm:h-3.5" /> Food CSV
+                                                </button>
+                                                <button onClick={() => exportCategoryCSV('Drinks')} className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-bold text-[10px] sm:text-xs transition-all bg-blue-50 px-2 sm:px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm active:scale-95">
+                                                    <Download size={12} className="sm:w-3.5 sm:h-3.5" /> Drinks CSV
+                                                </button>
+                                                <button onClick={exportAllToCSV} className="flex items-center gap-2 text-slate-600 hover:text-slate-800 font-bold text-[10px] sm:text-xs transition-all bg-slate-50 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm active:scale-95">
+                                                    <Download size={12} className="sm:w-3.5 sm:h-3.5" /> All CSV
+                                                </button>
+                                                <button onClick={exportOrdersReport} className="flex items-center gap-2 text-[#D2691E] hover:text-[#8B4513] font-bold text-xs sm:text-sm transition-all ml-auto sm:ml-0">
+                                                    <Download size={14} className="sm:w-4 sm:h-4" /> Word Report
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div className="hidden lg:block max-h-[560px] overflow-y-auto border border-gray-200 rounded-2xl">

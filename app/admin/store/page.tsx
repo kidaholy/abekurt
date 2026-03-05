@@ -115,6 +115,7 @@ export default function StorePage() {
     const [saveLoading, setSaveLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
     const [showOperationalExpenseForm, setShowOperationalExpenseForm] = useState(false)
+    const [expenseDateFilter, setExpenseDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('today')
 
     const [showRestockModal, setShowRestockModal] = useState(false)
     const [restockingItem, setRestockingItem] = useState<StockItem | null>(null)
@@ -994,6 +995,24 @@ export default function StorePage() {
         (e.description || "").toLowerCase().includes(searchTerm.toLowerCase())
     )
 
+    const filteredOperationalExpensesByDate = operationalExpenses.filter(e => {
+        const expDate = new Date(e.date)
+        const now = new Date()
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const weekStart = new Date(now); weekStart.setDate(now.getDate() - 7)
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+        const inSearch = e.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (e.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+
+        if (!inSearch) return false
+
+        if (expenseDateFilter === 'today') return expDate >= todayStart
+        if (expenseDateFilter === 'week') return expDate >= weekStart
+        if (expenseDateFilter === 'month') return expDate >= monthStart
+        return true
+    })
+
     const totalStats = {
         storeValue: stockItems.reduce((sum, item) => sum + ((item.storeQuantity || 0) * (item.averagePurchasePrice || item.unitCost || 0)), 0),
         totalItems: stockItems.length,
@@ -1117,7 +1136,7 @@ export default function StorePage() {
                                         onClick={() => setActiveTab('expenses')}
                                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'expenses' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                     >
-                                        Expenses
+                                        Daily Expenses
                                     </button>
                                     <button
                                         onClick={() => { setActiveTab('transfers'); fetchTransferRequests(); }}

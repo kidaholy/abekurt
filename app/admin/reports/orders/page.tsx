@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/context/auth-context"
 import { useSettings } from "@/context/settings-context"
 import { ReportExporter } from "@/lib/export-utils"
 import { OrderDetailsModal } from "@/components/order-details-modal"
-import { ArrowLeft, Download, FileText, Printer, Eye, DollarSign, ShoppingCart, Clock, CheckCircle } from "lucide-react"
+import { ArrowLeft, Download, FileText, Printer, Eye, DollarSign, ShoppingCart, Clock, CheckCircle, ChevronDown } from "lucide-react"
 import Link from "next/link"
 
 export default function OrdersReportPage() {
@@ -17,6 +17,9 @@ export default function OrdersReportPage() {
     const [error, setError] = useState<string | null>(null)
     const [selectedOrder, setSelectedOrder] = useState<any>(null)
     const [showOrderDetails, setShowOrderDetails] = useState(false)
+    const [showExportDropdown, setShowExportDropdown] = useState(false)
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+    const exportButtonRef = useRef<HTMLButtonElement>(null)
     const { token } = useAuth()
     const { settings } = useSettings()
 
@@ -65,34 +68,86 @@ export default function OrdersReportPage() {
         return order.status === statusFilter
     }) || []
 
-    const exportCSV = () => {
+    const exportCSV = (exportType: 'food' | 'drinks' | 'all' = 'all') => {
         if (!data) return
-        console.log("Exporting Orders CSV...", filteredOrders.length, "orders")
+        console.log("Exporting Orders CSV...", filteredOrders.length, "orders", "Type:", exportType)
 
-        const csvData = {
-            title: "Orders Report",
+        // Helper to check if an item is a drink based on mainCategory or category
+        const isDrinkItem = (item: any): boolean => {
+            // First check mainCategory (most reliable)
+            const mainCat = (item.mainCategory || '').toLowerCase()
+            if (mainCat === 'drinks') return true
+            if (mainCat === 'food') return false
+            
+            // If no mainCategory, check category name for drink keywords
+            const cat = (item.category || '').toLowerCase()
+            const drinkKeywords = ['coffee', 'tea', 'juice', 'drink', 'beverage', 'mojito', 'smoothie', 'soda', 'water', 'latte', 'espresso', 'cappuccino', 'macchiato', 'americano']
+            return drinkKeywords.some(keyword => cat.includes(keyword))
+        }
+
+        // Separate items into food and drinks
+        const foodItems: any[] = []
+        const drinksItems: any[] = []
+
+        filteredOrders.forEach((order: any) => {
+            const orderDate = new Date(order.createdAt).toLocaleDateString()
+            const orderTime = new Date(order.createdAt).toLocaleTimeString()
+            
+            order.items?.forEach((item: any) => {
+                const itemData = {
+                    "Order ID": order._id.slice(-8),
+                    "Date": orderDate,
+                    "Time": orderTime,
+                    "Table": order.tableNumber || "N/A",
+                    "Item Name": item.name || "Unknown",
+                    "Category": item.category || "N/A",
+                    "Quantity": item.quantity || 1,
+                    "Unit Price": item.price || 0,
+                    "Total": (item.price || 0) * (item.quantity || 1),
+                    "Status": (order.status || "").toUpperCase()
+                }
+
+                if (isDrinkItem(item)) {
+                    drinksItems.push(itemData)
+                } else {
+                    foodItems.push(itemData)
+                }
+            })
+        })
+
+        // Helper function to create CSV data for items
+        const createCSVData = (items: any[], type: string) => ({
+            title: `${type} Items Report`,
             period: `${filter.toUpperCase()} (${new Date(data.startDate).toLocaleDateString()} - ${new Date(data.endDate).toLocaleDateString()})`,
-            headers: ["Order ID", "Date", "Time", "Table", "Waiter", "Items", "Total Amount", "Status"],
-            data: filteredOrders.map((order: any) => ({
-                "Order ID": order._id.slice(-8),
-                "Date": new Date(order.createdAt).toLocaleDateString(),
-                "Time": new Date(order.createdAt).toLocaleTimeString(),
-                "Table": order.tableNumber || "N/A",
-                "Waiter": order.waiterName || "N/A",
-                "Items": order.items?.length || 0,
-                "Total Amount": `${(order.totalAmount || 0).toLocaleString()} ብር`,
-                "Status": (order.status || "").toUpperCase()
-            })),
+            headers: ["Order ID", "Date", "Time", "Table", "Item Name", "Category", "Quantity", "Unit Price", "Total", "Status"],
+            data: items,
             summary: {
-                "Total Orders": filteredOrders.length.toString(),
-                "Total Revenue": `${(data.summary?.totalRevenue || 0).toLocaleString()} ብር`,
-                "Average Order Value": `${(data.summary?.averageOrderValue || 0).toFixed(2)} ብር`,
-                "Completed Orders": (data.summary?.completedOrders || 0).toString(),
-                "Pending Orders": (data.summary?.pendingOrders || 0).toString()
+                "Total Items": items.length.toString(),
+                "Total Quantity": items.reduce((sum, item) => sum + item.Quantity, 0).toString(),
+                "Total Revenue": `${items.reduce((sum, item) => sum + item.Total, 0).toLocaleString()} ብር`,
+            }
+        })
+
+        // Export based on type
+        if (exportType === 'food' || exportType === 'all') {
+            if (foodItems.length > 0) {
+                ReportExporter.exportToCSV(createCSVData(foodItems, "Food"))
             }
         }
 
-        ReportExporter.exportToCSV(csvData)
+        if (exportType === 'drinks' || exportType === 'all') {
+            if (drinksItems.length > 0) {
+                // Add delay if exporting both
+                const delay = exportType === 'all' ? 500 : 0
+                setTimeout(() => {
+                    ReportExporter.exportToCSV(createCSVData(drinksItems, "Drinks"))
+                }, delay)
+            }
+        }
+
+        // Show summary
+        console.log(`Exported: ${foodItems.length} food items, ${drinksItems.length} drinks items`)
+        setShowExportDropdown(false)
     }
 
     const exportPDF = () => {
@@ -222,13 +277,26 @@ export default function OrdersReportPage() {
 
                             {/* Export Options */}
                             <div className="flex gap-2">
+                                {/* CSV Export Dropdown */}
                                 <button
-                                    onClick={exportCSV}
+                                    ref={exportButtonRef}
+                                    onClick={() => {
+                                        if (!showExportDropdown && exportButtonRef.current) {
+                                            const rect = exportButtonRef.current.getBoundingClientRect()
+                                            setDropdownPosition({
+                                                top: rect.bottom + 8,
+                                                left: Math.max(8, Math.min(rect.left, window.innerWidth - 180))
+                                            })
+                                        }
+                                        setShowExportDropdown(!showExportDropdown)
+                                    }}
                                     className="bg-[#D2691E] text-white px-4 py-2 rounded-lg shadow-sm hover:bg-[#B8541A] transition-colors flex items-center gap-2"
                                 >
                                     <Download size={16} />
-                                    <span className="font-bold">CSV</span>
+                                    <span className="font-bold">Export CSV</span>
+                                    <ChevronDown size={14} />
                                 </button>
+                                
                                 <button
                                     onClick={exportPDF}
                                     className="bg-[#8B4513] text-white px-4 py-2 rounded-lg shadow-sm hover:bg-[#7A3D0F] transition-colors flex items-center gap-2"
@@ -396,6 +464,46 @@ export default function OrdersReportPage() {
                         setSelectedOrder(null)
                     }}
                 />
+            )}
+
+            {/* Export CSV Dropdown - Rendered at root level to avoid clipping */}
+            {showExportDropdown && (
+                <>
+                    <div 
+                        className="fixed inset-0 z-[200]"
+                        onClick={() => setShowExportDropdown(false)}
+                    />
+                    <div 
+                        className="fixed z-[201] bg-white rounded-2xl shadow-2xl border-2 border-amber-200 py-2 min-w-[180px] overflow-hidden"
+                        style={{
+                            top: `${dropdownPosition.top}px`,
+                            left: `${dropdownPosition.left}px`
+                        }}
+                    >
+                        <button
+                            onClick={() => exportCSV('food')}
+                            className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-medium transition-all"
+                        >
+                            <span className="text-lg">🍽️</span>
+                            <span>Food Only</span>
+                        </button>
+                        <button
+                            onClick={() => exportCSV('drinks')}
+                            className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-medium transition-all"
+                        >
+                            <span className="text-lg">🥤</span>
+                            <span>Drinks Only</span>
+                        </button>
+                        <div className="my-1 border-t border-gray-100 mx-2" />
+                        <button
+                            onClick={() => exportCSV('all')}
+                            className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-bold transition-all bg-amber-50/50"
+                        >
+                            <span className="text-lg">📊</span>
+                            <span>Both (Separate Files)</span>
+                        </button>
+                    </div>
+                </>
             )}
         </ProtectedRoute>
     )

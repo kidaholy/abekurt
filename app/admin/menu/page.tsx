@@ -89,6 +89,9 @@ export default function AdminMenuPage() {
   const [showQrModal, setShowQrModal] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string>("")
   const [qrGenerating, setQrGenerating] = useState(false)
+  const [showExportDropdown, setShowExportDropdown] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+  const exportButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (token) {
@@ -435,30 +438,55 @@ export default function AdminMenuPage() {
     }
   }
 
-  const handleExportCSV = () => {
-    if (menuItems.length === 0) return
+  const handleExportDropdownToggle = () => {
+    if (!showExportDropdown && exportButtonRef.current) {
+      const rect = exportButtonRef.current.getBoundingClientRect()
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        left: Math.max(8, rect.left)
+      })
+    }
+    setShowExportDropdown(!showExportDropdown)
+  }
 
-    const headers = ["Menu ID", "Name", "Category", "Price", "Available", "Description"]
-    const rows = menuItems.map(item => [
+  const handleExportCSV = (exportType: 'food' | 'drinks' | 'all' = 'all') => {
+    let itemsToExport = menuItems
+      
+    if (exportType === 'food') {
+      itemsToExport = menuItems.filter(item => (item.mainCategory || 'Food') === 'Food')
+    } else if (exportType === 'drinks') {
+      itemsToExport = menuItems.filter(item => item.mainCategory === 'Drinks')
+    }
+      
+    if (itemsToExport.length === 0) {
+      notify({ title: 'No Items', message: `No ${exportType === 'all' ? '' : exportType + ' '}items to export.`, type: 'info' })
+      return
+    }
+  
+    const headers = ["Menu ID", "Name", "Main Category", "Category", "Price", "Available", "Description"]
+    const rows = itemsToExport.map(item => [
       item.menuId || "",
-      `"${(item.name || "").replace(/"/g, '""')}"`,
-      `"${(item.category || "").replace(/"/g, '""')}"`,
+      `"${(item.name || "").replace(/"/g, '""')}",`,
+      item.mainCategory || "Food",
+      `"${(item.category || "").replace(/"/g, '""')}",`,
       item.price,
       item.available ? "Yes" : "No",
-      `"${(item.description || "").replace(/"/g, '""')}"`
+      `"${(item.description || "").replace(/"/g, '""')}",`
     ])
-
+  
     const csvContent = headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n")
     const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
-
+  
     const link = document.createElement("a")
     link.href = url
-    link.setAttribute("download", `menu_export_${new Date().toISOString().split('T')[0]}.csv`)
+    const fileName = exportType === 'all' ? 'menu' : exportType.toLowerCase()
+    link.setAttribute("download", `${fileName}_export_${new Date().toISOString().split('T')[0]}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
+    setShowExportDropdown(false)
   }
 
   const resetForm = () => {
@@ -556,11 +584,14 @@ export default function AdminMenuPage() {
 
                       <div className="grid grid-cols-2 gap-2">
                         <button
-                          onClick={handleExportCSV}
-                          className="bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-black py-2.5 rounded-xl transition-all text-[9px] uppercase tracking-widest border border-white/10 flex items-center justify-center gap-2"
+                          ref={exportButtonRef}
+                          onClick={handleExportDropdownToggle}
+                          className="w-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-black py-2.5 rounded-xl transition-all text-[9px] uppercase tracking-widest border border-white/10 flex items-center justify-center gap-1"
                         >
-                          📥 {t("adminMenu.exportCsv") || "Export CSV"}
+                          📥 Export CSV
+                          <span className="text-[8px] ml-0.5">▼</span>
                         </button>
+                        
                         <button
                           onClick={handleGenerateQr}
                           disabled={qrGenerating}
@@ -1100,6 +1131,46 @@ export default function AdminMenuPage() {
           autoClose={notificationState.options.autoClose}
           duration={notificationState.options.duration}
         />
+
+        {/* Export CSV Dropdown - Rendered at root level to avoid clipping */}
+        {showExportDropdown && (
+          <>
+            <div 
+              className="fixed inset-0 z-[200]"
+              onClick={() => setShowExportDropdown(false)}
+            />
+            <div 
+              className="fixed z-[201] bg-white rounded-2xl shadow-2xl border-2 border-amber-200 py-2 min-w-[170px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+              style={{
+                top: `${dropdownPosition.top}px`,
+                left: `${dropdownPosition.left}px`
+              }}
+            >
+              <button
+                onClick={() => handleExportCSV('food')}
+                className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-medium transition-all"
+              >
+                <span className="text-lg">🍽️</span>
+                <span>Food Only</span>
+              </button>
+              <button
+                onClick={() => handleExportCSV('drinks')}
+                className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-medium transition-all"
+              >
+                <span className="text-lg">🥤</span>
+                <span>Drinks Only</span>
+              </button>
+              <div className="my-1 border-t border-gray-100 mx-2" />
+              <button
+                onClick={() => handleExportCSV('all')}
+                className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-bold transition-all bg-amber-50/50"
+              >
+                <span className="text-lg">📊</span>
+                <span>All Items</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </ProtectedRoute>
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { BentoNavbar } from "@/components/bento-navbar"
 import { useAuth } from "@/context/auth-context"
@@ -9,7 +9,7 @@ import { ConfirmationCard, NotificationCard } from "@/components/confirmation-ca
 import { useConfirmation } from "@/hooks/use-confirmation"
 import {
     Plus, Search, Trash2, Edit2, TrendingUp, History,
-    Package, BarChart3, AlertCircle, ShoppingCart
+    Package, BarChart3, AlertCircle, ShoppingCart, Download, ChevronDown
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
@@ -41,6 +41,9 @@ export default function StockInventoryPage() {
     const [showStockForm, setShowStockForm] = useState(false)
     const [saveLoading, setSaveLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState("")
+    const [showExportDropdown, setShowExportDropdown] = useState(false)
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+    const exportButtonRef = useRef<HTMLButtonElement>(null)
 
     // Dynamic Categories
     const [categories, setCategories] = useState<any[]>([])
@@ -209,6 +212,92 @@ export default function StockInventoryPage() {
         totalItems: stockItems.length
     }
 
+    const handleExportDropdownToggle = () => {
+        if (!showExportDropdown && exportButtonRef.current) {
+            const rect = exportButtonRef.current.getBoundingClientRect()
+            setDropdownPosition({
+                top: rect.bottom + 8,
+                left: Math.max(8, rect.left)
+            })
+        }
+        setShowExportDropdown(!showExportDropdown)
+    }
+
+    const exportStockCSV = (exportType: 'all' | 'low' | 'ready' | 'empty' = 'all') => {
+        let itemsToExport = [...filteredStock]
+        let fileName = 'stock_export'
+
+        if (exportType === 'low') {
+            itemsToExport = filteredStock.filter(item => 
+                item.trackQuantity && 
+                (item.quantity || 0) <= (item.minLimit || 0) && 
+                (item.quantity || 0) > 0
+            )
+            fileName = 'low_stock'
+        } else if (exportType === 'empty') {
+            itemsToExport = filteredStock.filter(item => 
+                item.trackQuantity && (item.quantity || 0) <= 0
+            )
+            fileName = 'empty_stock'
+        } else if (exportType === 'ready') {
+            itemsToExport = filteredStock.filter(item => 
+                !item.trackQuantity || (item.quantity || 0) > (item.minLimit || 0)
+            )
+            fileName = 'ready_stock'
+        }
+
+        if (itemsToExport.length === 0) {
+            notify({
+                title: "No Items",
+                message: "No items to export for this category.",
+                type: "info"
+            })
+            setShowExportDropdown(false)
+            return
+        }
+
+        const headers = ['Item Name', 'Category', 'Quantity', 'Unit', 'Status', 'Min Limit', 'Unit Cost', 'Total Value']
+        const rows = itemsToExport.map(item => {
+            const isOut = item.trackQuantity && (item.quantity || 0) <= 0
+            const isLow = item.trackQuantity && (item.quantity || 0) <= (item.minLimit || 0) && (item.quantity || 0) > 0
+            const status = isOut ? 'Empty' : isLow ? 'Low Stock' : 'Ready'
+            const totalValue = ((item.quantity || 0) * (item.unitCost || 0)).toFixed(2)
+
+            return [
+                item.name,
+                item.category,
+                item.quantity || 0,
+                item.unit,
+                status,
+                item.minLimit || '',
+                item.unitCost || '',
+                totalValue
+            ]
+        })
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `${fileName}_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        setShowExportDropdown(false)
+        notify({
+            title: "Export Complete",
+            message: `Exported ${itemsToExport.length} items to CSV.`,
+            type: "success"
+        })
+    }
+
     return (
         <ProtectedRoute requiredRoles={["admin"]}>
             <div className="min-h-screen bg-gray-50 p-6">
@@ -262,15 +351,26 @@ export default function StockInventoryPage() {
                                     </h2>
                                     <p className="text-gray-500 text-sm">Inventory currently available for POS sales.</p>
                                 </div>
-                                <div className="relative w-full md:w-64">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search stock..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-gray-100 outline-none font-bold text-sm shadow-sm"
-                                    />
+                                <div className="flex items-center gap-3 w-full md:w-auto">
+                                    <div className="relative flex-1 md:w-64">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search stock..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-gray-100 outline-none font-bold text-sm shadow-sm"
+                                        />
+                                    </div>
+                                    <button
+                                        ref={exportButtonRef}
+                                        onClick={handleExportDropdownToggle}
+                                        className="bg-[#8B4513] text-white px-4 py-3 rounded-2xl shadow-sm hover:bg-[#5D4037] transition-colors flex items-center gap-2 whitespace-nowrap"
+                                    >
+                                        <Download size={16} />
+                                        <span className="font-bold hidden sm:inline">Export CSV</span>
+                                        <ChevronDown size={14} />
+                                    </button>
                                 </div>
                             </div>
 
@@ -373,6 +473,53 @@ export default function StockInventoryPage() {
                         </div>
                     )}
                 </AnimatePresence>
+
+                {/* Export CSV Dropdown - Rendered at root level to avoid clipping */}
+                {showExportDropdown && (
+                    <>
+                        <div 
+                            className="fixed inset-0 z-[200]"
+                            onClick={() => setShowExportDropdown(false)}
+                        />
+                        <div 
+                            className="fixed z-[201] bg-white rounded-2xl shadow-2xl border-2 border-amber-200 py-2 min-w-[170px] overflow-hidden"
+                            style={{
+                                top: `${dropdownPosition.top}px`,
+                                left: `${dropdownPosition.left}px`
+                            }}
+                        >
+                            <button
+                                onClick={() => exportStockCSV('all')}
+                                className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-bold transition-all bg-amber-50/50"
+                            >
+                                <span className="text-lg">📦</span>
+                                <span>All Stock</span>
+                            </button>
+                            <div className="my-1 border-t border-gray-100 mx-2" />
+                            <button
+                                onClick={() => exportStockCSV('ready')}
+                                className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-medium transition-all"
+                            >
+                                <span className="text-lg">✅</span>
+                                <span>Ready Stock</span>
+                            </button>
+                            <button
+                                onClick={() => exportStockCSV('low')}
+                                className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-medium transition-all"
+                            >
+                                <span className="text-lg">⚠️</span>
+                                <span>Low Stock</span>
+                            </button>
+                            <button
+                                onClick={() => exportStockCSV('empty')}
+                                className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 flex items-center gap-3 text-gray-700 font-medium transition-all"
+                            >
+                                <span className="text-lg">❌</span>
+                                <span>Empty Stock</span>
+                            </button>
+                        </div>
+                    </>
+                )}
 
                 <ConfirmationCard isOpen={confirmationState.isOpen} onClose={closeConfirmation} onConfirm={confirmationState.onConfirm} title={confirmationState.options.title} message={confirmationState.options.message} type={confirmationState.options.type} />
                 <NotificationCard isOpen={notificationState.isOpen} onClose={closeNotification} title={notificationState.options.title} message={notificationState.options.message} type={notificationState.options.type} />

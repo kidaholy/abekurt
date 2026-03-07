@@ -220,14 +220,30 @@ export async function GET(request: Request) {
       if (order.status !== 'cancelled') {
         order.items.forEach((item: any) => {
           const menuItem = allMenuItems.find(m => m._id.toString() === item.menuItemId)
-          if (menuItem && menuItem.stockItemId && menuItem.reportQuantity) {
-            const stockItem = allStock.find(s => s._id.toString() === (menuItem.stockItemId as any)._id?.toString())
-            if (stockItem) {
-              const consumedAmount = menuItem.reportQuantity * item.quantity
-              const existing = stockConsumption.get(stockItem.name) || { consumed: 0, unit: stockItem.unit || '', cost: 0 }
-              existing.consumed += consumedAmount
-              existing.cost += consumedAmount * (stockItem.unitCost || 0)
-              stockConsumption.set(stockItem.name, existing)
+          if (menuItem) {
+            // Use recipe system if available
+            if (menuItem.recipe && menuItem.recipe.length > 0) {
+              menuItem.recipe.forEach((ingredient: any) => {
+                const stockItem = allStock.find(s => s._id.toString() === ingredient.stockItemId?.toString())
+                if (stockItem) {
+                  const consumedAmount = (ingredient.quantityRequired || 0) * item.quantity
+                  const existing = stockConsumption.get(stockItem.name) || { consumed: 0, unit: stockItem.unit || '', cost: 0 }
+                  existing.consumed += consumedAmount
+                  existing.cost += consumedAmount * (stockItem.averagePurchasePrice || stockItem.unitCost || 0)
+                  stockConsumption.set(stockItem.name, existing)
+                }
+              })
+            }
+            // Legacy fallback
+            else if (menuItem.stockItemId && menuItem.reportQuantity) {
+              const stockItem = allStock.find(s => s._id.toString() === (menuItem.stockItemId as any)._id?.toString() || s._id.toString() === menuItem.stockItemId.toString())
+              if (stockItem) {
+                const consumedAmount = menuItem.reportQuantity * item.quantity
+                const existing = stockConsumption.get(stockItem.name) || { consumed: 0, unit: stockItem.unit || '', cost: 0 }
+                existing.consumed += consumedAmount
+                existing.cost += consumedAmount * (stockItem.averagePurchasePrice || stockItem.unitCost || 0)
+                stockConsumption.set(stockItem.name, existing)
+              }
             }
           }
         })
@@ -238,8 +254,10 @@ export async function GET(request: Request) {
 
     // Inventory value
     const inventoryValue = allStock.reduce((sum, item) => {
-      if (item.trackQuantity && item.quantity && item.unitCost) {
-        return sum + (item.quantity * item.unitCost)
+      if (item.trackQuantity) {
+        const totalQty = (item.quantity || 0) + (item.storeQuantity || 0)
+        const price = item.averagePurchasePrice || item.unitCost || 0
+        return sum + (totalQty * price)
       }
       return sum
     }, 0)

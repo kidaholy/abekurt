@@ -145,6 +145,16 @@ StockSchema.methods.moveToStock = function (quantity: number) {
     return false
 }
 
+// Helper method to get total quantity (POS + Store)
+StockSchema.methods.getTotalQuantity = function(): number {
+    return (this.quantity || 0) + (this.storeQuantity || 0)
+}
+
+// Helper method to get total asset value (at average purchase price)
+StockSchema.methods.getTotalAssetValue = function(): number {
+    return this.getTotalQuantity() * (this.averagePurchasePrice || 0)
+}
+
 // Helper method to restock (Ddeprecated path, but keeping signature for now or updating it)
 StockSchema.methods.restock = function (quantityAdded: number, totalPurchaseCost: number, newUnitCost: number, notes?: string, restockedBy?: mongoose.Types.ObjectId) {
     // For legacy support or direct restocking, we just use addToStore + moveToStock immediately or just keep it

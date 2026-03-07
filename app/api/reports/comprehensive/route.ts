@@ -68,10 +68,11 @@ export async function GET(request: Request) {
 
         // Stock calculations
         const totalStockValue = stockItems
-            .reduce((sum, item) => sum + (item.quantity * (item.unitCost || 0)), 0)
+            .reduce((sum, item) => sum + (((item.quantity || 0) + (item.storeQuantity || 0)) * (item.averagePurchasePrice || item.unitCost || 0)), 0)
 
         // Total investment = Other expenses + Total stock assets
         const totalInvestment = totalOtherExpenses + totalStockValue
+        const totalLifetimeInvestment = stockItems.reduce((sum, item) => sum + (item.totalInvestment || 0), 0)
 
         // Net worth = Revenue - Total investment (Orders - (Asset + Expenses))
         const netProfit = totalRevenue - totalInvestment
@@ -85,23 +86,46 @@ export async function GET(request: Request) {
             if (order.status === "completed") {
                 order.items.forEach((item: any) => {
                     const menuData = menuMap.get(item.menuItemId)
-                    if (menuData && menuData.stockItemId && menuData.reportQuantity) {
-                        const stockItem = stockItems.find(s => s._id.toString() === (menuData.stockItemId as any)._id?.toString())
-                        if (stockItem) {
-                            const consumedAmount = menuData.reportQuantity * item.quantity
-                            const key = stockItem.name
+                    if (menuData) {
+                        // Use recipe system if available
+                        if (menuData.recipe && menuData.recipe.length > 0) {
+                            menuData.recipe.forEach((ingredient: any) => {
+                                const stockItem = stockItems.find(s => s._id.toString() === ingredient.stockItemId?.toString())
+                                if (stockItem) {
+                                    const consumedAmount = (ingredient.quantityRequired || 0) * item.quantity
+                                    const key = stockItem.name
 
-                            if (!stockConsumption[key]) {
-                                stockConsumption[key] = {
-                                    name: stockItem.name,
-                                    consumed: 0,
-                                    unit: stockItem.unit || '',
-                                    cost: 0
+                                    if (!stockConsumption[key]) {
+                                        stockConsumption[key] = {
+                                            name: stockItem.name,
+                                            consumed: 0,
+                                            unit: stockItem.unit || '',
+                                            cost: 0
+                                        }
+                                    }
+                                    stockConsumption[key].consumed += consumedAmount
+                                    stockConsumption[key].cost += consumedAmount * (stockItem.averagePurchasePrice || stockItem.unitCost || 0)
                                 }
-                            }
+                            })
+                        }
+                        // Legacy fallback
+                        else if (menuData.stockItemId && menuData.reportQuantity) {
+                            const stockItem = stockItems.find(s => s._id.toString() === (menuData.stockItemId as any)._id?.toString() || s._id.toString() === menuData.stockItemId.toString())
+                            if (stockItem) {
+                                const consumedAmount = menuData.reportQuantity * item.quantity
+                                const key = stockItem.name
 
-                            stockConsumption[key].consumed += consumedAmount
-                            stockConsumption[key].cost += consumedAmount * (stockItem.unitCost || 0)
+                                if (!stockConsumption[key]) {
+                                    stockConsumption[key] = {
+                                        name: stockItem.name,
+                                        consumed: 0,
+                                        unit: stockItem.unit || '',
+                                        cost: 0
+                                    }
+                                }
+                                stockConsumption[key].consumed += consumedAmount
+                                stockConsumption[key].cost += consumedAmount * (stockItem.averagePurchasePrice || stockItem.unitCost || 0)
+                            }
                         }
                     }
                 })
@@ -151,6 +175,7 @@ export async function GET(request: Request) {
                 totalOtherExpenses,
                 totalStockValue, // All stock assets
                 totalInvestment,
+                totalLifetimeInvestment,
                 netProfit,
                 profitMargin
             },

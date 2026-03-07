@@ -77,8 +77,14 @@ export async function GET(request: Request) {
 
                 // Current Status
                 currentBalance: item.quantity || 0,
+                storeQuantity: item.storeQuantity || 0,
+                totalHandled: (item.quantity || 0) + (item.storeQuantity || 0),
                 unitCost: item.unitCost || 0,
+                averagePurchasePrice: item.averagePurchasePrice || 0,
                 totalValue: (item.quantity || 0) * (item.unitCost || 0),
+                storeValue: (item.storeQuantity || 0) * (item.averagePurchasePrice || 0),
+                totalAssetValue: ((item.quantity || 0) + (item.storeQuantity || 0)) * (item.averagePurchasePrice || 0),
+                totalInvestment: item.totalInvestment || 0,
                 status: item.status,
                 minLimit: item.minLimit || 0,
 

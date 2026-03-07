@@ -136,7 +136,18 @@ export async function GET(request: Request) {
         const usageStats: Record<string, { unit: string, total: number, items: any[] }> = {
             'kg': { unit: 'kg', total: 0, items: [] },
             'liter': { unit: 'liter', total: 0, items: [] },
-            'piece': { unit: 'piece', total: 0, items: [] }
+            'piece': { unit: 'piece', total: 0, items: [] },
+            'g': { unit: 'g', total: 0, items: [] },
+            'ml': { unit: 'ml', total: 0, items: [] }
+        }
+
+        const normalizeUnit = (unit: string): string => {
+            const u = unit?.toLowerCase() || 'piece'
+            if (['l', 'liter', 'litre', 'liters'].includes(u)) return 'liter'
+            if (['ml', 'milliliter', 'millilitre'].includes(u)) return 'ml'
+            if (['kg', 'kilogram', 'kilograms'].includes(u)) return 'kg'
+            if (['g', 'gram', 'grams', 'gr'].includes(u)) return 'g'
+            return u
         }
 
         const itemConsumption: Record<string, { name: string, unit: string, quantity: number, stockId: string, orders: any[] }> = {}
@@ -164,16 +175,33 @@ export async function GET(request: Request) {
                                 console.log(`⚠️ Ingredient ${ingredient.stockItemName} missing stockItemId`)
                                 continue;
                             }
-                            const unit = ingredient.unit || 'piece'
+                            const unit = normalizeUnit(ingredient.unit)
                             const amount = (ingredient.quantityRequired || 0) * item.quantity
 
                             if (!usageStats[unit]) usageStats[unit] = { unit: unit, total: 0, items: [] }
+
+                            // Special handling for Liter/ml conversion for summary
+                            let consumptionValue = amount
+                            let baseUnit = unit
+                            if (unit === 'ml') {
+                                usageStats['liter'].total += (amount / 1000)
+                            } else if (unit === 'liter') {
+                                usageStats['liter'].total += amount
+                            } else if (unit === 'g') {
+                                usageStats['kg'].total += (amount / 1000)
+                            } else if (unit === 'kg') {
+                                usageStats['kg'].total += amount
+                            } else if (unit === 'piece') {
+                                usageStats['piece'].total += amount
+                            }
+
                             usageStats[unit].total += amount
                             usageStats[unit].items.push({
                                 menuItem: menuData.name,
                                 stockItem: ingredient.stockItemName,
                                 quantity: item.quantity,
                                 consumption: amount,
+                                baseUnit: unit,
                                 orderId: order._id,
                                 date: order.createdAt
                             })
@@ -299,6 +327,8 @@ export async function GET(request: Request) {
         const totalConsumedValue = stockAnalysis.reduce((sum, item) => sum + item.consumedValue, 0)
         const totalClosingValue = stockAnalysis.reduce((sum, item) => sum + item.closingValue, 0)
         const totalStoreClosingValue = stockAnalysis.reduce((sum, item) => sum + item.storeClosingValue, 0)
+        const totalAssetValue = totalClosingValue + totalStoreClosingValue
+        const totalLifetimeInvestment = stockItems.reduce((sum, item) => sum + (item.totalInvestment || 0), 0)
         const totalExpenses = totalPurchaseValue + totalOtherExpenses
 
         return NextResponse.json({
@@ -314,6 +344,8 @@ export async function GET(request: Request) {
                 totalConsumedValue,
                 totalClosingValue,
                 totalStoreClosingValue,
+                totalAssetValue,
+                totalLifetimeInvestment,
                 totalCostOfGoodsSold: totalConsumedValue,
                 totalBeef: usageStats['kg'].total,
                 totalMilk: usageStats['liter'].total,

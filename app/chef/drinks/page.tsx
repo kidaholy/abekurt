@@ -109,8 +109,12 @@ export default function KitchenDisplayPage() {
       if (response.ok) {
         const data = await response.json()
         const activeOrders = data.filter((order: Order) =>
-          order.status !== "completed" && order.status !== "cancelled"
-        )
+          order.status !== "completed" && order.status !== "cancelled" &&
+          order.items.some(item => (item as any).mainCategory === "Drinks")
+        ).map((order: Order) => ({
+          ...order,
+          items: order.items.filter(item => (item as any).mainCategory === "Drinks")
+        }))
 
         // Update Cache
         localStorage.setItem("chef_orders_cache", JSON.stringify(activeOrders))
@@ -218,63 +222,57 @@ export default function KitchenDisplayPage() {
   const readyOrders = orders.filter((o) => o.status === "ready")
 
   return (
-    <>
-      <ProtectedRoute requiredRoles={["chef"]}>
-        <div className="min-h-screen bg-gray-50 p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <BentoNavbar />
+    <ProtectedRoute requiredRoles={["chef"]}>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <BentoNavbar />
 
-            {/* Clean Header */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-orange-50 rounded-lg">
-                    <ChefHat className="h-8 w-8 text-orange-600" />
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Kitchen Display</h1>
+          {/* Clean Header */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-50 rounded-lg">
+                  <ChefHat className="h-8 w-8 text-orange-600" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Drink Station</h1>
+                  {assignedCategories.length > 0 ? (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 italic">Chef Kitchen:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {assignedCategories.map(cat => (
+                          <span key={cat} className="bg-orange-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase shadow-sm">
+                            🍳 {cat}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
                     <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span>Kitchen Management</span>
+                      <span>System Active</span>
                     </div>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <a href="/chef/food" className="bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-2 text-sm">
-                    🍳 Food Kitchen
-                  </a>
-                  <a href="/chef/drinks" className="bg-[#2d5a41] text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-2 text-sm">
-                    🍹 Drink Station
-                  </a>
+                  )}
                 </div>
               </div>
+              <button
+                onClick={fetchOrders}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <RefreshCw className="h-5 w-5 text-gray-600" />
+              </button>
             </div>
 
-            {/* Selection Dashboard */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
-              <a href="/chef/food" className="group relative overflow-hidden bg-white rounded-3xl p-8 shadow-xl border-2 border-orange-100 hover:border-orange-500 transition-all duration-300 transform hover:-translate-y-2">
-                <div className="absolute top-0 right-0 p-8 text-8xl opacity-10 group-hover:opacity-20 transition-opacity">🍳</div>
-                <div className="relative z-10">
-                  <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center text-3xl mb-6">🍔</div>
-                  <h3 className="text-3xl font-black text-gray-900 mb-2 uppercase tracking-tight">Food Kitchen</h3>
-                  <p className="text-gray-500 font-medium">Manage food orders, preparation times, and multi-stage workflows.</p>
-                  <div className="mt-8 flex items-center gap-2 text-orange-600 font-bold uppercase tracking-widest text-sm">
-                    Open Station <span>→</span>
-                  </div>
-                </div>
-              </a>
-
-              <a href="/chef/drinks" className="group relative overflow-hidden bg-white rounded-3xl p-8 shadow-xl border-2 border-[#2d5a41]/10 hover:border-[#2d5a41] transition-all duration-300 transform hover:-translate-y-2">
-                <div className="absolute top-0 right-0 p-8 text-8xl opacity-10 group-hover:opacity-20 transition-opacity">🍹</div>
-                <div className="relative z-10">
-                  <div className="w-16 h-16 bg-[#2d5a41]/10 rounded-2xl flex items-center justify-center text-3xl mb-6">☕</div>
-                  <h3 className="text-3xl font-black text-gray-900 mb-2 uppercase tracking-tight">Drink Station</h3>
-                  <p className="text-gray-500 font-medium">Fast-track drink orders with single-click completion logic.</p>
-                  <div className="mt-8 flex items-center gap-2 text-[#2d5a41] font-bold uppercase tracking-widest text-sm">
-                    Open Station <span>→</span>
-                  </div>
-                </div>
-              </a>
+            {/* Stats Bar */}
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-3xl font-bold text-blue-600">{preparingOrders.length}</div>
+                <div className="text-sm text-gray-600 mt-1">Preparing</div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="text-3xl font-bold text-green-600">{readyOrders.length}</div>
+                <div className="text-sm text-gray-600 mt-1">Ready</div>
+              </div>
             </div>
           </div>
 
@@ -294,32 +292,50 @@ export default function KitchenDisplayPage() {
             </div>
           )}
 
-          <div className="hidden" />
+          {/* Orders Grid */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+              <RefreshCw className="h-12 w-12 animate-spin text-gray-400 mb-4" />
+              <p className="text-gray-600">Loading kitchen orders...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <OrderColumn
+                title="Drinks Pending"
+                color="orange"
+                orders={preparingOrders.concat(readyOrders)}
+                onStatusChange={handleStatusChange}
+                onCancelOrder={handleCancelOrder}
+                nextStatus="completed"
+                t={t}
+              />
+            </div>
+          )}
         </div>
-      </ProtectedRoute>
 
-      <ConfirmationCard
-        isOpen={confirmationState.isOpen}
-        onClose={closeConfirmation}
-        onConfirm={confirmationState.onConfirm}
-        title={confirmationState.options.title}
-        message={confirmationState.options.message}
-        type={confirmationState.options.type}
-        confirmText={confirmationState.options.confirmText}
-        cancelText={confirmationState.options.cancelText}
-        icon={confirmationState.options.icon}
-      />
+        <ConfirmationCard
+          isOpen={confirmationState.isOpen}
+          onClose={closeConfirmation}
+          onConfirm={confirmationState.onConfirm}
+          title={confirmationState.options.title}
+          message={confirmationState.options.message}
+          type={confirmationState.options.type}
+          confirmText={confirmationState.options.confirmText}
+          cancelText={confirmationState.options.cancelText}
+          icon={confirmationState.options.icon}
+        />
 
-      <NotificationCard
-        isOpen={notificationState.isOpen}
-        onClose={closeNotification}
-        title={notificationState.options.title}
-        message={notificationState.options.message}
-        type={notificationState.options.type}
-        autoClose={notificationState.options.autoClose}
-        duration={notificationState.options.duration}
-      />
-    </>
+        <NotificationCard
+          isOpen={notificationState.isOpen}
+          onClose={closeNotification}
+          title={notificationState.options.title}
+          message={notificationState.options.message}
+          type={notificationState.options.type}
+          autoClose={notificationState.options.autoClose}
+          duration={notificationState.options.duration}
+        />
+      </div>
+    </ProtectedRoute>
   )
 }
 
@@ -475,41 +491,12 @@ function OrderCardActions({
     setTimeout(() => setBusy(false), 3000)
   }
 
-  if (order.status === "preparing") {
-    return (
-      <div className="flex gap-2">
-        <button
-          onClick={() => handleClick("ready")}
-          disabled={busy}
-          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {busy ? (
-            <>
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-              </svg>
-              Updating...
-            </>
-          ) : "✅ Mark Ready"}
-        </button>
-        <button
-          onClick={() => onCancelOrder(order._id)}
-          disabled={busy}
-          className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors disabled:opacity-50"
-        >
-          ✕
-        </button>
-      </div>
-    )
-  }
-
-  if (order.status === "ready") {
-    return (
+  return (
+    <div className="flex gap-2">
       <button
         onClick={() => handleClick("completed")}
         disabled={busy}
-        className="w-full bg-gray-800 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="flex-1 bg-[#2d5a41] text-white py-2 px-4 rounded-lg font-black text-sm hover:bg-[#1b3d2c] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 uppercase tracking-tight"
       >
         {busy ? (
           <>
@@ -517,12 +504,19 @@ function OrderCardActions({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
             </svg>
-            Completing...
+            Done...
           </>
-        ) : "🏁 Complete Order"}
+        ) : "🏁 Mark Done"}
       </button>
-    )
-  }
+      <button
+        onClick={() => onCancelOrder(order._id)}
+        disabled={busy}
+        className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors disabled:opacity-50"
+      >
+        ✕
+      </button>
+    </div>
+  )
 
   return null
 }

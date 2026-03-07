@@ -33,6 +33,7 @@ export default function CashierOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<"all" | "preparing" | "completed">("all")
+  const [mainCategoryFilter, setMainCategoryFilter] = useState<"all" | "Food" | "Drinks">("all")
   const { token, user } = useAuth()
   const { t } = useLanguage()
 
@@ -69,9 +70,12 @@ export default function CashierOrdersPage() {
 
   const isDeletedOrder = (o: Order) => !!o.isDeleted || o.status === "cancelled"
 
-  const filteredOrders = filterStatus === "all"
-    ? orders.filter(o => !isDeletedOrder(o))
-    : orders.filter((o) => o.status === filterStatus && !isDeletedOrder(o))
+  const filteredOrders = orders.filter(o => {
+    if (isDeletedOrder(o)) return false
+    const matchesStatus = filterStatus === "all" || o.status === filterStatus
+    const matchesCategory = mainCategoryFilter === "all" || o.items.some(item => (item as any).mainCategory === mainCategoryFilter)
+    return matchesStatus && matchesCategory
+  })
 
   const stats = {
     total: orders.filter(o => !isDeletedOrder(o)).length,
@@ -79,6 +83,19 @@ export default function CashierOrdersPage() {
     completed: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").length,
     // Today's revenue includes all non-cancelled orders
     revenue: orders.filter((o) => !isDeletedOrder(o)).reduce((sum, o) => sum + o.totalAmount, 0),
+    // Separate revenue for food and drinks
+    foodRevenue: orders.filter((o) => !isDeletedOrder(o)).reduce((sum, o) => {
+      const foodTotal = o.items
+        .filter(item => (item as any).mainCategory === "Food")
+        .reduce((s, i) => s + (i.price * i.quantity), 0)
+      return sum + foodTotal
+    }, 0),
+    drinkRevenue: orders.filter((o) => !isDeletedOrder(o)).reduce((sum, o) => {
+      const drinkTotal = o.items
+        .filter(item => (item as any).mainCategory === "Drinks")
+        .reduce((s, i) => s + (i.price * i.quantity), 0)
+      return sum + drinkTotal
+    }, 0),
     // Completed revenue for reference
     completedRevenue: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").reduce((sum, o) => sum + o.totalAmount, 0),
   }
@@ -119,27 +136,37 @@ export default function CashierOrdersPage() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                {/* Today's Revenue Card */}
-                <div className="bg-gradient-to-br from-emerald-50 to-green-100 rounded-xl p-4 border border-emerald-200 shadow-sm min-w-[180px]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <TrendingUp className="h-4 w-4 text-emerald-600" />
-                    <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Today's Revenue</span>
-                  </div>
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4 animate-spin text-emerald-600" />
-                      <span className="text-lg font-bold text-emerald-800">Loading...</span>
+                {/* Revenue Stats */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="bg-gradient-to-br from-emerald-50 to-green-100 rounded-xl p-4 border border-emerald-200 shadow-sm min-w-[150px]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-4 w-4 text-emerald-600" />
+                      <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Total Revenue</span>
                     </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold text-emerald-800">
-                        {stats.revenue.toLocaleString()} Br
-                      </div>
-                      <div className="text-xs text-emerald-600 mt-1">
-                        {stats.total} order{stats.total !== 1 ? 's' : ''} today
-                      </div>
-                    </>
-                  )}
+                    <div className="text-xl font-black text-emerald-800">
+                      {loading ? '...' : `${stats.revenue.toLocaleString()} Br`}
+                    </div>
+                  </div>
+
+                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-100 shadow-sm min-w-[140px]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs">🍳</span>
+                      <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Food Sales</span>
+                    </div>
+                    <div className="text-xl font-black text-orange-800">
+                      {loading ? '...' : `${stats.foodRevenue.toLocaleString()} Br`}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#2d5a41]/5 rounded-xl p-4 border border-[#2d5a41]/10 shadow-sm min-w-[140px]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs">🍹</span>
+                      <span className="text-[10px] font-black text-[#2d5a41] uppercase tracking-widest">Drink Sales</span>
+                    </div>
+                    <div className="text-xl font-black text-[#2d5a41]">
+                      {loading ? '...' : `${stats.drinkRevenue.toLocaleString()} Br`}
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={fetchOrders}
@@ -157,19 +184,35 @@ export default function CashierOrdersPage() {
             <CardHeader>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <CardTitle className="text-xl font-bold text-gray-900">Sales History</CardTitle>
-                <div className="flex gap-2">
-                  {["all", "preparing", "completed"].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setFilterStatus(s as any)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterStatus === s
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                    >
-                      {s.charAt(0).toUpperCase() + s.slice(1)}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex bg-gray-100 p-1 rounded-xl mr-4">
+                    {["all", "Food", "Drinks"].map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setMainCategoryFilter(c as any)}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${mainCategoryFilter === c
+                          ? "bg-[#2d5a41] text-white shadow-sm"
+                          : "text-gray-500 hover:text-gray-900"
+                          }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex bg-gray-100 p-1 rounded-xl">
+                    {["all", "preparing", "completed"].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setFilterStatus(s as any)}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${filterStatus === s
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "text-gray-500 hover:text-gray-900"
+                          }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </CardHeader>

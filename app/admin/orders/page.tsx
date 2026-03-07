@@ -41,6 +41,7 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [timeRange, setTimeRange] = useState<string>("today")
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "Food" | "Drinks">("all")
   const [deleting, setDeleting] = useState<string | null>(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const notifiedOrderIds = useRef<Set<string>>(new Set())
@@ -65,7 +66,7 @@ export default function AdminOrdersPage() {
         notify({
           title: "Preparation Delay!",
           message: `Order #${order.orderNumber} (Table ${order.tableNumber}) has exceeded its target time by ${metrics.delay}m.`,
-          type: "warning"
+          type: "error"
         })
         // Mark as notified
         notifiedOrderIds.current.add(order._id)
@@ -257,7 +258,9 @@ export default function AdminOrdersPage() {
       order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
 
-    return matchesFilter && matchesSearch
+    const matchesCategory = categoryFilter === "all" || order.items.some(item => (item as any).mainCategory === categoryFilter)
+
+    return matchesFilter && matchesSearch && matchesCategory
   })
 
   const getStatusConfig = (status: string) => {
@@ -320,7 +323,9 @@ export default function AdminOrdersPage() {
     all: {
       count: orders.length,
       time: orders.length > 0 ? Math.floor(orders.reduce((acc, o) => acc + getOrderMetrics(o).totalTaken, 0) / orders.length) : 0,
-      delay: orders.length > 0 ? Math.floor(orders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / orders.length) : 0
+      delay: orders.length > 0 ? Math.floor(orders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / orders.length) : 0,
+      foodRevenue: orders.filter(o => !o.isDeleted && o.status !== 'cancelled').reduce((sum, o) => sum + o.items.filter(i => (i as any).mainCategory === 'Food').reduce((s, it) => s + (it.price * it.quantity), 0), 0),
+      drinkRevenue: orders.filter(o => !o.isDeleted && o.status !== 'cancelled').reduce((sum, o) => sum + o.items.filter(i => (i as any).mainCategory === 'Drinks').reduce((s, it) => s + (it.price * it.quantity), 0), 0)
     },
     preparing: {
       count: preparingOrders.length,
@@ -329,7 +334,9 @@ export default function AdminOrdersPage() {
         : 0,
       delay: preparingOrders.length > 0
         ? Math.floor(preparingOrders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / preparingOrders.length)
-        : 0
+        : 0,
+      foodRevenue: preparingOrders.reduce((sum, o) => sum + o.items.filter(i => (i as any).mainCategory === 'Food').reduce((s, it) => s + (it.price * it.quantity), 0), 0),
+      drinkRevenue: preparingOrders.reduce((sum, o) => sum + o.items.filter(i => (i as any).mainCategory === 'Drinks').reduce((s, it) => s + (it.price * it.quantity), 0), 0)
     },
     ready: {
       count: readyOrders.length,
@@ -338,7 +345,9 @@ export default function AdminOrdersPage() {
         : 0,
       delay: readyOrders.length > 0
         ? Math.floor(readyOrders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / readyOrders.length)
-        : 0
+        : 0,
+      foodRevenue: readyOrders.reduce((sum, o) => sum + o.items.filter(i => (i as any).mainCategory === 'Food').reduce((s, it) => s + (it.price * it.quantity), 0), 0),
+      drinkRevenue: readyOrders.reduce((sum, o) => sum + o.items.filter(i => (i as any).mainCategory === 'Drinks').reduce((s, it) => s + (it.price * it.quantity), 0), 0)
     },
     served: {
       count: servedOrders.length,
@@ -347,7 +356,9 @@ export default function AdminOrdersPage() {
         : 0,
       delay: servedOrders.length > 0
         ? Math.floor(servedOrders.reduce((acc, o) => acc + getOrderMetrics(o).delay, 0) / servedOrders.length)
-        : 0
+        : 0,
+      foodRevenue: servedOrders.reduce((sum, o) => sum + o.items.filter(i => (i as any).mainCategory === 'Food').reduce((s, it) => s + (it.price * it.quantity), 0), 0),
+      drinkRevenue: servedOrders.reduce((sum, o) => sum + o.items.filter(i => (i as any).mainCategory === 'Drinks').reduce((s, it) => s + (it.price * it.quantity), 0), 0)
     },
     deleted: {
       count: deletedHistory.length,
@@ -413,10 +424,10 @@ export default function AdminOrdersPage() {
                 <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">{t("adminOrders.title")}</h2>
                 <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 gap-3 scrollbar-hide">
                   {[
-                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all.count - stats.deleted.count, time: stats.all.time, delay: stats.all.delay, emoji: "📋" },
-                    { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing.count, time: stats.preparing.time, delay: stats.preparing.delay, emoji: "🔥" },
-                    { id: "ready", label: t("adminOrders.ready"), count: stats.ready.count, time: stats.ready.time, delay: stats.ready.delay, emoji: "✅" },
-                    { id: "served", label: "Served", count: stats.served.count, time: stats.served.time, delay: stats.served.delay, emoji: "🍽️" },
+                    { id: "all", label: t("adminOrders.allOrders"), count: stats.all.count - stats.deleted.count, time: stats.all.time, delay: stats.all.delay, foodRevenue: stats.all.foodRevenue, drinkRevenue: stats.all.drinkRevenue, emoji: "📋" },
+                    { id: "preparing", label: t("adminOrders.preparing"), count: stats.preparing.count, time: stats.preparing.time, delay: stats.preparing.delay, foodRevenue: stats.preparing.foodRevenue, drinkRevenue: stats.preparing.drinkRevenue, emoji: "🔥" },
+                    { id: "ready", label: t("adminOrders.ready"), count: stats.ready.count, time: stats.ready.time, delay: stats.ready.delay, foodRevenue: stats.ready.foodRevenue, drinkRevenue: stats.ready.drinkRevenue, emoji: "✅" },
+                    { id: "served", label: "Served", count: stats.served.count, time: stats.served.time, delay: stats.served.delay, foodRevenue: stats.served.foodRevenue, drinkRevenue: stats.served.drinkRevenue, emoji: "🍽️" },
                     { id: "deleted", label: "Deleted History", count: stats.deleted.count, time: stats.deleted.time, delay: stats.deleted.delay, emoji: "🗑️" }
                   ].map(item => (
                     <button
@@ -441,6 +452,18 @@ export default function AdminOrdersPage() {
                           {item.delay !== null && item.delay > 0 && (
                             <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${filter === item.id ? 'bg-white/10 text-white' : 'bg-red-50 text-red-500'}`}>
                               +{item.delay}m
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-0.5 ml-7 md:ml-8 mt-1">
+                          {(item as any).foodRevenue !== undefined && (item as any).foodRevenue > 0 && (
+                            <span className={`text-[9px] font-black uppercase tracking-tighter ${filter === item.id ? 'text-white/80' : 'text-orange-600'}`}>
+                              🍳 {(item as any).foodRevenue.toLocaleString()} Br
+                            </span>
+                          )}
+                          {(item as any).drinkRevenue !== undefined && (item as any).drinkRevenue > 0 && (
+                            <span className={`text-[9px] font-black uppercase tracking-tighter ${filter === item.id ? 'text-white/80' : 'text-[#2d5a41]'}`}>
+                              🍹 {(item as any).drinkRevenue.toLocaleString()} Br
                             </span>
                           )}
                         </div>
@@ -484,6 +507,20 @@ export default function AdminOrdersPage() {
                             className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all whitespace-nowrap ${timeRange === r ? "bg-[#8B4513] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
                           >{r}</button>
                         ))}
+
+                        <div className="w-px h-4 bg-gray-300 mx-2 self-center" />
+
+                        {["all", "Food", "Drinks"].map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => setCategoryFilter(c as any)}
+                            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all whitespace-nowrap ${categoryFilter === c ? "bg-[#2d5a41] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                          >
+                            {c}
+                          </button>
+                        ))}
+
+                        <div className="w-px h-4 bg-gray-300 mx-2 self-center" />
 
                         <Popover>
                           <PopoverTrigger asChild>

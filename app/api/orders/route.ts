@@ -43,6 +43,7 @@ export async function GET(request: Request) {
     const endDate = searchParams.get('endDate')
     const limit = searchParams.get('limit')
     const includeDeleted = searchParams.get('includeDeleted') === 'true'
+    const mainCategory = searchParams.get('mainCategory') // 'Food' or 'Drinks'
 
     const decoded = await validateSession(request)
     // console.log("📋 User fetching orders:", decoded.email || decoded.id)
@@ -95,6 +96,11 @@ export async function GET(request: Request) {
         // If no assigned categories, chef sees nothing
         return NextResponse.json([])
       }
+    }
+
+    // Filter by mainCategory if provided
+    if (mainCategory) {
+      query["items.mainCategory"] = mainCategory
     }
 
     let orderQuery = Order.find(query).sort({ createdAt: -1 })

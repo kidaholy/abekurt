@@ -28,6 +28,7 @@ interface IMenuItem {
   stockConsumption?: number
   reportUnit?: 'kg' | 'liter' | 'piece'
   reportQuantity?: number
+  distributions?: string[]  // e.g. ["Hot", "Cold", "Iced"]
 }
 
 const RecipeIngredientSchema = new Schema<IRecipeIngredient>({
@@ -58,6 +59,7 @@ const menuItemSchema = new Schema<IMenuItem>(
     stockConsumption: { type: Number, default: 0 },
     reportUnit: { type: String, enum: ['kg', 'liter', 'piece'], default: 'piece' },
     reportQuantity: { type: Number, default: 0 },
+    distributions: [{ type: String }],
   },
   { timestamps: true }
 )

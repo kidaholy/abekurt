@@ -15,6 +15,7 @@ export interface CartItem {
   quantity: number
   category: string
   reportUnit?: string
+  distribution?: string  // selected variant label
 }
 
 interface CartSidebarProps {
@@ -345,6 +346,9 @@ export function CartSidebar({
                   <h3 className="font-bold text-xs text-gray-800 truncate">
                     {item.menuId ? `#${item.menuId} ` : ""}{item.name}
                   </h3>
+                  {item.distribution && (
+                    <p className="text-[9px] text-blue-600 font-bold uppercase tracking-wide">{item.distribution}</p>
+                  )}
                   <p className="text-[10px] text-gray-400 font-bold">{item.price} {t("common.currencyBr")}</p>
                 </div>
                 

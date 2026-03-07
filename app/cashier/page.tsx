@@ -27,6 +27,7 @@ interface MenuItem {
   available?: boolean
   preparationTime?: number
   reportUnit?: string
+  distributions?: string[]
 }
 
 
@@ -45,6 +46,7 @@ export default function CashierPOSPage() {
   const [showMobileCart, setShowMobileCart] = useState(false)
   const [paperWidth, setPaperWidth] = useState(80)
   const [selectedBatchId, setSelectedBatchId] = useState<string>("")
+  const [variantModal, setVariantModal] = useState<{ item: MenuItem } | null>(null)
   const { token, user } = useAuth()
   const { t } = useLanguage()
   const { settings } = useSettings()
@@ -190,6 +192,12 @@ export default function CashierPOSPage() {
   }, [token, user])
 
   const handleAddToCart = (item: MenuItem) => {
+    // If item has distributions, show variant modal first
+    if (item.distributions && item.distributions.length > 0) {
+      setVariantModal({ item })
+      return
+    }
+
     const existingItem = cartItems.find((ci) => ci.id === item._id)
     if (existingItem) {
       setCartItems(cartItems.map((ci) => (ci.id === item._id ? { ...ci, quantity: ci.quantity + 1 } : ci)))
@@ -204,6 +212,28 @@ export default function CashierPOSPage() {
         reportUnit: item.reportUnit
       }])
     }
+  }
+
+  const handleSelectVariant = (item: MenuItem, distribution: string) => {
+    const cartItemId = `${item._id}_${distribution}`
+    const cartItemName = `${item.name} - ${distribution}`
+
+    const existingItem = cartItems.find((ci) => ci.id === cartItemId)
+    if (existingItem) {
+      setCartItems(cartItems.map((ci) => (ci.id === cartItemId ? { ...ci, quantity: ci.quantity + 1 } : ci)))
+    } else {
+      setCartItems([...cartItems, {
+        id: cartItemId,
+        menuId: item.menuId,
+        name: cartItemName,
+        price: item.price,
+        quantity: 1,
+        category: item.category,
+        reportUnit: item.reportUnit,
+        distribution
+      }])
+    }
+    setVariantModal(null)
   }
 
   const handleRemoveFromCart = (id: string) => {
@@ -572,6 +602,33 @@ export default function CashierPOSPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl p-10 shadow-2xl max-w-md w-full">
               <OrderAnimation orderNumber={orderNumber} totalItems={cartItems.length} isVisible={showOrderAnimation} />
+            </div>
+          </div>
+        )}
+
+        {/* Variant Selection Modal */}
+        {variantModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-sm w-full">
+              <h3 className="text-xl font-black text-gray-900 mb-2 text-center">{variantModal.item.name}</h3>
+              <p className="text-sm text-gray-500 text-center mb-6">Select a distribution</p>
+              <div className="space-y-3">
+                {variantModal.item.distributions?.map((dist) => (
+                  <button
+                    key={dist}
+                    onClick={() => handleSelectVariant(variantModal.item, dist)}
+                    className="w-full py-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-2xl font-bold text-blue-700 transition-all hover:scale-[1.02] active:scale-95"
+                  >
+                    {dist}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setVariantModal(null)}
+                className="w-full mt-4 py-3 text-gray-500 font-bold hover:text-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         )}

@@ -27,6 +27,7 @@ interface MenuItem {
   reportQuantity?: number
   stockItemId?: string | any
   stockConsumption?: number
+  distributions?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -45,6 +46,7 @@ interface MenuItemForm {
   reportQuantity: string
   stockItemId: string
   stockConsumption: string
+  distributions: string[]
 }
 
 export default function AdminMenuPage() {
@@ -74,7 +76,8 @@ export default function AdminMenuPage() {
     reportUnit: 'piece',
     reportQuantity: '1',
     stockItemId: "",
-    stockConsumption: "0"
+    stockConsumption: "0",
+    distributions: []
   })
   const [imageInputType, setImageInputType] = useState<'file' | 'url'>('file')
   const { token } = useAuth()
@@ -408,6 +411,7 @@ export default function AdminMenuPage() {
       reportQuantity: item.reportQuantity?.toString() || "0",
       stockItemId: item.stockItemId?._id || item.stockItemId || "",
       stockConsumption: item.stockConsumption?.toString() || "0",
+      distributions: item.distributions || [],
     })
     setShowCreateForm(true)
   }
@@ -494,7 +498,7 @@ export default function AdminMenuPage() {
       menuId: "", name: "", mainCategory: 'Food', category: "", price: "", description: "",
       image: "", preparationTime: "10", available: true,
       reportUnit: 'piece', reportQuantity: '1',
-      stockItemId: "", stockConsumption: "0"
+      stockItemId: "", stockConsumption: "0", distributions: []
     })
     setEditingItem(null)
     setShowCreateForm(false)
@@ -1015,6 +1019,66 @@ export default function AdminMenuPage() {
                         )}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Distribution Variants */}
+                  <div className="md:col-span-2 bg-blue-50/50 p-6 rounded-[30px] border border-blue-100">
+                      <h3 className="text-sm font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <span>🔀</span> Distribution Variants (Optional)
+                      </h3>
+                      <p className="text-[11px] text-gray-400 font-medium mb-4">Add options the cashier must choose from when ordering this item (e.g. Hot, Cold, Spicy, Mild).</p>
+
+                      {/* Input to add new variant */}
+                      <div className="flex gap-2 mb-4">
+                        <input
+                          type="text"
+                          id="newVariantInput"
+                          placeholder="e.g. Hot, Cold, Large..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              const val = (e.target as HTMLInputElement).value.trim()
+                              if (val && !formData.distributions.includes(val)) {
+                                setFormData(prev => ({ ...prev, distributions: [...prev.distributions, val] }));
+                                (e.target as HTMLInputElement).value = ''
+                              }
+                            }
+                          }}
+                          className="flex-1 bg-white border border-blue-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById('newVariantInput') as HTMLInputElement
+                            const val = input?.value.trim()
+                            if (val && !formData.distributions.includes(val)) {
+                              setFormData(prev => ({ ...prev, distributions: [...prev.distributions, val] }))
+                              input.value = ''
+                            }
+                          }}
+                          className="px-5 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-colors"
+                        >
+                          + Add
+                        </button>
+                      </div>
+
+                      {/* List of added variants */}
+                      {formData.distributions.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {formData.distributions.map((variant, idx) => (
+                            <span key={idx} className="flex items-center gap-1.5 bg-white border border-blue-200 text-blue-700 font-bold text-xs px-3 py-1.5 rounded-full">
+                              {variant}
+                              <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, distributions: prev.distributions.filter((_, i) => i !== idx) }))}
+                                className="text-blue-400 hover:text-red-500 transition-colors leading-none"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                   </div>
 
                   <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100">

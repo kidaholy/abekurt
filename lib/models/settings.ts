@@ -11,7 +11,7 @@ interface ISettings {
 const settingsSchema = new Schema<ISettings>(
   {
     key: { type: String, required: true, unique: true },
-    value: { type: String, required: true },
+    value: { type: String, default: "" },
     type: { type: String, enum: ["string", "url", "boolean", "number"], default: "string" },
     description: { type: String },
   },

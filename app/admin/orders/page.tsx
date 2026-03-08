@@ -7,7 +7,7 @@ import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
 import { useConfirmation } from "@/hooks/use-confirmation"
-import { Clock, Trash2, Calendar as CalendarIcon } from "lucide-react"
+import { Clock, Trash2, Calendar as CalendarIcon, CheckCheck } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
@@ -44,6 +44,7 @@ export default function AdminOrdersPage() {
   const [categoryFilter, setCategoryFilter] = useState<"all" | "Food" | "Drinks">("all")
   const [deleting, setDeleting] = useState<string | null>(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkServing, setBulkServing] = useState(false)
   const notifiedOrderIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -244,6 +245,50 @@ export default function AdminOrdersPage() {
       })
     } finally {
       setBulkDeleting(false)
+    }
+  }
+
+  const handleBulkServeOrders = async () => {
+    const activeCount = orders.filter(o => !o.isDeleted && o.status !== 'cancelled' && o.status !== 'served' && o.status !== 'completed').length
+    if (activeCount === 0) {
+      notify({ title: "No Active Orders", message: "There are no active orders to mark as served.", type: "error" })
+      return
+    }
+
+    const confirmed = await confirm({
+      title: "Mark All Orders as Served",
+      message: `Are you sure you want to mark all ${activeCount} active order${activeCount !== 1 ? 's' : ''} as served?\n\nThis will update all pending, preparing, and ready orders.`,
+      type: "warning",
+      confirmText: "Mark All as Served",
+      cancelText: "Cancel"
+    })
+
+    if (!confirmed) return
+
+    setBulkServing(true)
+    try {
+      const response = await fetch("/api/orders/bulk-serve", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setOrders(prevOrders => prevOrders.map(o =>
+          (!o.isDeleted && o.status !== 'cancelled' && o.status !== 'served' && o.status !== 'completed')
+            ? { ...o, status: 'served' }
+            : o
+        ))
+        notify({ title: "All Orders Served", message: result.message, type: "success" })
+      } else {
+        const error = await response.json()
+        notify({ title: "Failed", message: error.message || "Failed to mark orders as served", type: "error" })
+      }
+    } catch (error) {
+      console.error("Failed to bulk serve orders:", error)
+      notify({ title: "Error", message: "Failed to mark orders as served. Please try again.", type: "error" })
+    } finally {
+      setBulkServing(false)
     }
   }
 
@@ -562,23 +607,42 @@ export default function AdminOrdersPage() {
                       />
                     </div>
                     {orders.length > 0 && (
-                      <button
-                        onClick={handleBulkDeleteOrders}
-                        disabled={bulkDeleting}
-                        className="w-full sm:w-auto bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center gap-2 whitespace-nowrap"
-                      >
-                        {bulkDeleting ? (
-                          <>
-                            <span className="animate-spin">⏳</span>
-                            <span className="text-xs">{t("adminOrders.deleting")}</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>🗑️</span>
-                            <span className="text-xs sm:text-sm">{t("adminOrders.deleteAllOrders")}</span>
-                          </>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleBulkServeOrders}
+                          disabled={bulkServing || bulkDeleting}
+                          className="w-full sm:w-auto bg-[#2d5a41] hover:bg-[#245038] disabled:bg-[#2d5a41]/50 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center gap-2 whitespace-nowrap"
+                        >
+                          {bulkServing ? (
+                            <>
+                              <span className="animate-spin">⏳</span>
+                              <span className="text-xs">Serving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCheck className="h-4 w-4" />
+                              <span className="text-xs sm:text-sm">Mark All as Served</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleBulkDeleteOrders}
+                          disabled={bulkDeleting || bulkServing}
+                          className="w-full sm:w-auto bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center gap-2 whitespace-nowrap"
+                        >
+                          {bulkDeleting ? (
+                            <>
+                              <span className="animate-spin">⏳</span>
+                              <span className="text-xs">{t("adminOrders.deleting")}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>🗑️</span>
+                              <span className="text-xs sm:text-sm">{t("adminOrders.deleteAllOrders")}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div> {/* Closes the div at line 469 */}

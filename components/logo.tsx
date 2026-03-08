@@ -8,14 +8,18 @@ interface LogoProps {
   showText?: boolean
   className?: string
   textColor?: string
+  overrideUrl?: string
 }
 
-export function Logo({ size = "md", showText = true, className = "", textColor }: LogoProps) {
+export function Logo({ size = "md", showText = true, className = "", textColor, overrideUrl }: LogoProps) {
   const { settings, loading } = useSettings()
+
+  const logoUrl = overrideUrl || settings.logo_url
+  const isDataUrl = logoUrl?.startsWith('data:')
 
   const sizeClasses = {
     sm: "w-8 h-8",
-    md: "w-12 h-12", 
+    md: "w-12 h-12",
     lg: "w-16 h-16"
   }
 
@@ -41,14 +45,15 @@ export function Logo({ size = "md", showText = true, className = "", textColor }
 
   return (
     <div className={`flex items-center gap-3 group ${className}`}>
-      {settings.logo_url ? (
+      {logoUrl ? (
         <div className={`${sizeClasses[size]} relative overflow-hidden rounded-full border-2 border-white shadow-lg transition-transform duration-300 group-hover:scale-110`}>
           <Image
-            src={settings.logo_url}
+            src={logoUrl}
             alt={`${settings.app_name} Logo`}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 32px, 48px"
+            unoptimized={isDataUrl}
           />
         </div>
       ) : (
@@ -56,7 +61,7 @@ export function Logo({ size = "md", showText = true, className = "", textColor }
           {settings.app_name.charAt(0).toUpperCase()}
         </div>
       )}
-      
+
       {showText && (
         <div className="hidden sm:block">
           <h1 className={`${textSizeClasses[size]} font-bold brand-font ${textColor || 'text-sidebar-foreground'}`}>

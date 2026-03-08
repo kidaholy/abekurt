@@ -249,14 +249,18 @@ export default function AdminSettingsPage() {
     setSaving(true)
 
     try {
-      // Save all settings
-      await Promise.all([
-        handleSaveSetting("logo_url", formData.logo_url, "url", t("adminSettings.applicationLogoUrl")),
-        handleSaveSetting("app_name", formData.app_name, "string", t("adminSettings.applicationName")),
-        handleSaveSetting("app_tagline", formData.app_tagline, "string", t("adminSettings.applicationTagline")),
-        handleSaveSetting("vat_rate", formData.vat_rate, "number", "Value Added Tax (VAT) rate (e.g., 0.15 for 15%)"),
-        handleSaveSetting("enable_cashier_printing", formData.enable_cashier_printing, "boolean", "Enable or disable automatic receipt printing in the cashier POS")
-      ])
+      // Save all settings one by one to better track failures
+      const settingsToSave = [
+        { key: "logo_url", value: formData.logo_url, type: "url", desc: t("adminSettings.applicationLogoUrl") },
+        { key: "app_name", value: formData.app_name, type: "string", desc: t("adminSettings.applicationName") },
+        { key: "app_tagline", value: formData.app_tagline, type: "string", desc: t("adminSettings.applicationTagline") },
+        { key: "vat_rate", value: formData.vat_rate, type: "number", desc: "Value Added Tax (VAT) rate" },
+        { key: "enable_cashier_printing", value: formData.enable_cashier_printing, type: "boolean", desc: "Auto-print setting" }
+      ]
+
+      for (const s of settingsToSave) {
+        await handleSaveSetting(s.key, s.value, s.type, s.desc)
+      }
 
       // Refresh settings in context
       await refreshSettings()
@@ -314,7 +318,7 @@ export default function AdminSettingsPage() {
         return
       }
 
-      setFormData({ ...formData, logo_url: compressedImage })
+      setFormData(prev => ({ ...prev, logo_url: compressedImage }))
     } catch (error) {
       console.error('Failed to process image:', error)
       notify({
@@ -337,7 +341,7 @@ export default function AdminSettingsPage() {
     })
 
     if (confirmed) {
-      setFormData({ ...formData, logo_url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=200&h=200&fit=crop&crop=center' })
+      setFormData(prev => ({ ...prev, logo_url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=200&h=200&fit=crop&crop=center' }))
     }
   }
 
@@ -357,7 +361,7 @@ export default function AdminSettingsPage() {
                   <div className="text-center">
                     <h3 className="text-sm font-bold text-gray-500 mb-3">{t("adminSettings.currentLogo")}</h3>
                     <div className="flex justify-center">
-                      <Logo size="lg" showText={true} />
+                      <Logo size="lg" showText={true} overrideUrl={formData.logo_url} />
                     </div>
                   </div>
 
@@ -365,7 +369,7 @@ export default function AdminSettingsPage() {
                     <h3 className="text-sm font-bold text-gray-500 mb-3">{t("adminSettings.previewInNavigation")}</h3>
                     <div className="bg-gray-50 rounded-2xl p-4">
                       <div className="flex items-center justify-between">
-                        <Logo size="md" showText={true} />
+                        <Logo size="md" showText={true} overrideUrl={formData.logo_url} />
                         <div className="text-xs text-gray-400">{t("adminSettings.navigationBar")}</div>
                       </div>
                     </div>
@@ -485,7 +489,7 @@ export default function AdminSettingsPage() {
                           <input
                             type="url"
                             value={formData.logo_url.startsWith('data:') ? '' : formData.logo_url}
-                            onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                            onChange={(e) => setFormData(prev => ({ ...prev, logo_url: e.target.value }))}
                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-4 focus:ring-[#8B4513]/10 focus:border-[#8B4513]/20 transition-all font-medium"
                             placeholder={t("adminSettings.logoUrlPlaceholder")}
                           />
@@ -562,7 +566,7 @@ export default function AdminSettingsPage() {
                       <input
                         type="text"
                         value={formData.app_name}
-                        onChange={(e) => setFormData({ ...formData, app_name: e.target.value })}
+                        onChange={(e) => setFormData(prev => ({ ...prev, app_name: e.target.value }))}
                         className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-4 focus:ring-[#8B4513]/10 focus:border-[#8B4513]/20 transition-all font-bold"
                         placeholder={t("adminSettings.appNamePlaceholder")}
                         required
@@ -581,7 +585,7 @@ export default function AdminSettingsPage() {
                       <input
                         type="text"
                         value={formData.app_tagline}
-                        onChange={(e) => setFormData({ ...formData, app_tagline: e.target.value })}
+                        onChange={(e) => setFormData(prev => ({ ...prev, app_tagline: e.target.value }))}
                         className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-4 focus:ring-[#8B4513]/10 focus:border-[#8B4513]/20 transition-all font-medium text-slate-600"
                         placeholder={t("adminSettings.appTaglinePlaceholder")}
                         required
@@ -604,7 +608,7 @@ export default function AdminSettingsPage() {
                             min="0"
                             max="1"
                             value={formData.vat_rate}
-                            onChange={(e) => setFormData({ ...formData, vat_rate: e.target.value })}
+                            onChange={(e) => setFormData(prev => ({ ...prev, vat_rate: e.target.value }))}
                             className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-4 focus:ring-[#8B4513]/10 focus:border-[#8B4513]/20 transition-all font-bold"
                             placeholder={t("adminSettings.vatRatePlaceholder")}
                             required

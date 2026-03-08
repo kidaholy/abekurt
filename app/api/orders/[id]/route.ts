@@ -13,14 +13,12 @@ import { validateSession } from "@/lib/auth"
 // PUT update order status with automatic stock consumption
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await validateSession(request)
+        const decoded = await validateSession(request)
         await connectDB()
 
         const { id } = await params
         const body = await request.json()
         const { status } = body
-
-        const decoded = await validateSession(request)
 
         if (status === "cancelled" && decoded.role !== "admin") {
             return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 })

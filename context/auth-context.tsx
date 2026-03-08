@@ -43,10 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Initial health check: Verify if the user is still active
       fetch("/api/system-check", {
         headers: { Authorization: `Bearer ${storedToken}` }
-      }).then(res => {
+      }).then(async res => {
         if (res.status === 401) {
-          console.warn("🚫 Initial check failed: Account deactivated or token invalid. Logging out.")
-          logout()
+          try {
+            const data = await res.json()
+            // Only log out on explicit deactivation, not transient 401s
+            if (data?.checks?.auth?.details?.includes("deactivated")) {
+              console.warn("🚫 Initial check failed: Account deactivated. Logging out.")
+              logout()
+            }
+          } catch {
+            // Ignore JSON parse errors — don't logout
+          }
         }
       }).catch(err => console.error("Health check failed:", err))
     }
@@ -65,8 +73,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const isLoginPage = window.location.pathname === "/login"
 
           if (!isAuthRequest && !isLoginPage) {
-            console.warn("🚫 401 Unauthorized detected globally. Forcing logout.")
-            logout()
+            // Don't immediately logout — re-validate the session first.
+            // A single 401 could be from a specific endpoint, not a full session invalidation.
+            const currentToken = localStorage.getItem("token")
+            if (!currentToken || currentToken === "null" || currentToken === "undefined") {
+              // No token at all — legitimate logout
+              logout()
+            } else {
+              // Re-check the session with system-check before logging out
+              originalFetch("/api/system-check", {
+                headers: { Authorization: `Bearer ${currentToken}` }
+              }).then(checkRes => {
+                if (checkRes.status === 401) {
+                  console.warn(`🚫 Session confirmed invalid (from ${url}). Forcing logout.`)
+                  logout()
+                }
+              }).catch(() => {
+                // Network error — don't log out, could be temporary
+              })
+            }
           }
         }
         return response

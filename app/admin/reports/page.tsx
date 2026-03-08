@@ -35,6 +35,7 @@ export default function ReportsPage() {
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
     const [menuItems, setMenuItems] = useState<any[]>([])
     const [menuSearchTerm, setMenuSearchTerm] = useState("")
+    const [orderHistoryTab, setOrderHistoryTab] = useState<'All' | 'Food' | 'Drinks'>('All')
 
     // Context
     const { token } = useAuth()
@@ -134,6 +135,18 @@ export default function ReportsPage() {
     const lifetimeInvestment = salesSummary.lifetimeTotalInvestment || 0
     const lifetimeNetWorth = salesSummary.lifetimeNetWorth || 0
     const filteredOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    const foodRevenue = filteredOrders
+        .filter(o => o.status !== "cancelled" && !o.isDeleted)
+        .reduce((sum, o) => sum + o.items
+            .filter((i: any) => i.mainCategory === 'Food')
+            .reduce((s: number, it: any) => s + ((it.price || 0) * (it.quantity || 0)), 0), 0)
+
+    const drinksRevenue = filteredOrders
+        .filter(o => o.status !== "cancelled" && !o.isDeleted)
+        .reduce((sum, o) => sum + o.items
+            .filter((i: any) => i.mainCategory === 'Drinks')
+            .reduce((s: number, it: any) => s + ((it.price || 0) * (it.quantity || 0)), 0), 0)
 
     const menuItemSales = Object.values(filteredOrders.reduce((acc, order) => {
         if (order.status === 'cancelled' || order.isDeleted) return acc;
@@ -492,6 +505,18 @@ export default function ReportsPage() {
                                                         <td className="p-4 text-gray-400 text-xs font-medium">Total completed orders value for this period</td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="p-4 text-md text-slate-600 pl-8 flex items-center gap-2"><div className="w-1.5 h-4 bg-orange-400 rounded-full"></div> Food Revenue</td>
+                                                        <td className="p-4 text-center"><span className="bg-orange-50 text-orange-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">BREAKDOWN</span></td>
+                                                        <td className="p-4 text-right text-md font-bold text-orange-500">{foodRevenue.toLocaleString()} ETB</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Portion from Food items</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="p-4 text-md text-slate-600 pl-8 flex items-center gap-2"><div className="w-1.5 h-4 bg-blue-400 rounded-full"></div> Drinks Revenue</td>
+                                                        <td className="p-4 text-center"><span className="bg-blue-50 text-blue-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">BREAKDOWN</span></td>
+                                                        <td className="p-4 text-right text-md font-bold text-blue-500">{drinksRevenue.toLocaleString()} ETB</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Portion from Drinks items</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-gray-50/50 transition-colors">
                                                         <td className="p-4 text-lg text-slate-800">Period Investment</td>
                                                         <td className="p-4 text-center"><span className="bg-red-50 text-red-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">EXPENSE</span></td>
                                                         <td className="p-4 text-right text-lg font-black text-red-600">-{periodInvestment.toLocaleString()} ETB</td>
@@ -568,13 +593,23 @@ export default function ReportsPage() {
                                                 <button onClick={() => exportCategoryCSV('Drinks')} className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-bold text-[10px] sm:text-xs transition-all bg-blue-50 px-2 sm:px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm active:scale-95">
                                                     <Download size={12} className="sm:w-3.5 sm:h-3.5" /> Drinks CSV
                                                 </button>
-                                                <button onClick={exportAllToCSV} className="flex items-center gap-2 text-slate-600 hover:text-slate-800 font-bold text-[10px] sm:text-xs transition-all bg-slate-50 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm active:scale-95">
+                                                <button onClick={exportAllToCSV} className="flex items-center gap-2 text-slate-600 hover:text-slate-800 font-bold text-[10px] sm:text-xs transition-all bg-slate-50 px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm active:scale-95 ml-auto sm:ml-0">
                                                     <Download size={12} className="sm:w-3.5 sm:h-3.5" /> All CSV
                                                 </button>
-                                                <button onClick={exportOrdersReport} className="flex items-center gap-2 text-[#D2691E] hover:text-[#8B4513] font-bold text-xs sm:text-sm transition-all ml-auto sm:ml-0">
-                                                    <Download size={14} className="sm:w-4 sm:h-4" /> Word Report
-                                                </button>
                                             </div>
+                                        </div>
+
+                                        {/* Sub Tabs for Order History */}
+                                        <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-max">
+                                            {['All', 'Food', 'Drinks'].map((tab) => (
+                                                <button
+                                                    key={tab}
+                                                    onClick={() => setOrderHistoryTab(tab as any)}
+                                                    className={`flex-1 sm:flex-none px-6 py-2 rounded-lg text-xs font-black uppercase transition-all whitespace-nowrap ${orderHistoryTab === tab ? "bg-white text-slate-800 shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                                                >
+                                                    {tab} Orders
+                                                </button>
+                                            ))}
                                         </div>
 
                                         <div className="hidden lg:block max-h-[560px] overflow-y-auto border border-gray-200 rounded-2xl">
@@ -584,37 +619,58 @@ export default function ReportsPage() {
                                                         <th className="p-4">Item Names</th>
                                                         <th className="p-4 text-center">Table</th>
                                                         <th className="p-4 text-center">Qty</th>
-                                                        <th className="p-4 text-right">Payment</th>
+                                                        {orderHistoryTab !== 'Drinks' && <th className="p-4 text-right text-orange-600 font-bold">Food</th>}
+                                                        {orderHistoryTab !== 'Food' && <th className="p-4 text-right text-blue-600 font-bold">Drinks</th>}
+                                                        <th className="p-4 text-right font-black">Total Payment</th>
                                                         <th className="p-4 text-center">Status</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-50 font-bold text-sm">
-                                                    {filteredOrders.length === 0 ? (
-                                                        <tr><td colSpan={5} className="p-8 text-center text-gray-400 italic font-medium">No orders found for this period.</td></tr>
-                                                    ) : (
-                                                        filteredOrders.map((order) => {
-                                                            const itemNames = order.items.map((i: any) => i.name).join(", ")
-                                                            const totalQty = order.items.reduce((acc: number, i: any) => acc + (i.quantity || 0), 0)
-                                                            return (
-                                                                <tr key={order._id} className="hover:bg-gray-50 transition-colors">
-                                                                    <td className="p-4 text-slate-800">
-                                                                        <div className="line-clamp-1 text-base" title={itemNames}>{itemNames}</div>
-                                                                        <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{order._id.slice(-6)} · {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                                                    </td>
-                                                                    <td className="p-4 text-center">
-                                                                        <div className="flex flex-col items-center gap-1">
-                                                                            {order.batchNumber && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">Batch #{order.batchNumber}</span>}
-                                                                            {order.tableNumber ? <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-lg text-xs font-black">{order.tableNumber}</span> : <span className="text-gray-300">-</span>}
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="p-4 text-center text-slate-500">{totalQty}</td>
-                                                                    <td className="p-4 text-right font-black text-[#8B4513]">{(order.totalAmount || 0).toLocaleString()} Br</td>
-                                                                    <td className="p-4 text-center uppercase tracking-widest text-[9px]">
-                                                                        <span className={`px-2 py-1 rounded-lg font-black ${order.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : order.status === 'cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>{order.status}</span>
-                                                                    </td>
-                                                                </tr>
-                                                            )
+                                                    {filteredOrders
+                                                        .filter(order => {
+                                                            if (orderHistoryTab === 'All') return true;
+                                                            return order.items.some((i: any) => i.mainCategory === orderHistoryTab);
                                                         })
+                                                        .length === 0 ? (
+                                                        <tr><td colSpan={orderHistoryTab === 'All' ? 7 : 6} className="p-8 text-center text-gray-400 italic font-medium">No {orderHistoryTab.toLowerCase()} orders found for this period.</td></tr>
+                                                    ) : (
+                                                        filteredOrders
+                                                            .filter(order => {
+                                                                if (orderHistoryTab === 'All') return true;
+                                                                return order.items.some((i: any) => i.mainCategory === orderHistoryTab);
+                                                            })
+                                                            .map((order) => {
+                                                                // If Tab is Food or Drinks, ONLY show items of that category
+                                                                const displayItems = orderHistoryTab === 'All'
+                                                                    ? order.items
+                                                                    : order.items.filter((i: any) => i.mainCategory === orderHistoryTab)
+
+                                                                const itemNames = displayItems.map((i: any) => i.name).join(", ")
+                                                                const totalQty = displayItems.reduce((acc: number, i: any) => acc + (i.quantity || 0), 0)
+                                                                const orderFoodRev = displayItems.filter((i: any) => i.mainCategory === 'Food').reduce((s: number, i: any) => s + ((i.price || 0) * (i.quantity || 0)), 0)
+                                                                const orderDrinksRev = displayItems.filter((i: any) => i.mainCategory === 'Drinks').reduce((s: number, i: any) => s + ((i.price || 0) * (i.quantity || 0)), 0)
+                                                                const rowTotalPayment = orderHistoryTab === 'All' ? order.totalAmount : (orderFoodRev + orderDrinksRev)
+
+                                                                return (
+                                                                    <tr key={order._id} className="hover:bg-gray-50 transition-colors">
+                                                                        <td className="p-4 text-slate-800 w-1/3 min-w-[250px]">
+                                                                            <div className="leading-relaxed whitespace-pre-wrap">{itemNames}</div>
+                                                                            <div className="text-[10px] text-gray-400 font-medium mt-1">{new Date(order.createdAt).toLocaleString()}</div>
+                                                                        </td>
+                                                                        <td className="p-4 text-center text-gray-500 whitespace-nowrap">{order.tableNumber ? `T-${order.tableNumber}` : "Takeaway"}</td>
+                                                                        <td className="p-4 text-center text-emerald-600">{totalQty} units</td>
+                                                                        {orderHistoryTab !== 'Drinks' && <td className="p-4 text-right text-orange-500 font-bold">{orderFoodRev > 0 ? orderFoodRev.toLocaleString() : "-"}</td>}
+                                                                        {orderHistoryTab !== 'Food' && <td className="p-4 text-right text-blue-500 font-bold">{orderDrinksRev > 0 ? orderDrinksRev.toLocaleString() : "-"}</td>}
+                                                                        <td className="p-4 text-right">
+                                                                            <div className="font-black text-slate-800">{rowTotalPayment.toLocaleString()} Br</div>
+                                                                            <div className="text-[9px] text-gray-400 font-black uppercase tracking-tight">{order.paymentMethod || "CASH"}</div>
+                                                                        </td>
+                                                                        <td className="p-4 text-center uppercase tracking-widest text-[9px]">
+                                                                            <span className={`px-2 py-1 rounded-lg font-black ${order.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : order.status === 'cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>{order.status}</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                )
+                                                            })
                                                     )}
                                                 </tbody>
                                             </table>
@@ -622,31 +678,57 @@ export default function ReportsPage() {
 
                                         {/* Mobile Order Cards */}
                                         <div className="lg:hidden space-y-3">
-                                            {filteredOrders.length === 0 ? (
+                                            {filteredOrders
+                                                .filter(order => {
+                                                    if (orderHistoryTab === 'All') return true;
+                                                    return order.items.some((i: any) => i.mainCategory === orderHistoryTab);
+                                                })
+                                                .length === 0 ? (
                                                 <div className="p-8 text-center text-gray-400 italic font-medium">No orders found.</div>
                                             ) : (
-                                                filteredOrders.slice(0, 50).map((order) => {
-                                                    const itemNames = order.items.map((i: any) => i.name).join(", ")
-                                                    return (
-                                                        <div key={order._id} className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
-                                                            <div className="flex justify-between items-start mb-2">
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-black text-slate-800 line-clamp-1">{itemNames}</span>
-                                                                    <span className="text-[10px] font-mono text-gray-400">#{order._id.slice(-6)} · {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                filteredOrders
+                                                    .filter(order => {
+                                                        if (orderHistoryTab === 'All') return true;
+                                                        return order.items.some((i: any) => i.mainCategory === orderHistoryTab);
+                                                    })
+                                                    .slice(0, 50).map((order) => {
+                                                        const displayItems = orderHistoryTab === 'All'
+                                                            ? order.items
+                                                            : order.items.filter((i: any) => i.mainCategory === orderHistoryTab)
+
+                                                        const itemNames = displayItems.map((i: any) => i.name).join(", ")
+                                                        const orderFoodRev = displayItems.filter((i: any) => i.mainCategory === 'Food').reduce((s: number, i: any) => s + ((i.price || 0) * (i.quantity || 0)), 0)
+                                                        const orderDrinksRev = displayItems.filter((i: any) => i.mainCategory === 'Drinks').reduce((s: number, i: any) => s + ((i.price || 0) * (i.quantity || 0)), 0)
+                                                        const rowTotalPayment = orderHistoryTab === 'All' ? order.totalAmount : (orderFoodRev + orderDrinksRev)
+
+                                                        return (
+                                                            <div key={order._id} className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-black text-slate-800 line-clamp-1">{itemNames}</span>
+                                                                        <span className="text-[10px] font-mono text-gray-400">#{order._id.slice(-6)} · {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                    </div>
+                                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{order.status}</span>
                                                                 </div>
-                                                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{order.status}</span>
-                                                            </div>
-                                                            <div className="flex justify-between items-end mt-4">
-                                                                <div className="flex items-center gap-2">
-                                                                    {order.batchNumber && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">Batch #{order.batchNumber}</span>}
-                                                                    {order.tableNumber && <span className="bg-white border border-gray-200 px-2 py-1 rounded text-[10px] font-black text-gray-600">{order.tableNumber}</span>}
-                                                                    <span className="text-[10px] font-bold text-gray-400">{order.items.reduce((s: any, i: any) => s + (i.quantity || 0), 0)} ITEMS</span>
+                                                                <div className="flex justify-between items-end mt-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                        {order.batchNumber && <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">Batch #{order.batchNumber}</span>}
+                                                                        {order.tableNumber && <span className="bg-white border border-gray-200 px-2 py-1 rounded text-[10px] font-black text-gray-600">{order.tableNumber}</span>}
+                                                                        <span className="text-[10px] font-bold text-gray-400">{displayItems.reduce((s: any, i: any) => s + (i.quantity || 0), 0)} ITEMS</span>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <span className="text-lg font-black text-[#8B4513]">{rowTotalPayment.toLocaleString()} <span className="text-[10px] text-gray-400 uppercase">{order.paymentMethod || "CASH"}</span></span>
+                                                                        {orderHistoryTab === 'All' && (
+                                                                            <div className="flex justify-end gap-1.5 mt-0.5">
+                                                                                {orderFoodRev > 0 && <span className="text-[9px] text-orange-600 font-bold uppercase tracking-tighter bg-orange-100/50 px-1.5 py-0.5 rounded">Food: {orderFoodRev.toLocaleString()}</span>}
+                                                                                {orderDrinksRev > 0 && <span className="text-[9px] text-blue-600 font-bold uppercase tracking-tighter bg-blue-100/50 px-1.5 py-0.5 rounded">Drinks: {orderDrinksRev.toLocaleString()}</span>}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                                <span className="text-lg font-black text-[#8B4513]">{(order.totalAmount || 0).toLocaleString()} <span className="text-xs">Br</span></span>
                                                             </div>
-                                                        </div>
-                                                    )
-                                                })
+                                                        )
+                                                    })
                                             )}
                                         </div>
                                     </div>

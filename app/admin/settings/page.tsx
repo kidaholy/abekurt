@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { BentoNavbar } from "@/components/bento-navbar"
 import { useAuth } from "@/context/auth-context"
@@ -39,7 +39,10 @@ export default function AdminSettingsPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadMethod, setUploadMethod] = useState<"url" | "file">("url")
 
-  // Table & Batch Management State
+  // State Management Refs
+  const isInitialized = useRef(false)
+
+  // Table & Management State
   const [activeTab, setActiveTab] = useState("branding")
   const [batches, setBatches] = useState<any[]>([])
   const [tables, setTables] = useState<any[]>([])
@@ -58,7 +61,7 @@ export default function AdminSettingsPage() {
   const [categoryType, setCategoryType] = useState<"menu" | "stock">("menu")
 
   useEffect(() => {
-    if (settings) {
+    if (settings && !isInitialized.current) {
       setFormData({
         logo_url: settings.logo_url || "",
         favicon_url: settings.favicon_url || "",
@@ -67,6 +70,7 @@ export default function AdminSettingsPage() {
         vat_rate: settings.vat_rate || "0.08",
         enable_cashier_printing: settings.enable_cashier_printing || "true"
       })
+      isInitialized.current = true
     }
   }, [settings])
 
@@ -302,11 +306,11 @@ export default function AdminSettingsPage() {
 
     setUploading(true)
     try {
-      // Compress and process image
+      // Compressed logo should be small for DB storage
       const compressedImage = await compressImage(file, {
-        maxWidth: 400,
-        maxHeight: 400,
-        quality: 0.8,
+        maxWidth: 200,
+        maxHeight: 200,
+        quality: 0.9,
         format: 'jpeg'
       })
 
@@ -315,14 +319,19 @@ export default function AdminSettingsPage() {
       if (finalSize > 500 * 1024) { // 500KB limit for base64
         notify({
           title: "Image Too Large",
-          message: "The compressed image is still too large. Please try a smaller image.",
+          message: `The compressed image is ${Math.round(finalSize / 1024)}KB, which exceeds the 500KB limit.`,
           type: "error"
         })
         setUploading(false)
         return
       }
 
-      setFormData(prev => ({ ...prev, logo_url: compressedImage }))
+      setFormData(prev => ({
+        ...prev,
+        logo_url: compressedImage,
+        // If favicon is empty, update it too
+        favicon_url: prev.favicon_url === "" ? compressedImage : prev.favicon_url
+      }))
     } catch (error) {
       console.error('Failed to process image:', error)
       notify({
@@ -505,21 +514,49 @@ export default function AdminSettingsPage() {
                       ) : (
                         /* File Upload */
                         <div className="space-y-3">
-                          <div className="relative group">
+                          <div className="relative group overflow-hidden rounded-[2.5rem]">
                             <input
                               type="file"
                               accept="image/*"
                               onChange={handleFileUpload}
                               disabled={uploading}
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                             />
-                            <div className="bg-gray-50 border-2 border-dashed border-gray-100 rounded-2xl px-6 py-10 transition-all group-hover:bg-gray-100/50 group-hover:border-[#8B4513]/20 flex flex-col items-center gap-3">
-                              <div className="p-3 bg-white rounded-full custom-shadow">
-                                <Upload className="w-6 h-6 text-[#8B4513]" />
-                              </div>
-                              <p className="text-sm font-bold text-slate-800">{t("adminSettings.uploadFile")}</p>
-                              {uploading && (
-                                <span className="animate-spin text-lg">⏳</span>
+                            <div className="bg-gray-50 border-4 border-dashed border-gray-100 rounded-[2.5rem] px-6 py-12 transition-all group-hover:bg-[#8B4513]/5 group-hover:border-[#8B4513]/20 flex flex-col items-center gap-4 relative overflow-hidden">
+                              {formData.logo_url ? (
+                                <div className="relative z-10 flex flex-col items-center gap-4">
+                                  <div className="w-32 h-32 rounded-3xl overflow-hidden border-4 border-white shadow-2xl relative bg-white">
+                                    <img
+                                      src={formData.logo_url}
+                                      className="w-full h-full object-contain"
+                                      alt="Logo Preview"
+                                    />
+                                    {uploading && (
+                                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                        <span className="animate-spin text-2xl text-white">⏳</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-gray-100 shadow-sm">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-[#8B4513]">Click or drag to change logo</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="p-5 bg-white rounded-full shadow-lg">
+                                    <Upload className="w-8 h-8 text-[#8B4513]" />
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-sm font-black text-slate-800 uppercase tracking-tight mb-1">{t("adminSettings.uploadFile")}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">JPG, PNG OR WEBP • MAX 5MB</p>
+                                  </div>
+                                </>
+                              )}
+
+                              {uploading && !formData.logo_url && (
+                                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-10">
+                                  <span className="animate-spin text-3xl">⏳</span>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -608,8 +645,8 @@ export default function AdminSettingsPage() {
                           </div>
 
                           {formData.favicon_url && (
-                            <div className="w-full md:w-32 h-24 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center relative">
-                              <div className="w-10 h-10 bg-white rounded-lg shadow-sm border border-gray-200 p-1 overflow-hidden">
+                            <div className="w-full md:w-32 h-24 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center relative group">
+                              <div className="w-10 h-10 bg-white rounded-lg shadow-sm border border-gray-200 p-1 overflow-hidden transition-transform group-hover:scale-110">
                                 <img src={formData.favicon_url} className="w-full h-full object-contain" alt="Favicon Preview" />
                               </div>
                               <button

@@ -68,7 +68,7 @@ export async function PUT(request: Request) {
       }
     )
 
-    console.log(`✅ Setting updated: ${key} = ${value}`)
+    console.log(`✅ Setting updated: ${key} (Type: ${type}, Value Length: ${String(value).length})`)
     return NextResponse.json(setting)
   } catch (error: any) {
     console.error("Update settings error:", error)

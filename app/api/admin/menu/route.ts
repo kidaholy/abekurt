@@ -54,8 +54,8 @@ export async function POST(request: Request) {
     const { menuId, name, mainCategory, category, price, description, image, preparationTime, available, stockItemId, stockConsumption } = await request.json()
     console.log("📝 Menu item data received:", { menuId, name, mainCategory, category, price, stockItemId })
 
-    if (!name || !category || !price) {
-      return NextResponse.json({ message: "Name, category, and price are required" }, { status: 400 })
+    if (!name || !price) {
+      return NextResponse.json({ message: "Name and price are required" }, { status: 400 })
     }
 
     // Check if menuId is provided, if not auto-generate
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       menuId: finalMenuId,
       name: name.trim(),
       mainCategory: mainCategory || 'Food',
-      category: category.trim().normalize("NFC"),
+      category: category ? category.trim().normalize("NFC") : undefined,
       price: Number(price),
       description,
       image,

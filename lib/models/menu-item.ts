@@ -43,7 +43,7 @@ const menuItemSchema = new Schema<IMenuItem>(
     menuId: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     mainCategory: { type: String, enum: ['Food', 'Drinks'], default: 'Food' },
-    category: { type: String, required: true },
+    category: { type: String },
     price: { type: Number, required: true },
     available: { type: Boolean, default: true },
     description: { type: String },

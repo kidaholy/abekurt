@@ -64,13 +64,6 @@ const menuItemSchema = new Schema<IMenuItem>(
   { timestamps: true }
 )
 
-// Middleware to ensure menu item is linked to stock
-menuItemSchema.pre('save', function (next) {
-  if ((!this.recipe || this.recipe.length === 0) && !this.stockItemId) {
-    return next(new Error('Menu item must be linked to at least one stock item via recipe or stockItemId'))
-  }
-  next()
-})
 
 // Method to check if menu item can be prepared (all ingredients available)
 menuItemSchema.methods.canBePrepared = async function (quantity: number = 1): Promise<{ available: boolean, missingIngredients: string[] }> {
@@ -134,6 +127,12 @@ menuItemSchema.methods.consumeIngredients = async function (quantity: number = 1
   }
 }
 
+
+
+// Force model re-registration to pick up schema changes in development
+if (process.env.NODE_ENV === "development") {
+  delete mongoose.models.MenuItem
+}
 
 const MenuItem = mongoose.models.MenuItem || mongoose.model<IMenuItem>("MenuItem", menuItemSchema)
 

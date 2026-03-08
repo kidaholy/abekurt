@@ -180,6 +180,28 @@ export default function AdminMenuPage() {
     }
   }
 
+  const handleUpdateCategory = async (id: string, newName: string) => {
+    if (!newName.trim()) return
+    setCategoryLoading(true)
+    try {
+      const response = await fetch(`/api/categories/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newName }),
+      })
+      if (response.ok) {
+        fetchCategories()
+      }
+    } catch (error) {
+      console.error("Error updating category:", error)
+    } finally {
+      setCategoryLoading(false)
+    }
+  }
+
   // Filters and search logic
 
   useEffect(() => {
@@ -455,18 +477,18 @@ export default function AdminMenuPage() {
 
   const handleExportCSV = (exportType: 'food' | 'drinks' | 'all' = 'all') => {
     let itemsToExport = menuItems
-      
+
     if (exportType === 'food') {
       itemsToExport = menuItems.filter(item => (item.mainCategory || 'Food') === 'Food')
     } else if (exportType === 'drinks') {
       itemsToExport = menuItems.filter(item => item.mainCategory === 'Drinks')
     }
-      
+
     if (itemsToExport.length === 0) {
       notify({ title: 'No Items', message: `No ${exportType === 'all' ? '' : exportType + ' '}items to export.`, type: 'info' })
       return
     }
-  
+
     const headers = ["Menu ID", "Name", "Main Category", "Category", "Price", "Available", "Description"]
     const rows = itemsToExport.map(item => [
       item.menuId || "",
@@ -477,11 +499,11 @@ export default function AdminMenuPage() {
       item.available ? "Yes" : "No",
       `"${(item.description || "").replace(/"/g, '""')}",`
     ])
-  
+
     const csvContent = headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n")
     const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
-  
+
     const link = document.createElement("a")
     link.href = url
     const fileName = exportType === 'all' ? 'menu' : exportType.toLowerCase()
@@ -595,7 +617,7 @@ export default function AdminMenuPage() {
                           📥 Export CSV
                           <span className="text-[8px] ml-0.5">▼</span>
                         </button>
-                        
+
                         <button
                           onClick={handleGenerateQr}
                           disabled={qrGenerating}
@@ -1023,62 +1045,62 @@ export default function AdminMenuPage() {
 
                   {/* Distribution Variants */}
                   <div className="md:col-span-2 bg-blue-50/50 p-6 rounded-[30px] border border-blue-100">
-                      <h3 className="text-sm font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
-                        <span>🔀</span> Distribution Variants (Optional)
-                      </h3>
-                      <p className="text-[11px] text-gray-400 font-medium mb-4">Add options the cashier must choose from when ordering this item (e.g. Hot, Cold, Spicy, Mild).</p>
+                    <h3 className="text-sm font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <span>🔀</span> Distribution Variants (Optional)
+                    </h3>
+                    <p className="text-[11px] text-gray-400 font-medium mb-4">Add options the cashier must choose from when ordering this item (e.g. Hot, Cold, Spicy, Mild).</p>
 
-                      {/* Input to add new variant */}
-                      <div className="flex gap-2 mb-4">
-                        <input
-                          type="text"
-                          id="newVariantInput"
-                          placeholder="e.g. Hot, Cold, Large..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              const val = (e.target as HTMLInputElement).value.trim()
-                              if (val && !formData.distributions.includes(val)) {
-                                setFormData(prev => ({ ...prev, distributions: [...prev.distributions, val] }));
-                                (e.target as HTMLInputElement).value = ''
-                              }
-                            }
-                          }}
-                          className="flex-1 bg-white border border-blue-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const input = document.getElementById('newVariantInput') as HTMLInputElement
-                            const val = input?.value.trim()
+                    {/* Input to add new variant */}
+                    <div className="flex gap-2 mb-4">
+                      <input
+                        type="text"
+                        id="newVariantInput"
+                        placeholder="e.g. Hot, Cold, Large..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            const val = (e.target as HTMLInputElement).value.trim()
                             if (val && !formData.distributions.includes(val)) {
-                              setFormData(prev => ({ ...prev, distributions: [...prev.distributions, val] }))
-                              input.value = ''
+                              setFormData(prev => ({ ...prev, distributions: [...prev.distributions, val] }));
+                              (e.target as HTMLInputElement).value = ''
                             }
-                          }}
-                          className="px-5 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-colors"
-                        >
-                          + Add
-                        </button>
-                      </div>
+                          }
+                        }}
+                        className="flex-1 bg-white border border-blue-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.getElementById('newVariantInput') as HTMLInputElement
+                          const val = input?.value.trim()
+                          if (val && !formData.distributions.includes(val)) {
+                            setFormData(prev => ({ ...prev, distributions: [...prev.distributions, val] }))
+                            input.value = ''
+                          }
+                        }}
+                        className="px-5 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-colors"
+                      >
+                        + Add
+                      </button>
+                    </div>
 
-                      {/* List of added variants */}
-                      {formData.distributions.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {formData.distributions.map((variant, idx) => (
-                            <span key={idx} className="flex items-center gap-1.5 bg-white border border-blue-200 text-blue-700 font-bold text-xs px-3 py-1.5 rounded-full">
-                              {variant}
-                              <button
-                                type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, distributions: prev.distributions.filter((_, i) => i !== idx) }))}
-                                className="text-blue-400 hover:text-red-500 transition-colors leading-none"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                    {/* List of added variants */}
+                    {formData.distributions.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {formData.distributions.map((variant, idx) => (
+                          <span key={idx} className="flex items-center gap-1.5 bg-white border border-blue-200 text-blue-700 font-bold text-xs px-3 py-1.5 rounded-full">
+                            {variant}
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, distributions: prev.distributions.filter((_, i) => i !== idx) }))}
+                              className="text-blue-400 hover:text-red-500 transition-colors leading-none"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100">
@@ -1126,6 +1148,7 @@ export default function AdminMenuPage() {
           categories={categories}
           onAdd={handleAddCategory}
           onDelete={handleDeleteCategory}
+          onUpdate={handleUpdateCategory}
           loading={categoryLoading}
           title={t("adminMenu.manageCategories")}
           value={newCategoryName}
@@ -1199,11 +1222,11 @@ export default function AdminMenuPage() {
         {/* Export CSV Dropdown - Rendered at root level to avoid clipping */}
         {showExportDropdown && (
           <>
-            <div 
+            <div
               className="fixed inset-0 z-[200]"
               onClick={() => setShowExportDropdown(false)}
             />
-            <div 
+            <div
               className="fixed z-[201] bg-white rounded-2xl shadow-2xl border-2 border-amber-200 py-2 min-w-[170px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
               style={{
                 top: `${dropdownPosition.top}px`,
@@ -1240,8 +1263,22 @@ export default function AdminMenuPage() {
   )
 }
 
-function CategoryManager({ show, onClose, categories, onAdd, onDelete, loading, title, value, onChange, t }: any) {
+function CategoryManager({ show, onClose, categories, onAdd, onDelete, onUpdate, loading, title, value, onChange, t }: any) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState("")
+
   if (!show) return null
+
+  const handleStartEdit = (cat: any) => {
+    setEditingId(cat._id)
+    setEditValue(cat.name)
+  }
+
+  const handleSaveEdit = async (id: string) => {
+    if (!editValue.trim()) return
+    await onUpdate(id, editValue)
+    setEditingId(null)
+  }
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -1272,14 +1309,39 @@ function CategoryManager({ show, onClose, categories, onAdd, onDelete, loading, 
 
         <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
           {categories.map((cat: any) => (
-            <div key={cat._id} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
-              <span className="font-medium text-gray-700">{cat.name}</span>
-              <button
-                onClick={() => onDelete(cat._id)}
-                className="text-red-400 hover:text-red-600 p-1"
-              >
-                🗑️
-              </button>
+            <div key={cat._id} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl gap-2">
+              {editingId === cat._id ? (
+                <div className="flex-1 flex gap-2">
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#2d5a41]"
+                    autoFocus
+                  />
+                  <button onClick={() => handleSaveEdit(cat._id)} className="text-green-500 hover:scale-110 transition-transform">✓</button>
+                  <button onClick={() => setEditingId(null)} className="text-gray-400 hover:scale-110 transition-transform">✕</button>
+                </div>
+              ) : (
+                <>
+                  <span className="font-medium text-gray-700 flex-1">{cat.name}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleStartEdit(cat)}
+                      className="text-amber-500 hover:text-amber-600 p-1 text-sm"
+                      title="Rename"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => onDelete(cat._id)}
+                      className="text-red-400 hover:text-red-600 p-1"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
           {categories.length === 0 && <p className="text-center text-gray-400 py-4">{t("adminMenu.noCats")}</p>}

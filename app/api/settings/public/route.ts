@@ -9,8 +9,8 @@ export async function GET(request: Request) {
     await connectDB()
 
     // Get public settings (logo, app name, etc.)
-    const publicSettings = await Settings.find({
-      key: { $in: ["logo_url", "app_name", "app_tagline", "vat_rate", "enable_cashier_printing"] }
+    const publicSettings = await (Settings as any).find({
+      key: { $in: ["logo_url", "favicon_url", "app_name", "app_tagline", "vat_rate", "enable_cashier_printing"] }
     }).lean()
 
     // Convert to key-value object
@@ -22,6 +22,7 @@ export async function GET(request: Request) {
     // Provide defaults if settings don't exist
     const defaultSettings = {
       logo_url: "",
+      favicon_url: "",
       app_name: "Prime Addis",
       app_tagline: "Coffee Management",
       enable_cashier_printing: "true",

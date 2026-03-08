@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   try {
     await connectDB()
     const settings = await Settings.find({
-      key: { $in: ["logo_url", "app_name", "app_tagline"] }
+      key: { $in: ["logo_url", "favicon_url", "app_name", "app_tagline"] }
     }).lean()
 
     settings.forEach((s) => {
@@ -35,8 +35,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
   // Add cache-busting timestamp
   const timestamp = Date.now()
-  const logoUrl = settingsObj.logo_url
-    ? (settingsObj.logo_url.startsWith('data:') ? settingsObj.logo_url : `${settingsObj.logo_url}${settingsObj.logo_url.includes('?') ? '&' : '?'}v=${timestamp}`)
+  const iconSource = settingsObj.favicon_url || settingsObj.logo_url
+  const logoUrl = iconSource
+    ? (iconSource.startsWith('data:') ? iconSource : `${iconSource}${iconSource.includes('?') ? '&' : '?'}v=${timestamp}`)
     : "/icon.svg"
 
   const appName = settingsObj.app_name || "Prime Addis"

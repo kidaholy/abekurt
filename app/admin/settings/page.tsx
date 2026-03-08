@@ -14,6 +14,7 @@ import { useConfirmation } from "@/hooks/use-confirmation"
 
 interface AdminSettings {
   logo_url: string
+  favicon_url: string
   app_name: string
   app_tagline: string
   vat_rate: string
@@ -27,6 +28,7 @@ export default function AdminSettingsPage() {
   const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
   const [formData, setFormData] = useState<AdminSettings>({
     logo_url: "",
+    favicon_url: "",
     app_name: "Prime Addis",
     app_tagline: "Coffee Management",
     vat_rate: "0.08",
@@ -59,6 +61,7 @@ export default function AdminSettingsPage() {
     if (settings) {
       setFormData({
         logo_url: settings.logo_url || "",
+        favicon_url: settings.favicon_url || "",
         app_name: settings.app_name || "Prime Addis",
         app_tagline: settings.app_tagline || "Coffee Management",
         vat_rate: settings.vat_rate || "0.08",
@@ -252,6 +255,7 @@ export default function AdminSettingsPage() {
       // Save all settings one by one to better track failures
       const settingsToSave = [
         { key: "logo_url", value: formData.logo_url, type: "url", desc: t("adminSettings.applicationLogoUrl") },
+        { key: "favicon_url", value: formData.favicon_url, type: "url", desc: "Browser Tab Icon (Favicon)" },
         { key: "app_name", value: formData.app_name, type: "string", desc: t("adminSettings.applicationName") },
         { key: "app_tagline", value: formData.app_tagline, type: "string", desc: t("adminSettings.applicationTagline") },
         { key: "vat_rate", value: formData.vat_rate, type: "number", desc: "Value Added Tax (VAT) rate" },
@@ -556,6 +560,72 @@ export default function AdminSettingsPage() {
                           </button>
                         </div>
                       )}
+
+                      {/* Favicon Upload Section */}
+                      <div className="space-y-4 pt-6 border-t border-gray-100">
+                        <label className="block text-sm font-bold text-gray-700">
+                          Browser Tab Icon (Favicon)
+                        </label>
+                        <div className="flex flex-col md:flex-row gap-4">
+                          <div className="flex-1 space-y-3">
+                            <input
+                              type="url"
+                              value={formData.favicon_url.startsWith('data:') ? '' : formData.favicon_url}
+                              onChange={(e) => setFormData(prev => ({ ...prev, favicon_url: e.target.value }))}
+                              className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-4 focus:ring-[#8B4513]/10 focus:border-[#8B4513]/20 transition-all font-medium"
+                              placeholder="Favicon URL (e.g. https://.../favicon.png)"
+                            />
+                            <div className="relative group overflow-hidden rounded-2xl">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0]
+                                  if (!file) return
+                                  const validation = validateImageFile(file)
+                                  if (!validation.valid) {
+                                    notify({ title: "Invalid Image", message: validation.error || "Error", type: "error" })
+                                    return
+                                  }
+                                  setUploading(true)
+                                  try {
+                                    const compressed = await compressImage(file, { maxWidth: 64, maxHeight: 64, quality: 0.9, format: 'png' })
+                                    setFormData(prev => ({ ...prev, favicon_url: compressed }))
+                                  } catch (err) {
+                                    console.error(err)
+                                  } finally {
+                                    setUploading(false)
+                                  }
+                                }}
+                                disabled={uploading}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              />
+                              <div className="bg-gray-50 border-2 border-dashed border-gray-100 px-6 py-4 flex items-center justify-center gap-2 group-hover:bg-gray-100/50 transition-all">
+                                <Upload className="w-4 h-4 text-[#8B4513]" />
+                                <span className="text-xs font-bold text-slate-600">Upload Favicon (64x64 PNG recommended)</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {formData.favicon_url && (
+                            <div className="w-full md:w-32 h-24 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center relative">
+                              <div className="w-10 h-10 bg-white rounded-lg shadow-sm border border-gray-200 p-1 overflow-hidden">
+                                <img src={formData.favicon_url} className="w-full h-full object-contain" alt="Favicon Preview" />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, favicon_url: "" }))}
+                                className="absolute -top-2 -right-2 bg-red-100 text-red-500 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-sm hover:bg-red-200"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-400 italic">
+                          This is the small icon shown in the browser tab. If empty, it will use the hotel logo.
+                        </p>
+                      </div>
                     </div>
 
                     {/* App Name */}

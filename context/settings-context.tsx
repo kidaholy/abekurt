@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 
 interface AppSettings {
   logo_url: string
+  favicon_url: string
   app_name: string
   app_tagline: string
   vat_rate: string
@@ -21,6 +22,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>({
     logo_url: "",
+    favicon_url: "",
     app_name: "Prime Addis",
     app_tagline: "Coffee Management",
     vat_rate: "0.08",

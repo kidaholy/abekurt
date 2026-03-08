@@ -20,12 +20,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const body = await request.json()
         const { status } = body
 
+        const decoded = await validateSession(request)
+
+        if (status === "cancelled" && decoded.role !== "admin") {
+            return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 })
+        }
+
         const order = await (Order as any).findById(id)
         if (!order) {
             return NextResponse.json({ message: "Order not found" }, { status: 404 })
         }
 
-        const decoded = await validateSession(request)
         const previousStatus = order.status
 
         // RBAC: If role is chef, only update assigned items
@@ -177,7 +182,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 // DELETE order
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        await validateSession(request)
+        const decoded = await validateSession(request)
+        if (decoded.role !== "admin") {
+            return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+        }
         await connectDB()
 
         const { id } = await params

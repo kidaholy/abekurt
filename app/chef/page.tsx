@@ -130,51 +130,7 @@ export default function KitchenDisplayPage() {
     }
   }
 
-  const handleCancelOrder = async (orderId: string) => {
-    const confirmed = await confirm({
-      title: "Cancel Order",
-      message: "Are you sure you want to cancel this order?\n\nThis action cannot be undone.",
-      type: "warning",
-      confirmText: "Cancel Order",
-      cancelText: "Keep Order"
-    })
 
-    if (!confirmed) return
-
-    try {
-      // Optimistic Update
-      const preservedOrders = orders;
-      setOrders(prevOrders => prevOrders.filter(order => order._id !== orderId))
-
-      const response = await fetch(`/api/orders/${orderId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: "cancelled" }),
-      })
-
-      if (response.ok) {
-        localStorage.setItem('orderUpdated', Date.now().toString())
-      } else {
-        // Rollback on failure
-        setOrders(preservedOrders);
-        notify({
-          title: "Error",
-          message: "Failed to cancel the order. Please try again.",
-          type: "error"
-        })
-      }
-    } catch (err) {
-      // fetchOrders() // Fallback to fresh data on network error
-      notify({
-        title: "Error",
-        message: "An error occurred while cancelling the order.",
-        type: "error"
-      })
-    }
-  }
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     const preservedOrders = orders;
@@ -328,7 +284,6 @@ function OrderColumn({
   color,
   orders,
   onStatusChange,
-  onCancelOrder,
   nextStatus,
   t
 }: {
@@ -336,7 +291,6 @@ function OrderColumn({
   color: "orange" | "blue" | "green"
   orders: Order[]
   onStatusChange: (orderId: string, newStatus: string) => void
-  onCancelOrder: (orderId: string) => void
   nextStatus: string
   t: (key: string) => string
 }) {
@@ -358,7 +312,6 @@ function OrderColumn({
               key={order._id}
               order={order}
               onStatusChange={onStatusChange}
-              onCancelOrder={onCancelOrder}
               nextStatus={nextStatus}
               color={color}
               t={t}
@@ -373,14 +326,12 @@ function OrderColumn({
 function OrderCard({
   order,
   onStatusChange,
-  onCancelOrder,
   nextStatus,
   color,
   t
 }: {
   order: Order
   onStatusChange: (orderId: string, newStatus: string) => void
-  onCancelOrder: (orderId: string) => void
   nextStatus: string
   color: "orange" | "blue" | "green"
   t: (key: string) => string
@@ -449,7 +400,6 @@ function OrderCard({
         <OrderCardActions
           order={order}
           onStatusChange={onStatusChange}
-          onCancelOrder={onCancelOrder}
         />
       </CardContent>
     </Card>
@@ -459,11 +409,9 @@ function OrderCard({
 function OrderCardActions({
   order,
   onStatusChange,
-  onCancelOrder,
 }: {
   order: Order
   onStatusChange: (orderId: string, newStatus: string) => void
-  onCancelOrder: (orderId: string) => void
 }) {
   const [busy, setBusy] = useState(false)
 
@@ -492,13 +440,6 @@ function OrderCardActions({
               Updating...
             </>
           ) : "✅ Mark Ready"}
-        </button>
-        <button
-          onClick={() => onCancelOrder(order._id)}
-          disabled={busy}
-          className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors disabled:opacity-50"
-        >
-          ✕
         </button>
       </div>
     )

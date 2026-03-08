@@ -17,6 +17,10 @@ export async function PUT(request: Request, context: any) {
 
     const { status } = await request.json()
 
+    if (status === "cancelled" && decoded.role !== "admin") {
+      return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 })
+    }
+
     const orderToUpdate = await Order.findById(params.id)
     if (!orderToUpdate) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 })

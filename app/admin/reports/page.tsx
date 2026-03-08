@@ -17,6 +17,7 @@ const SLIDES = [
     { id: "orders", label: "Order History", icon: ShoppingCart, color: "#D2691E", bg: "bg-[#D2691E]" },
     { id: "inventory", label: "Inventory Investment", icon: Clock, color: "#7C3AED", bg: "bg-purple-600" },
     { id: "store", label: "Store Investment", icon: Package, color: "#EA580C", bg: "bg-orange-600" },
+    { id: "menu-sales", label: "Menu Item Sales", icon: ShoppingCart, color: "#10B981", bg: "bg-emerald-500" },
 ]
 
 export default function ReportsPage() {
@@ -33,6 +34,7 @@ export default function ReportsPage() {
     const [stockUsageData, setStockUsageData] = useState<any>(null)
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
     const [menuItems, setMenuItems] = useState<any[]>([])
+    const [menuSearchTerm, setMenuSearchTerm] = useState("")
 
     // Context
     const { token } = useAuth()
@@ -132,6 +134,19 @@ export default function ReportsPage() {
     const lifetimeInvestment = salesSummary.lifetimeTotalInvestment || 0
     const lifetimeNetWorth = salesSummary.lifetimeNetWorth || 0
     const filteredOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    const menuItemSales = Object.values(filteredOrders.reduce((acc, order) => {
+        if (order.status === 'cancelled' || order.isDeleted) return acc;
+        order.items.forEach((item: any) => {
+            const name = item.name;
+            if (!acc[name]) {
+                acc[name] = { name: name, category: item.category || 'N/A', quantity: 0, revenue: 0 };
+            }
+            acc[name].quantity += (item.quantity || 0);
+            acc[name].revenue += (item.quantity || 0) * (item.price || 0);
+        });
+        return acc;
+    }, {} as Record<string, { name: string, category: string, quantity: number, revenue: number }>)).sort((a, b) => b.quantity - a.quantity);
 
     // Export functions
     const exportFinancialReport = () => {
@@ -851,7 +866,84 @@ export default function ReportsPage() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* ── MENU ITEM SALES ── */}
+                                {activeSlide === 4 && (
+                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex flex-col min-h-0 h-full space-y-6">
+                                        <div className="flex items-center justify-between shrink-0">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 bg-emerald-500 rounded-full flex items-center justify-center text-white">
+                                                    <ShoppingCart size={20} />
+                                                </div>
+                                                <div>
+                                                    <h2 className="text-xl font-black text-slate-800">Menu Item Sales</h2>
+                                                    <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Individual sold quantity report</p>
+                                                </div>
+                                            </div>
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search menu items..."
+                                                    value={menuSearchTerm}
+                                                    onChange={(e) => setMenuSearchTerm(e.target.value)}
+                                                    className="pl-4 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all w-64"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="hidden lg:block overflow-y-auto border border-gray-200 rounded-2xl flex-1 custom-scrollbar max-h-[560px]">
+                                            <table className="w-full text-left relative text-sm">
+                                                <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest sticky top-0 z-10">
+                                                    <tr>
+                                                        <th className="p-4">Menu Item</th>
+                                                        <th className="p-4 text-center text-emerald-600">Quantity Sold</th>
+                                                        <th className="p-4 text-right">Revenue Generated</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-50">
+                                                    {menuItemSales
+                                                        .filter((item) => item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()))
+                                                        .map((item, idx) => (
+                                                            <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                                                <td className="p-4">
+                                                                    <p className="font-black text-slate-800">{item.name}</p>
+                                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-0.5">{item.category}</p>
+                                                                </td>
+                                                                <td className="p-4 text-center">
+                                                                    <span className="text-lg font-black text-emerald-600">{item.quantity}</span>
+                                                                    <span className="text-[10px] text-gray-400 ml-1 uppercase">Sold</span>
+                                                                </td>
+                                                                <td className="p-4 text-right">
+                                                                    <span className="text-md font-bold text-slate-800">{item.revenue.toLocaleString()}</span>
+                                                                    <span className="text-[10px] text-gray-400 ml-1">Br</span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Mobile View */}
+                                        <div className="lg:hidden space-y-4 max-h-[600px] overflow-y-auto">
+                                            {menuItemSales
+                                                .filter((item) => item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()))
+                                                .map((item, idx) => (
+                                                    <div key={idx} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex justify-between items-center">
+                                                        <div>
+                                                            <p className="font-black text-slate-800 text-lg">{item.name}</p>
+                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">{item.category}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-xl font-black text-emerald-600">{item.quantity} <span className="text-[10px] text-gray-400 uppercase">Sold</span></p>
+                                                            <p className="text-sm font-bold text-slate-600">{item.revenue.toLocaleString()} Br</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
                         </div>
                     </div>
                 </div>

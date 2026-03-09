@@ -167,6 +167,7 @@ export default function ReportsPage() {
             { Metric: "Total Revenue", Type: "INCOME", Amount: `${totalRevenue.toLocaleString()} ETB`, Description: "Total completed orders value for this period" },
             { Metric: "Period Investment", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Specific investment (Restocks + Expenses) for this period" },
             { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Investment for this period" },
+            { Metric: "Lifetime Investment", Type: "EXPENSE", Amount: `${lifetimeInvestment.toLocaleString()} ETB`, Description: "Total investment since launch" },
             { Metric: "LIFETIME NET WORTH", Type: "RESULT", Amount: `${lifetimeNetWorth.toLocaleString()} ETB`, Description: "Global business standing" }
         ]
         ReportExporter.exportToWord({ title: "Financial Summary Report", period: timeRange, headers: ["Metric", "Type", "Amount", "Description"], data, metadata: { companyName: settings.app_name || "Prime Addis" } })
@@ -319,6 +320,7 @@ export default function ReportsPage() {
                     { Metric: "Total Revenue", Type: "INCOME", Amount: `${totalRevenue.toLocaleString()} ETB`, Description: "Total completed orders value" },
                     { Metric: "Period Investment", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Period-specific investment" },
                     { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Investment for this period" },
+                    { Metric: "Lifetime Investment", Type: "EXPENSE", Amount: `${lifetimeInvestment.toLocaleString()} ETB`, Description: "Total investment since launch" },
                     { Metric: "LIFETIME NET WORTH", Type: "RESULT", Amount: `${lifetimeNetWorth.toLocaleString()} ETB`, Description: "Revenue - Investment since launch" }
                 ]
             },
@@ -528,6 +530,12 @@ export default function ReportsPage() {
                                                         <td className={`p-4 text-right text-lg font-black ${periodProfit >= 0 ? "text-blue-600" : "text-red-600"}`}>{periodProfit.toLocaleString()} ETB</td>
                                                         <td className="p-4 text-gray-400 text-xs font-medium">Revenue - Period Investment</td>
                                                     </tr>
+                                                    <tr className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="p-4 text-lg text-slate-800">Lifetime Investment</td>
+                                                        <td className="p-4 text-center"><span className="bg-red-50 text-red-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">GLOBAL</span></td>
+                                                        <td className="p-4 text-right text-lg font-black text-red-600">-{lifetimeInvestment.toLocaleString()} ETB</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Total investment from day one</td>
+                                                    </tr>
                                                     <tr className="bg-slate-900 text-white">
                                                         <td className="p-6 text-xl font-black">LIFETIME NET WORTH (Profit)</td>
                                                         <td className="p-6 text-center"><span className="bg-white/20 text-white py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">GLOBAL</span></td>
@@ -560,6 +568,13 @@ export default function ReportsPage() {
                                                     <span className="text-[10px] font-bold text-blue-600/60 uppercase">Period Profit</span>
                                                 </div>
                                                 <p className={`text-2xl font-black ${periodProfit >= 0 ? "text-blue-700" : "text-red-700"}`}>{periodProfit.toLocaleString()} <span className="text-xs">ETB</span></p>
+                                            </div>
+                                            <div className="p-4 rounded-2xl bg-orange-50 border border-orange-100">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Global Expense</span>
+                                                    <span className="text-[10px] font-bold text-orange-600/60 uppercase">Lifetime Investment</span>
+                                                </div>
+                                                <p className="text-2xl font-black text-orange-700">-{lifetimeInvestment.toLocaleString()} <span className="text-xs">ETB</span></p>
                                             </div>
                                             <div className="p-6 rounded-2xl bg-slate-900 text-white shadow-xl">
                                                 <div className="flex justify-between items-center mb-2">

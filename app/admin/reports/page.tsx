@@ -797,10 +797,11 @@ export default function ReportsPage() {
                                                             const totalHandled = item.transferred ?? (closingQuantity + consumedCount)
                                                             const remains = closingQuantity
                                                             const totalPurchaseValue = item.transferredValue ?? (totalHandled * costPrice)
-                                                            const potentialRevenue = remains * sellingPrice
                                                             const isLow = item.isLowStock || (remains <= (item.minLimit || 5))
                                                             const sellUnitEquivalent = item.sellUnitEquivalent || 1
-                                                            const portionsAvailable = sellUnitEquivalent > 0 ? (remains / sellUnitEquivalent).toFixed(1) : '0'
+                                                            const portionsAvailable = sellUnitEquivalent > 0 ? remains / sellUnitEquivalent : 0
+                                                            const potentialRevenue = portionsAvailable * sellingPrice
+                                                            const consumedPortions = sellUnitEquivalent > 0 ? consumedCount / sellUnitEquivalent : consumedCount
                                                             return (
                                                                 <tr key={idx} className={`hover:bg-gray-50 transition-colors ${isLow ? 'bg-red-50/30' : ''}`}>
                                                                     <td className="p-4">
@@ -818,7 +819,7 @@ export default function ReportsPage() {
                                                                     </td>
                                                                     <td className="p-4 text-center text-amber-600">
                                                                         {sellUnitEquivalent !== 1 ? (
-                                                                            <span>≈ {portionsAvailable} <span className="text-[10px]">p</span></span>
+                                                                            <span>≈ {portionsAvailable.toFixed(1)} <span className="text-[10px]">p</span></span>
                                                                         ) : (
                                                                             <span className="text-gray-400 text-[10px]">-</span>
                                                                         )}
@@ -827,7 +828,13 @@ export default function ReportsPage() {
                                                                         {totalPurchaseValue.toLocaleString()} <span className="text-[10px]">Br</span>
                                                                         <div className="text-[9px] text-gray-400 font-medium">@{Math.round(costPrice)} avg</div>
                                                                     </td>
-                                                                    <td className="p-4 text-center text-red-400">{consumedCount} <span className="text-[10px] uppercase font-black tracking-tighter">Used</span></td>
+                                                                    <td className="p-4 text-center text-red-400">
+                                                                        {sellUnitEquivalent !== 1 ? (
+                                                                            <span>{consumedPortions.toFixed(1)} <span className="text-[10px] uppercase font-black tracking-tighter">portions</span></span>
+                                                                        ) : (
+                                                                            <span>{consumedCount} <span className="text-[10px] uppercase font-black tracking-tighter">{item.unit}</span></span>
+                                                                        )}
+                                                                    </td>
                                                                     <td className="p-4 text-right text-blue-600">{potentialRevenue.toLocaleString()} <span className="text-[10px]">Br</span></td>
                                                                     <td className="p-4 text-center"><span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${isLow ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{isLow ? 'LOW' : 'OK'}</span></td>
                                                                 </tr>
@@ -847,7 +854,10 @@ export default function ReportsPage() {
                                                     const remains = closingQuantity
                                                     const isLow = item.isLowStock || (remains <= (item.minLimit || 5))
                                                     const sellUnitEquivalent = item.sellUnitEquivalent || 1
-                                                    const portionsAvailable = sellUnitEquivalent > 0 ? (remains / sellUnitEquivalent).toFixed(1) : '0'
+                                                    const portionsAvailable = sellUnitEquivalent > 0 ? remains / sellUnitEquivalent : 0
+                                                    const sellingPrice = item.currentUnitCost ?? item.unitCost ?? 0
+                                                    const potentialRevenue = portionsAvailable * sellingPrice
+                                                    const consumedPortions = sellUnitEquivalent > 0 ? consumedCount / sellUnitEquivalent : consumedCount
                                                     return (
                                                         <div key={idx} className={`p-4 rounded-2xl border ${isLow ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
                                                             <div className="flex justify-between items-start mb-3">
@@ -864,7 +874,13 @@ export default function ReportsPage() {
                                                                 </div>
                                                                 <div className="bg-white p-3 rounded-xl border border-gray-100">
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Usage Count</p>
-                                                                    <p className="text-xl font-black text-slate-800">{consumedCount} <span className="text-xs text-gray-400 uppercase">Usage</span></p>
+                                                                    <p className="text-xl font-black text-slate-800">
+                                                                        {sellUnitEquivalent !== 1 ? (
+                                                                            <span>{consumedPortions.toFixed(1)} <span className="text-xs text-gray-400 uppercase">portions</span></span>
+                                                                        ) : (
+                                                                            <span>{consumedCount} <span className="text-xs text-gray-400 uppercase">{item.unit}</span></span>
+                                                                        )}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                             {sellUnitEquivalent !== 1 && (
@@ -875,18 +891,18 @@ export default function ReportsPage() {
                                                                     </div>
                                                                     <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
                                                                         <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">Portions</p>
-                                                                        <p className="text-lg font-black text-amber-600">≈ {portionsAvailable} <span className="text-xs text-amber-400">p</span></p>
+                                                                        <p className="text-lg font-black text-amber-600">≈ {portionsAvailable.toFixed(1)} <span className="text-xs text-amber-400">p</span></p>
                                                                     </div>
                                                                 </div>
                                                             )}
                                                             <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
                                                                 <div>
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Potential Revenue</p>
-                                                                    <p className="text-lg font-black text-blue-600">{(remains * (item.unitCost || 0)).toLocaleString()} Br</p>
+                                                                    <p className="text-lg font-black text-blue-600">{potentialRevenue.toLocaleString()} Br</p>
                                                                 </div>
                                                                 <div className="text-right">
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Unit Price</p>
-                                                                    <p className="text-lg font-black text-orange-600">{(item.unitCost || 0).toLocaleString()} Br</p>
+                                                                    <p className="text-lg font-black text-orange-600">{sellingPrice.toLocaleString()} Br</p>
                                                                 </div>
                                                             </div>
                                                         </div>

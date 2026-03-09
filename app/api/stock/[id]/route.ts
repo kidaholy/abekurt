@@ -198,26 +198,55 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         await connectDB()
 
         const { id } = await params
+        const { searchParams } = new URL(request.url)
+        const source = searchParams.get("source") // 'stock' or 'store'
+        
         const stockItem = await Stock.findById(id)
 
         if (!stockItem) {
             return NextResponse.json({ message: "Stock item not found" }, { status: 404 })
         }
 
-        // Safe Delete: If there is quantity in the store, don't delete the record, just clear active stock
-        if ((stockItem.storeQuantity || 0) > 0) {
-            stockItem.quantity = 0
-            stockItem.status = 'out_of_stock'
+        // If deleting from Store page - only clear store quantity
+        if (source === 'store') {
+            const hasActiveStock = (stockItem.quantity || 0) > 0
+            
+            // Always keep the record, just clear store quantity
+            stockItem.storeQuantity = 0
             await stockItem.save()
+            
+            if (hasActiveStock) {
+                return NextResponse.json({
+                    message: "Item removed from Store. Active stock in POS remains.",
+                    keepInPOS: true
+                })
+            } else {
+                return NextResponse.json({
+                    message: "Item removed from Store. Record kept for history.",
+                    keepRecord: true
+                })
+            }
+        }
+
+        // If deleting from Stock/POS page - only clear active quantity
+        const hasStoreQuantity = (stockItem.storeQuantity || 0) > 0
+        
+        // Always keep the record, just clear active stock
+        stockItem.quantity = 0
+        stockItem.status = 'out_of_stock'
+        await stockItem.save()
+        
+        if (hasStoreQuantity) {
             return NextResponse.json({
                 message: "Stock removed from POS, but kept in Store because it has remaining quantity.",
                 keepInStore: true
             })
+        } else {
+            return NextResponse.json({
+                message: "Stock removed from POS. Record kept for history.",
+                keepRecord: true
+            })
         }
-
-        // Otherwise, proceed with full deletion
-        await Stock.findByIdAndDelete(id)
-        return NextResponse.json({ message: "Stock item deleted successfully" })
     } catch (error: any) {
         console.error("❌ Delete stock error:", error)
         return NextResponse.json({ message: error.message || "Failed to delete stock item" }, { status: 500 })

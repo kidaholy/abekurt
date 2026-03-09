@@ -161,7 +161,7 @@ export default function StockInventoryPage() {
 
         if (!confirmed) return
         try {
-            const response = await fetch(`/api/stock/${id}`, {
+            const response = await fetch(`/api/stock/${id}?source=stock`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             })

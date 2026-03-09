@@ -700,7 +700,7 @@ export default function StorePage() {
     const deleteStockItem = async (id: string) => {
         const confirmed = await confirm({
             title: "Delete Store Item",
-            message: "Are you sure you want to delete this item from store?\n\nThis action cannot be undone.",
+            message: "Are you sure you want to delete this item from store?\n\nThis will only remove it from Store inventory. Active stock in POS will remain.",
             type: "danger",
             confirmText: "Delete Item",
             cancelText: "Cancel"
@@ -708,12 +708,18 @@ export default function StorePage() {
 
         if (!confirmed) return
         try {
-            const response = await fetch(`/api/stock/${id}`, {
+            const response = await fetch(`/api/stock/${id}?source=store`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             })
             if (response.ok) {
+                const data = await response.json()
                 fetchStockItems()
+                notify({
+                    title: "Store Item Deleted",
+                    message: data.message || "Item removed from store successfully.",
+                    type: "success"
+                })
             }
         } catch (error) {
             console.error("Error deleting stock:", String(error))

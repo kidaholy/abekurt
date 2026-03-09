@@ -612,7 +612,10 @@ export default function NetWorthReportPage() {
                         const totalHandled = (item.openingStock || 0) + (item.transferred || 0);
                         const remains = item.closingStock || 0;
                         const sellUnitEquivalent = item.sellUnitEquivalent || 1;
-                        const portionsAvailable = sellUnitEquivalent > 0 ? (remains / sellUnitEquivalent).toFixed(1) : '0';
+                        const portionsAvailable = sellUnitEquivalent > 0 ? remains / sellUnitEquivalent : 0;
+                        const potentialRevenue = portionsAvailable * (item.currentUnitCost || 0);
+                        const consumedQuantity = item.consumed || 0;
+                        const consumedPortions = sellUnitEquivalent > 0 ? consumedQuantity / sellUnitEquivalent : consumedQuantity;
 
                         return (
                           <tr key={idx} className="hover:bg-gray-50">
@@ -632,7 +635,7 @@ export default function NetWorthReportPage() {
                             </td>
                             <td className="py-3 px-4 text-center font-bold text-amber-600">
                               {sellUnitEquivalent !== 1 ? (
-                                <span>≈ {portionsAvailable} <span className="text-xs text-amber-400 font-normal">portions</span></span>
+                                <span>≈ {portionsAvailable.toFixed(1)} <span className="text-xs text-amber-400 font-normal">portions</span></span>
                               ) : (
                                 <span className="text-gray-400 text-xs">-</span>
                               )}
@@ -641,13 +644,17 @@ export default function NetWorthReportPage() {
                               {(item.transferredValue || 0).toLocaleString()} ብር
                             </td>
                             <td className="py-3 px-4 text-center font-bold text-red-500">
-                              {(item.consumed || 0).toFixed(1)} <span className="text-xs text-red-300 font-normal">Usage</span>
+                              {sellUnitEquivalent !== 1 ? (
+                                <span>{consumedPortions.toFixed(1)} <span className="text-xs text-red-300 font-normal">portions</span></span>
+                              ) : (
+                                <span>{consumedQuantity.toFixed(1)} <span className="text-xs text-red-300 font-normal">{item.unit}</span></span>
+                              )}
                             </td>
                             <td className="py-3 px-4 text-center font-bold text-slate-800">
                               {remains.toFixed(1)} <span className="text-xs text-gray-400 font-normal">{item.unit || "unit"}</span>
                             </td>
                             <td className="py-3 px-4 text-right font-bold text-blue-600">
-                              {(item.closingValue || 0).toLocaleString()} ብር
+                              {potentialRevenue.toLocaleString()} ብር
                             </td>
                             <td className="py-3 px-4 text-center">
                               {item.isLowStock || remains <= (item.minLimit || 5) ? (

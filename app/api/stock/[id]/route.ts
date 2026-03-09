@@ -109,13 +109,18 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         }
 
         // Regular update operation
-        const allowedUpdates = ['name', 'category', 'unit', 'unitType', 'minLimit', 'storeMinLimit', 'trackQuantity', 'showStatus', 'status', 'storeQuantity']
+        const allowedUpdates = ['name', 'category', 'unit', 'unitType', 'minLimit', 'storeMinLimit', 'trackQuantity', 'showStatus', 'status', 'storeQuantity', 'totalInvestment']
         const updateData: any = {}
 
         for (const key of allowedUpdates) {
             if (body[key] !== undefined) {
                 updateData[key] = body[key]
             }
+        }
+
+        // Handle totalPurchaseCost mapping to totalInvestment if provided
+        if (body.totalPurchaseCost !== undefined) {
+            updateData.totalInvestment = Number(body.totalPurchaseCost)
         }
 
         // Handle direct quantity/price updates (for admin corrections)

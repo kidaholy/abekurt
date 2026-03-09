@@ -95,7 +95,10 @@ export async function GET(request: Request) {
             date: { $gte: startDate, $lte: endDate }
         }
         const dailyExpenses = await DailyExpense.find(expenseQuery).lean()
-        const totalOtherExpenses = dailyExpenses.reduce((sum, exp) => sum + (exp.otherExpenses || 0), 0)
+        const totalOtherExpenses = dailyExpenses.reduce((sum, exp) => {
+            const itemsCost = (exp.items || []).reduce((iSum, item) => iSum + (item.amount || 0), 0)
+            return sum + (exp.otherExpenses || 0) + itemsCost
+        }, 0)
 
         // 📉 PERIOD-SPECIFIC STOCK INVESTMENT
         const stocksWithHistory = await Stock.find({
@@ -119,12 +122,15 @@ export async function GET(request: Request) {
         const [lifetimeRevenueData, allStock, allExpenses] = await Promise.all([
             Order.find({ status: { $ne: "cancelled" } }).select('totalAmount').lean(),
             Stock.find({}).select('totalInvestment').lean(),
-            DailyExpense.find({}).select('otherExpenses').lean()
+            DailyExpense.find({}).select('otherExpenses items').lean()
         ])
 
         const lifetimeRevenue = (lifetimeRevenueData as any[]).reduce((sum, order) => sum + (order.totalAmount || 0), 0)
         const lifetimeStockInvestment = (allStock as any[]).reduce((sum, item) => sum + (item.totalInvestment || 0), 0)
-        const lifetimeOtherExpenses = (allExpenses as any[]).reduce((sum, exp) => sum + (exp.otherExpenses || 0), 0)
+        const lifetimeOtherExpenses = (allExpenses as any[]).reduce((sum, exp) => {
+            const itemsCost = (exp.items || []).reduce((iSum: number, item: any) => iSum + (item.amount || 0), 0)
+            return sum + (exp.otherExpenses || 0) + itemsCost
+        }, 0)
 
         const lifetimeTotalInvestment = lifetimeStockInvestment + lifetimeOtherExpenses
         const lifetimeNetWorth = lifetimeRevenue - lifetimeTotalInvestment

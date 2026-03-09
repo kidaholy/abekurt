@@ -60,7 +60,8 @@ export async function GET(request: Request) {
                 isLowStock: item.trackQuantity && (item.quantity || 0) <= (item.minLimit || 0),
                 isLowStoreStock: item.trackQuantity && (item.storeQuantity || 0) <= (item.storeMinLimit || 0),
                 isOutOfStock: item.trackQuantity && (item.quantity || 0) <= 0,
-                availableForOrder: item.trackQuantity ? (item.status === 'active' && (item.quantity || 0) > 0) : true
+                availableForOrder: item.trackQuantity ? (item.status === 'active' && (item.quantity || 0) > 0) : true,
+                sellUnitEquivalent: item.sellUnitEquivalent || 1
             }
         })
 
@@ -108,7 +109,8 @@ export async function POST(request: Request) {
             unitCost: body.unitCost || 0,
             totalPurchased: body.quantity || 0,
             totalConsumed: 0,
-            totalInvestment: body.totalPurchaseCost || 0
+            totalInvestment: body.totalPurchaseCost || 0,
+            sellUnitEquivalent: body.sellUnitEquivalent === undefined || body.sellUnitEquivalent === "" ? 1 : Number(body.sellUnitEquivalent.toString().replace(',', '.')) || 1
         }
 
         const newStock = new Stock(stockData)

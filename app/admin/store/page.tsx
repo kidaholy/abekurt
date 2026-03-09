@@ -70,6 +70,7 @@ interface StockItem {
     totalPurchased?: number
     totalLifetimePurchased?: number
     totalConsumed?: number
+    sellUnitEquivalent: number
 }
 
 interface FixedAsset {
@@ -188,7 +189,8 @@ export default function StorePage() {
         totalPurchaseCost: "",
         unitCost: "",
         trackQuantity: true,
-        showStatus: true
+        showStatus: true,
+        sellUnitEquivalent: "1"
     })
 
     const { t } = useLanguage()
@@ -647,21 +649,29 @@ export default function StorePage() {
             const url = editingStock ? `/api/stock/${editingStock._id}` : "/api/stock"
             const method = editingStock ? "PUT" : "POST"
 
-            const { quantity, ...rest } = stockFormData
+            const { quantity, minLimit, storeMinLimit, unitCost, totalPurchaseCost, sellUnitEquivalent, ...rest } = stockFormData
+            
+            const payload = {
+                ...rest,
+                storeQuantity: quantity === "" ? undefined : Number(quantity),
+                minLimit: minLimit === "" ? undefined : Number(minLimit),
+                storeMinLimit: storeMinLimit === "" ? undefined : Number(storeMinLimit),
+                unitCost: unitCost === "" ? undefined : Number(unitCost),
+                totalPurchaseCost: totalPurchaseCost === "" ? undefined : Number(totalPurchaseCost),
+                sellUnitEquivalent: sellUnitEquivalent === "" || sellUnitEquivalent === undefined ? 1 : Number(sellUnitEquivalent.toString().replace(',', '.')) || 1
+            }
+            
+            console.log('🔍 Sending payload:', payload)
+            console.log('🔍 sellUnitEquivalent from form:', sellUnitEquivalent)
+            console.log('🔍 sellUnitEquivalent in payload:', payload.sellUnitEquivalent)
+            
             const response = await fetch(url, {
                 method,
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({
-                    ...rest,
-                    storeQuantity: quantity === "" ? undefined : Number(quantity),
-                    minLimit: stockFormData.minLimit === "" ? undefined : Number(stockFormData.minLimit),
-                    storeMinLimit: stockFormData.storeMinLimit === "" ? undefined : Number(stockFormData.storeMinLimit),
-                    unitCost: stockFormData.unitCost === "" ? undefined : Number(stockFormData.unitCost),
-                    totalPurchaseCost: stockFormData.totalPurchaseCost === "" ? undefined : Number(stockFormData.totalPurchaseCost),
-                }),
+                body: JSON.stringify(payload),
             })
 
             if (response.ok) {
@@ -935,7 +945,8 @@ export default function StorePage() {
             totalPurchaseCost: item.totalInvestment?.toString() || "",
             unitCost: item.unitCost?.toString() || "",
             trackQuantity: item.trackQuantity,
-            showStatus: item.showStatus
+            showStatus: item.showStatus,
+            sellUnitEquivalent: item.sellUnitEquivalent?.toString() || "1"
         })
         setShowStockForm(true)
     }
@@ -962,7 +973,8 @@ export default function StorePage() {
             totalPurchaseCost: "",
             unitCost: "",
             trackQuantity: true,
-            showStatus: true
+            showStatus: true,
+            sellUnitEquivalent: "1"
         })
         setEditingStock(null)
         setShowStockForm(false)
@@ -1189,11 +1201,17 @@ export default function StorePage() {
                                                                 {(item.storeQuantity || 0).toLocaleString()}
                                                                 <span className="text-xs font-bold text-gray-400 ml-1 uppercase">{item.unit}</span>
                                                             </p>
+                                                            {item.sellUnitEquivalent && item.sellUnitEquivalent > 0 && item.sellUnitEquivalent !== 1 && (
+                                                                <p className="text-[10px] font-black uppercase text-amber-600">
+                                                                    ≈ {((item.storeQuantity || 0) / item.sellUnitEquivalent).toFixed(1)} Portions
+                                                                </p>
+                                                            )}
                                                         </td>
                                                         <td className="py-5">
                                                             {(item.quantity || 0) > 0 ? (
                                                                 <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
                                                                     {(item.quantity || 0).toLocaleString()} {item.unit} Active
+                                                                    {item.sellUnitEquivalent && item.sellUnitEquivalent > 0 && item.sellUnitEquivalent !== 1 && ` (${((item.quantity || 0) / item.sellUnitEquivalent).toFixed(1)} Portions)`}
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
@@ -1616,10 +1634,10 @@ export default function StorePage() {
                                                 <input type="text" placeholder="Item" value={item.name} onChange={e => {
                                                     const n = [...expenseFormData.items]; n[index].name = e.target.value; setExpenseFormData({ ...expenseFormData, items: n });
                                                 }} className="flex-1 bg-white p-2 rounded-lg text-sm" />
-                                                <input type="number" placeholder="Qty" value={item.quantity} onChange={e => {
+                                                <input type="number" placeholder="Qty" step="any" value={item.quantity} onChange={e => {
                                                     const n = [...expenseFormData.items]; n[index].quantity = Number(e.target.value); setExpenseFormData({ ...expenseFormData, items: n });
                                                 }} className="w-16 bg-white p-2 rounded-lg text-sm" />
-                                                <input type="number" placeholder="Br" value={item.amount} onChange={e => {
+                                                <input type="number" placeholder="Br" step="any" value={item.amount} onChange={e => {
                                                     const n = [...expenseFormData.items]; n[index].amount = Number(e.target.value); setExpenseFormData({ ...expenseFormData, items: n });
                                                 }} className="w-20 bg-white p-2 rounded-lg text-sm" />
                                                 <button type="button" onClick={() => setExpenseFormData({ ...expenseFormData, items: expenseFormData.items.filter((_, i) => i !== index) })} className="text-red-400"><Trash2 size={14} /></button>
@@ -1673,20 +1691,26 @@ export default function StorePage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">In Store Qty</label>
-                                            <input type="number" placeholder="In Store Qty" value={stockFormData.quantity} onChange={e => setStockFormData({ ...stockFormData, quantity: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
+                                            <input type="number" step="any" placeholder="In Store Qty" value={stockFormData.quantity} onChange={e => setStockFormData({ ...stockFormData, quantity: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Total Cost</label>
-                                            <input type="number" placeholder="Total Cost" value={stockFormData.totalPurchaseCost} onChange={e => setStockFormData({ ...stockFormData, totalPurchaseCost: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
+                                            <input type="number" step="any" placeholder="Total Cost" value={stockFormData.totalPurchaseCost} onChange={e => setStockFormData({ ...stockFormData, totalPurchaseCost: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Limit For Store Alert</label>
                                             <input type="number" placeholder="Store Min Limit" value={stockFormData.storeMinLimit} onChange={e => setStockFormData({ ...stockFormData, storeMinLimit: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Selling Price (Unit Cost)</label>
-                                        <input type="number" placeholder="Selling Price" value={stockFormData.unitCost} onChange={e => setStockFormData({ ...stockFormData, unitCost: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Selling Price (Unit Cost)</label>
+                                            <input type="number" step="any" placeholder="Selling Price" value={stockFormData.unitCost} onChange={e => setStockFormData({ ...stockFormData, unitCost: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Sell Unit Equivalent ({stockFormData.unit}/portion)</label>
+                                            <input type="number" step="any" placeholder="e.g. 0.46" value={stockFormData.sellUnitEquivalent} onChange={e => setStockFormData({ ...stockFormData, sellUnitEquivalent: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
+                                        </div>
                                     </div>
                                     <div className="flex gap-4 pt-4">
                                         <button type="button" onClick={resetStockForm} className="flex-1 py-4 font-bold text-gray-400">Cancel</button>
@@ -1703,8 +1727,8 @@ export default function StorePage() {
                             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="relative bg-white rounded-[2rem] p-8 max-w-sm w-full">
                                 <h2 className="text-xl font-black mb-4">Restock {restockingItem.name}</h2>
                                 <form onSubmit={handleRestockSubmit} className="space-y-4">
-                                    <input type="number" placeholder="Amount to add" value={restockAmount} onChange={e => setRestockAmount(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
-                                    <input type="number" placeholder="Total Cost" value={newTotalCost} onChange={e => setNewTotalCost(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
+                                    <input type="number" step="any" placeholder="Amount to add" value={restockAmount} onChange={e => setRestockAmount(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
+                                    <input type="number" step="any" placeholder="Total Cost" value={newTotalCost} onChange={e => setNewTotalCost(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
                                     <div className="flex gap-3 pt-4">
                                         <button type="button" onClick={() => setShowRestockModal(false)} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Cancel</button>
                                         <button type="submit" className="flex-1 py-3 bg-[#8B4513] text-white rounded-xl font-bold">Restock</button>
@@ -1721,7 +1745,7 @@ export default function StorePage() {
                                 <h2 className="text-xl font-black mb-1">Transfer to Stock</h2>
                                 <p className="text-xs text-gray-400 mb-4">Max: {transferringItem.storeQuantity} {transferringItem.unit}</p>
                                 <form onSubmit={handleTransferSubmit} className="space-y-4">
-                                    <input type="number" placeholder="Amount" max={transferringItem.storeQuantity} value={transferAmount} onChange={e => setTransferAmount(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-black text-xl text-emerald-600 shadow-inner" required />
+                                    <input type="number" step="any" placeholder="Amount" max={transferringItem.storeQuantity} value={transferAmount} onChange={e => setTransferAmount(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-black text-xl text-emerald-600 shadow-inner" required />
                                     <div className="flex gap-3 pt-4">
                                         <button type="button" onClick={() => setShowTransferModal(false)} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Cancel</button>
                                         <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm">Move to POS</button>
@@ -1920,7 +1944,7 @@ export default function StorePage() {
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Quantity to Transfer</label>
-                                        <input type="number" placeholder="0.00" value={newTransferRequest.quantity} onChange={e => setNewTransferRequest({ ...newTransferRequest, quantity: e.target.value })} className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-emerald-500 transition-all" />
+                                        <input type="number" step="any" placeholder="0.00" value={newTransferRequest.quantity} onChange={e => setNewTransferRequest({ ...newTransferRequest, quantity: e.target.value })} className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-emerald-500 transition-all" />
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Purpose / Notes</label>

@@ -28,6 +28,7 @@ export interface IStock extends Document {
     totalPurchased: number // Lifetime total purchased
     totalConsumed: number // Lifetime total consumed via sales
     totalInvestment: number // Total money invested in purchasing this item
+    sellUnitEquivalent: number // How much of the base unit is consumed per portion/sale
     createdAt: Date
     updatedAt: Date
 }
@@ -69,6 +70,7 @@ const StockSchema = new Schema<IStock>(
         totalPurchased: { type: Number, default: 0, min: 0 },
         totalConsumed: { type: Number, default: 0, min: 0 },
         totalInvestment: { type: Number, default: 0, min: 0 },
+        sellUnitEquivalent: { type: Number, default: 1, min: 0 },
     },
     {
         timestamps: true,
@@ -146,12 +148,12 @@ StockSchema.methods.moveToStock = function (quantity: number) {
 }
 
 // Helper method to get total quantity (POS + Store)
-StockSchema.methods.getTotalQuantity = function(): number {
+StockSchema.methods.getTotalQuantity = function (): number {
     return (this.quantity || 0) + (this.storeQuantity || 0)
 }
 
 // Helper method to get total asset value (at average purchase price)
-StockSchema.methods.getTotalAssetValue = function(): number {
+StockSchema.methods.getTotalAssetValue = function (): number {
     return this.getTotalQuantity() * (this.averagePurchasePrice || 0)
 }
 

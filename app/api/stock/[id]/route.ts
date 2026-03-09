@@ -28,6 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             isLowStoreStock: stockItem.trackQuantity && (stockItem.storeQuantity || 0) <= (stockItem.storeMinLimit || 0),
             isOutOfStock: stockItem.trackQuantity && (stockItem.quantity || 0) <= 0,
             availableForOrder: stockItem.trackQuantity ? (stockItem.status === 'active' && (stockItem.quantity || 0) > 0) : true,
+            sellUnitEquivalent: stockItem.sellUnitEquivalent || 1,
             restockHistory: stockItem.restockHistory?.map((entry: any) => ({
                 ...entry,
                 _id: entry._id?.toString(),
@@ -109,12 +110,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         }
 
         // Regular update operation
-        const allowedUpdates = ['name', 'category', 'unit', 'unitType', 'minLimit', 'storeMinLimit', 'trackQuantity', 'showStatus', 'status', 'storeQuantity', 'totalInvestment']
+        const allowedUpdates = ['name', 'category', 'unit', 'unitType', 'minLimit', 'storeMinLimit', 'trackQuantity', 'showStatus', 'status', 'storeQuantity', 'totalInvestment', 'sellUnitEquivalent']
         const updateData: any = {}
+
+        console.log('🔍 API received body:', body)
+        console.log('🔍 API received sellUnitEquivalent:', body.sellUnitEquivalent)
 
         for (const key of allowedUpdates) {
             if (body[key] !== undefined) {
-                updateData[key] = body[key]
+                if (key === 'sellUnitEquivalent') {
+                    updateData[key] = body[key] === "" ? 1 : Number(body[key].toString().replace(',', '.')) || 1
+                    console.log('🔍 API processed sellUnitEquivalent:', updateData[key])
+                } else {
+                    updateData[key] = body[key]
+                }
             }
         }
 
@@ -134,8 +143,30 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             updateData.unitCost = Math.max(0, Number(body.unitCost))
         }
 
+        // Auto-update unitType if unit changes
+        if (body.unit !== undefined) {
+            const unit = body.unit.toLowerCase()
+            if (['kg', 'g', 'gram', 'kilogram'].includes(unit)) {
+                updateData.unitType = 'weight'
+            } else if (['l', 'ml', 'liter', 'litre', 'milliliter'].includes(unit)) {
+                updateData.unitType = 'volume'
+            } else {
+                updateData.unitType = 'count'
+            }
+        }
+
         Object.assign(stockItem, updateData)
+
+        // Explicitly set sellUnitEquivalent if present to ensure Mongoose tracks it
+        if (updateData.sellUnitEquivalent !== undefined) {
+            console.log('🔍 Setting sellUnitEquivalent on stockItem:', updateData.sellUnitEquivalent)
+            stockItem.sellUnitEquivalent = updateData.sellUnitEquivalent
+            stockItem.markModified('sellUnitEquivalent')
+        }
+
         await stockItem.save()
+        
+        console.log('🔍 After save, stockItem.sellUnitEquivalent:', stockItem.sellUnitEquivalent)
 
         const serializedStock = {
             ...stockItem.toObject(),
@@ -167,12 +198,25 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         await connectDB()
 
         const { id } = await params
+        const stockItem = await Stock.findById(id)
 
-        const deletedStock = await Stock.findByIdAndDelete(id)
-        if (!deletedStock) {
+        if (!stockItem) {
             return NextResponse.json({ message: "Stock item not found" }, { status: 404 })
         }
 
+        // Safe Delete: If there is quantity in the store, don't delete the record, just clear active stock
+        if ((stockItem.storeQuantity || 0) > 0) {
+            stockItem.quantity = 0
+            stockItem.status = 'out_of_stock'
+            await stockItem.save()
+            return NextResponse.json({
+                message: "Stock removed from POS, but kept in Store because it has remaining quantity.",
+                keepInStore: true
+            })
+        }
+
+        // Otherwise, proceed with full deletion
+        await Stock.findByIdAndDelete(id)
         return NextResponse.json({ message: "Stock item deleted successfully" })
     } catch (error: any) {
         console.error("❌ Delete stock error:", error)

@@ -1008,7 +1008,15 @@ export default function AdminMenuPage() {
                           <label className="block text-sm font-bold text-gray-700 mb-2">Link to Stock Item</label>
                           <select
                             value={formData.stockItemId}
-                            onChange={(e) => setFormData({ ...formData, stockItemId: e.target.value })}
+                            onChange={(e) => {
+                              const stockId = e.target.value;
+                              const stock = stockItems.find((s: any) => s._id === stockId);
+                              setFormData({
+                                ...formData,
+                                stockItemId: stockId,
+                                stockConsumption: stock ? (stock.sellUnitEquivalent || 1).toString() : "1.0"
+                              });
+                            }}
                             className="w-full bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#f5bc6b]"
                           >
                             <option value="">No Stock Linked</option>

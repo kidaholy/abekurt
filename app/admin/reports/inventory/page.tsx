@@ -581,6 +581,12 @@ export default function NetWorthReportPage() {
                     <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">
                       Quantity
                     </th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">
+                      Sell Unit
+                    </th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">
+                      Portions
+                    </th>
                     <th className="text-right py-3 px-4 font-semibold text-sm text-gray-700">
                       Total Purchase
                     </th>
@@ -605,6 +611,8 @@ export default function NetWorthReportPage() {
                       .map((item: any, idx: number) => {
                         const totalHandled = (item.openingStock || 0) + (item.transferred || 0);
                         const remains = item.closingStock || 0;
+                        const sellUnitEquivalent = item.sellUnitEquivalent || 1;
+                        const portionsAvailable = sellUnitEquivalent > 0 ? (remains / sellUnitEquivalent).toFixed(1) : '0';
 
                         return (
                           <tr key={idx} className="hover:bg-gray-50">
@@ -614,6 +622,20 @@ export default function NetWorthReportPage() {
                             </td>
                             <td className="py-3 px-4 text-center font-bold text-slate-800">
                               {totalHandled.toFixed(1)} <span className="text-xs text-gray-400 font-normal">{item.unit || "unit"}</span>
+                            </td>
+                            <td className="py-3 px-4 text-center font-bold text-purple-600">
+                              {sellUnitEquivalent !== 1 ? (
+                                <span>{sellUnitEquivalent} <span className="text-xs text-purple-400 font-normal">{item.unit}/portion</span></span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">1:1</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center font-bold text-amber-600">
+                              {sellUnitEquivalent !== 1 ? (
+                                <span>≈ {portionsAvailable} <span className="text-xs text-amber-400 font-normal">portions</span></span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">-</span>
+                              )}
                             </td>
                             <td className="py-3 px-4 text-right font-bold text-green-600">
                               {(item.transferredValue || 0).toLocaleString()} ብር
@@ -643,7 +665,7 @@ export default function NetWorthReportPage() {
                       })
                   ) : (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-gray-500">
+                      <td colSpan={11} className="py-8 text-center text-gray-500">
                         {loading ? "Loading inventory data..." : "No inventory data available for this period."}
                       </td>
                     </tr>

@@ -778,6 +778,8 @@ export default function ReportsPage() {
                                                         <th className="p-4">Item Name</th>
                                                         <th className="p-4 text-center text-orange-600">Sell Price</th>
                                                         <th className="p-4 text-center">Remains</th>
+                                                        <th className="p-4 text-center text-purple-600">Sell Unit</th>
+                                                        <th className="p-4 text-center text-amber-600">Portions</th>
                                                         <th className="p-4 text-center text-green-600">Total Inv.</th>
                                                         <th className="p-4 text-center text-red-500">Usage</th>
                                                         <th className="p-4 text-right text-blue-600">Potential</th>
@@ -797,6 +799,8 @@ export default function ReportsPage() {
                                                             const totalPurchaseValue = item.transferredValue ?? (totalHandled * costPrice)
                                                             const potentialRevenue = remains * sellingPrice
                                                             const isLow = item.isLowStock || (remains <= (item.minLimit || 5))
+                                                            const sellUnitEquivalent = item.sellUnitEquivalent || 1
+                                                            const portionsAvailable = sellUnitEquivalent > 0 ? (remains / sellUnitEquivalent).toFixed(1) : '0'
                                                             return (
                                                                 <tr key={idx} className={`hover:bg-gray-50 transition-colors ${isLow ? 'bg-red-50/30' : ''}`}>
                                                                     <td className="p-4">
@@ -805,6 +809,20 @@ export default function ReportsPage() {
                                                                     </td>
                                                                     <td className="p-4 text-center text-orange-600">{Math.round(sellingPrice).toLocaleString()} <span className="text-[10px]">Br</span></td>
                                                                     <td className="p-4 text-center"><p className={`text-sm ${isLow ? 'text-red-600' : 'text-slate-800'}`}>{remains} <span className="text-[10px] text-gray-400">{item.unit}</span></p></td>
+                                                                    <td className="p-4 text-center text-purple-600">
+                                                                        {sellUnitEquivalent !== 1 ? (
+                                                                            <span>{sellUnitEquivalent} <span className="text-[10px]">{item.unit}/p</span></span>
+                                                                        ) : (
+                                                                            <span className="text-gray-400 text-[10px]">1:1</span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="p-4 text-center text-amber-600">
+                                                                        {sellUnitEquivalent !== 1 ? (
+                                                                            <span>≈ {portionsAvailable} <span className="text-[10px]">p</span></span>
+                                                                        ) : (
+                                                                            <span className="text-gray-400 text-[10px]">-</span>
+                                                                        )}
+                                                                    </td>
                                                                     <td className="p-4 text-center text-green-600">
                                                                         {totalPurchaseValue.toLocaleString()} <span className="text-[10px]">Br</span>
                                                                         <div className="text-[9px] text-gray-400 font-medium">@{Math.round(costPrice)} avg</div>
@@ -828,6 +846,8 @@ export default function ReportsPage() {
                                                     const consumedCount = item.consumed ?? 0
                                                     const remains = closingQuantity
                                                     const isLow = item.isLowStock || (remains <= (item.minLimit || 5))
+                                                    const sellUnitEquivalent = item.sellUnitEquivalent || 1
+                                                    const portionsAvailable = sellUnitEquivalent > 0 ? (remains / sellUnitEquivalent).toFixed(1) : '0'
                                                     return (
                                                         <div key={idx} className={`p-4 rounded-2xl border ${isLow ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
                                                             <div className="flex justify-between items-start mb-3">
@@ -847,6 +867,18 @@ export default function ReportsPage() {
                                                                     <p className="text-xl font-black text-slate-800">{consumedCount} <span className="text-xs text-gray-400 uppercase">Usage</span></p>
                                                                 </div>
                                                             </div>
+                                                            {sellUnitEquivalent !== 1 && (
+                                                                <div className="grid grid-cols-2 gap-4 mt-3">
+                                                                    <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
+                                                                        <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-1">Sell Unit</p>
+                                                                        <p className="text-lg font-black text-purple-600">{sellUnitEquivalent} <span className="text-xs text-purple-400">{item.unit}/p</span></p>
+                                                                    </div>
+                                                                    <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                                                                        <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">Portions</p>
+                                                                        <p className="text-lg font-black text-amber-600">≈ {portionsAvailable} <span className="text-xs text-amber-400">p</span></p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                             <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
                                                                 <div>
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Potential Revenue</p>

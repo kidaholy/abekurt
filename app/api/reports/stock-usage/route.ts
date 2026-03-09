@@ -70,7 +70,7 @@ export async function GET(request: Request) {
             status: { $ne: "cancelled" }
         }).select('items totalAmount createdAt status').lean()
 
-        const stockItems = await Stock.find({}).select('name category quantity storeQuantity unit unitCost averagePurchasePrice totalInvestment minLimit storeMinLimit status supplier updatedAt totalPurchased').lean()
+        const stockItems = await Stock.find({}).select('name category quantity storeQuantity unit unitCost averagePurchasePrice totalInvestment minLimit storeMinLimit status supplier updatedAt totalPurchased sellUnitEquivalent').lean()
         const menuItems = await MenuItem.find({}).select('name reportUnit reportQuantity stockItemId recipe').lean()
         const menuMap = new Map(menuItems.map(m => [m._id.toString(), m]))
 
@@ -301,6 +301,7 @@ export async function GET(request: Request) {
                 averagePurchasePrice: stock.averagePurchasePrice || 0,
                 totalLifetimeInvestment: stock.totalInvestment || 0,
                 totalLifetimePurchased: stock.totalPurchased || 0,
+                sellUnitEquivalent: stock.sellUnitEquivalent || 1,
                 openingValue: openingStock * currentUnitCost,
                 purchaseValue: purchaseData.totalCost,
                 transferredValue: transferred * currentUnitCost,

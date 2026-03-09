@@ -191,7 +191,7 @@ export async function POST(request: Request) {
     const [linkedMenuItems, stockItems, lastOrder, tableData] = await Promise.all([
       MenuItem.find({ _id: { $in: menuItemIds } }).populate('stockItemId'),
       Stock.find({ _id: { $in: stockIds } }),
-      Order.findOne({}, { orderNumber: 1 }).sort({ orderNumber: -1 }),
+      Order.findOne({}, { orderNumber: 1 }).sort({ createdAt: -1 }),
       tableId ? Table.findById(tableId) :
         (tableNumber && tableNumber !== "Buy&Go" ? Table.findOne({ tableNumber }) : null)
     ])
@@ -217,7 +217,8 @@ export async function POST(request: Request) {
     // Generate order number
     let orderNumber: string
     if (lastOrder && lastOrder.orderNumber) {
-      const lastNumber = Number(lastOrder.orderNumber)
+      const digits = lastOrder.orderNumber.replace(/\D/g, '')
+      const lastNumber = digits ? Number(digits) : 0
       orderNumber = String(lastNumber + 1).padStart(3, "0")
     } else {
       orderNumber = "001"

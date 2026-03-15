@@ -263,7 +263,7 @@ export default function MenuPage() {
                             <button
                               key={cat}
                               onClick={() => setCategoryFilter(cat)}
-                              className={`px-6 py-3 rounded-full font-bold whitespace-nowrap transition-all duration-300 ${categoryFilter === cat
+                              className={`px-6 py-3 rounded-full font-bold whitespace-nowrap transition-all duration-300 flex-shrink-0 ${categoryFilter === cat
                                 ? "bg-[#8B4513]/80 text-white shadow-lg scale-105"
                                 : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                                 }`}

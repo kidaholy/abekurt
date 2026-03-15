@@ -171,7 +171,7 @@ export default function PublicMenuPage() {
                                             <button
                                                 onClick={() => setCategoryFilter(cat)}
                                                 className={cn(
-                                                    "flex items-center gap-2 px-5 py-2.5 rounded-full font-bold whitespace-nowrap text-sm transition-all duration-300 border shadow-sm",
+                                                    "flex items-center gap-2 px-5 py-2.5 rounded-full font-bold whitespace-nowrap text-sm transition-all duration-300 border shadow-sm flex-shrink-0",
                                                     categoryFilter === cat
                                                         ? "bg-[#8B4513] text-white border-[#8B4513] shadow-md scale-105"
                                                         : "bg-white text-gray-500 hover:bg-amber-50 hover:text-[#8B4513] border-gray-200"

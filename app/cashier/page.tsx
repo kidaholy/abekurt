@@ -428,12 +428,12 @@ export default function CashierPOSPage() {
             <div className="lg:col-span-8 space-y-6">
               {/* Category Filter */}
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
                   {categories.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setCategoryFilter(cat)}
-                      className={`px-4 py-2 rounded-lg font-black text-xs uppercase tracking-widest whitespace-nowrap transition-all shadow-sm flex items-center gap-2 ${categoryFilter === cat
+                      className={`px-4 py-2 rounded-lg font-black text-xs whitespace-nowrap transition-all shadow-sm flex items-center gap-2 flex-shrink-0 ${categoryFilter === cat
                         ? "bg-blue-600 text-white scale-105"
                         : "bg-white text-gray-500 hover:bg-gray-50 border border-gray-100"
                         }`}

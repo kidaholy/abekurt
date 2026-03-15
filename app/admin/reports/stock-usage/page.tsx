@@ -212,7 +212,7 @@ export default function StockUsageReportPage() {
 
   return (
     <ProtectedRoute requiredRoles={["admin"]}>
-      <div className="min-h-screen bg-gray-50 p-8 font-sans print:bg-white print:p-0">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8 font-sans print:bg-white print:p-0">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
@@ -240,8 +240,8 @@ export default function StockUsageReportPage() {
                     key={f}
                     onClick={() => setFilter(f)}
                     className={`px-4 py-2 rounded-md text-sm font-bold capitalize transition-all ${filter === f
-                        ? "bg-[#8B4513] text-white shadow-md"
-                        : "text-gray-500 hover:bg-gray-50"
+                      ? "bg-[#8B4513] text-white shadow-md"
+                      : "text-gray-500 hover:bg-gray-50"
                       }`}
                   >
                     {f}
@@ -293,7 +293,7 @@ export default function StockUsageReportPage() {
           {reportData && (
             <>
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                   <div className="flex items-center justify-between">
                     <div>
@@ -376,7 +376,7 @@ export default function StockUsageReportPage() {
                   </h3>
                 </div>
                 <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-center">
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <p className="text-2xl font-bold text-blue-600">
                         {reportData.summary.totalOpeningValue.toLocaleString()}
@@ -428,7 +428,7 @@ export default function StockUsageReportPage() {
                     Detailed Stock Analysis
                   </h3>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
@@ -472,10 +472,10 @@ export default function StockUsageReportPage() {
                               <div className="flex items-center gap-3">
                                 <div
                                   className={`w-3 h-3 rounded-full ${item.status === "finished"
-                                      ? "bg-red-500"
-                                      : item.isLowStock
-                                        ? "bg-orange-500"
-                                        : "bg-green-500"
+                                    ? "bg-red-500"
+                                    : item.isLowStock
+                                      ? "bg-orange-500"
+                                      : "bg-green-500"
                                     }`}
                                 />
                                 <div>
@@ -548,6 +548,73 @@ export default function StockUsageReportPage() {
                       </tr>
                     </tfoot>
                   </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="lg:hidden divide-y divide-gray-100">
+                  {reportData.stockAnalysis.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400">No stock analysis data found.</div>
+                  ) : (
+                    reportData.stockAnalysis.map((item: StockAnalysisItem, idx: number) => {
+                      const isLow = item.isLowStock;
+                      const isNear = item.isNearStockOut;
+                      return (
+                        <div key={idx} className="p-4 space-y-3 bg-white">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.status === "finished"
+                                  ? "bg-red-500"
+                                  : isLow
+                                    ? "bg-orange-500"
+                                    : "bg-green-500"
+                                  }`}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-bold text-gray-900 text-sm">{item.name}</span>
+                                <span className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">{item.category}</span>
+                              </div>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${isLow ? 'bg-red-100 text-red-700' : isNear ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                              {isLow ? 'Low' : isNear ? 'Near' : 'OK'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                              <span className="text-gray-400 font-medium">Opening</span>
+                              <span className="font-bold text-gray-700">{item.openingStock} {item.unit}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                              <span className="text-gray-400 font-medium text-green-600">Restocked</span>
+                              <span className="font-bold text-green-700">+{item.purchased}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                              <span className="text-gray-400 font-medium text-red-600">Sold</span>
+                              <span className="font-bold text-red-700">-{item.consumed}</span>
+                            </div>
+                            <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                              <span className="text-gray-400 font-medium">Remaining</span>
+                              <span className="font-bold text-slate-900">{item.closingStock} {item.unit}</span>
+                            </div>
+                          </div>
+
+                          <div className="bg-gray-50 p-2 rounded-lg flex justify-between items-center">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] text-gray-400 uppercase font-bold">Total Value</span>
+                              <span className="font-black text-blue-600">{item.closingValue.toLocaleString()} Br</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[9px] text-gray-400 uppercase font-bold">Velocity</span>
+                              <div className="font-bold text-gray-700 text-xs">
+                                {item.usageVelocity.toFixed(1)}/{reportData.periodDays}d
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
               </div>
 

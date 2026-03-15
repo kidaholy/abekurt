@@ -78,7 +78,7 @@ export default function OrdersReportPage() {
             const mainCat = (item.mainCategory || '').toLowerCase()
             if (mainCat === 'drinks') return true
             if (mainCat === 'food') return false
-            
+
             // If no mainCategory, check category name for drink keywords
             const cat = (item.category || '').toLowerCase()
             const drinkKeywords = ['coffee', 'tea', 'juice', 'drink', 'beverage', 'mojito', 'smoothie', 'soda', 'water', 'latte', 'espresso', 'cappuccino', 'macchiato', 'americano']
@@ -92,7 +92,7 @@ export default function OrdersReportPage() {
         filteredOrders.forEach((order: any) => {
             const orderDate = new Date(order.createdAt).toLocaleDateString()
             const orderTime = new Date(order.createdAt).toLocaleTimeString()
-            
+
             order.items?.forEach((item: any) => {
                 const itemData = {
                     "Order ID": order._id.slice(-8),
@@ -235,7 +235,7 @@ export default function OrdersReportPage() {
 
     return (
         <ProtectedRoute requiredRoles={["admin"]}>
-            <div className="min-h-screen bg-gray-50 p-8 font-sans print:bg-white print:p-0">
+            <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8 font-sans print:bg-white print:p-0">
                 <div className="max-w-7xl mx-auto space-y-6">
                     {/* Header */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
@@ -296,7 +296,7 @@ export default function OrdersReportPage() {
                                     <span className="font-bold">Export CSV</span>
                                     <ChevronDown size={14} />
                                 </button>
-                                
+
                                 <button
                                     onClick={exportPDF}
                                     className="bg-[#8B4513] text-white px-4 py-2 rounded-lg shadow-sm hover:bg-[#7A3D0F] transition-colors flex items-center gap-2"
@@ -324,8 +324,8 @@ export default function OrdersReportPage() {
                     {data && (
                         <>
                             {/* Summary Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-gray-500">Total Orders</p>
@@ -335,7 +335,7 @@ export default function OrdersReportPage() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                                <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-gray-500">Total Revenue</p>
@@ -345,7 +345,7 @@ export default function OrdersReportPage() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                                <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-gray-500">Average Order Value</p>
@@ -355,7 +355,7 @@ export default function OrdersReportPage() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                                <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-medium text-gray-500">Completed Orders</p>
@@ -373,7 +373,7 @@ export default function OrdersReportPage() {
                                         Order Details ({filteredOrders.length} orders)
                                     </h3>
                                 </div>
-                                <div className="overflow-x-auto">
+                                <div className="hidden lg:block overflow-x-auto">
                                     <table className="w-full">
                                         <thead className="bg-gray-50">
                                             <tr>
@@ -448,6 +448,54 @@ export default function OrdersReportPage() {
                                         </tfoot>
                                     </table>
                                 </div>
+
+                                {/* Mobile Card View */}
+                                <div className="lg:hidden divide-y divide-gray-100">
+                                    {filteredOrders.length === 0 ? (
+                                        <div className="p-8 text-center text-gray-400 italic font-medium">No orders found.</div>
+                                    ) : (
+                                        filteredOrders.map((order: any, idx: number) => (
+                                            <div key={idx} className="p-4 space-y-3 bg-white">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-mono text-xs font-bold text-gray-900 leading-none">#{order._id.slice(-8)}</span>
+                                                        <span className="text-[10px] text-gray-400 mt-1">{new Date(order.createdAt).toLocaleString()}</span>
+                                                    </div>
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${getStatusColor(order.status)}`}>
+                                                        {order.status.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <div className="text-xs text-gray-600">
+                                                        <span className="font-bold">Waiter:</span> {order.waiterName || "N/A"}
+                                                    </div>
+                                                    <div className="text-xs text-gray-600 font-bold">
+                                                        Table: {order.tableNumber || "N/A"}
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-end bg-gray-50/50 p-2 rounded-lg border border-gray-100/50">
+                                                    <div className="text-xs font-medium text-gray-500">
+                                                        {order.items.length} items
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="text-right">
+                                                            <div className="font-black text-green-600 leading-none">{order.totalAmount.toLocaleString()} ብር</div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedOrder(order)
+                                                                setShowOrderDetails(true)
+                                                            }}
+                                                            className="text-[#8B4513] p-1.5 bg-white rounded-full shadow-sm border border-gray-100"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </>
                     )}
@@ -469,11 +517,11 @@ export default function OrdersReportPage() {
             {/* Export CSV Dropdown - Rendered at root level to avoid clipping */}
             {showExportDropdown && (
                 <>
-                    <div 
+                    <div
                         className="fixed inset-0 z-[200]"
                         onClick={() => setShowExportDropdown(false)}
                     />
-                    <div 
+                    <div
                         className="fixed z-[201] bg-white rounded-2xl shadow-2xl border-2 border-amber-200 py-2 min-w-[180px] overflow-hidden"
                         style={{
                             top: `${dropdownPosition.top}px`,

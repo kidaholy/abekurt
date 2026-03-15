@@ -213,7 +213,7 @@ export default function NetWorthReportPage() {
 
   return (
     <ProtectedRoute requiredRoles={["admin"]}>
-      <div className="min-h-screen bg-gray-50 p-8 font-sans print:bg-white print:p-0">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8 font-sans print:bg-white print:p-0">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
@@ -309,8 +309,8 @@ export default function NetWorthReportPage() {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">
@@ -338,7 +338,7 @@ export default function NetWorthReportPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">
@@ -568,7 +568,7 @@ export default function NetWorthReportPage() {
                 Inventory Investment Details
               </h3>
             </div>
-            <div className="overflow-x-auto">
+            <div className="hidden xl:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -697,6 +697,70 @@ export default function NetWorthReportPage() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="xl:hidden divide-y divide-gray-100">
+              {periodData?.usage?.stockAnalysis?.length > 0 ? (
+                periodData.usage.stockAnalysis
+                  .filter((item: any) => item.openingStock > 0 || item.transferred > 0 || item.closingStock > 0 || item.consumed > 0)
+                  .map((item: any, idx: number) => {
+                    const remains = item.closingStock || 0;
+                    const isLow = item.isLowStock || remains <= (item.minLimit || 5);
+                    const totalHandled = (item.openingStock || 0) + (item.transferred || 0);
+                    const sellUnitEquivalent = item.sellUnitEquivalent || 1;
+                    const portionsAvailable = sellUnitEquivalent > 0 ? remains / sellUnitEquivalent : 0;
+                    const potentialRevenue = portionsAvailable * (item.currentUnitCost || 0);
+
+                    return (
+                      <div key={idx} className="p-4 space-y-3 bg-white">
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-900 text-sm">{item.name}</span>
+                            <span className="text-[10px] text-gray-400 mt-1 uppercase font-black tracking-tight">{item.category}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${isLow ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                            {isLow ? 'Low' : 'OK'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                            <span className="text-gray-400 font-medium">Total Handled</span>
+                            <span className="font-bold text-gray-700">{totalHandled.toFixed(1)} {item.unit}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                            <span className="text-gray-400 font-medium">Remains</span>
+                            <span className="font-bold text-slate-900">{remains.toFixed(1)} {item.unit}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                            <span className="text-gray-400 font-medium">Unit Cost</span>
+                            <span className="font-bold text-orange-600">{(item.currentUnitCost || 0).toFixed(0)} Br</span>
+                          </div>
+                          <div className="flex justify-between items-center border-b border-gray-50 pb-1">
+                            <span className="text-gray-400 font-medium">Potential</span>
+                            <span className="font-bold text-blue-600">{potentialRevenue.toLocaleString()} Br</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-50 p-2 rounded-lg flex justify-between items-center">
+                          <div className="flex flex-col">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold">Total Purchase Value</span>
+                            <span className="font-black text-green-600">{(item.transferredValue || 0).toLocaleString()} Br</span>
+                          </div>
+                          {sellUnitEquivalent !== 1 && (
+                            <div className="text-right">
+                              <span className="text-[9px] text-amber-500 uppercase font-bold">Portions Left</span>
+                              <div className="font-black text-amber-600">≈ {portionsAvailable.toFixed(1)}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+              ) : (
+                <div className="p-8 text-center text-gray-500 text-sm italic">No inventory data available for this period.</div>
+              )}
             </div>
           </div>
         </div>

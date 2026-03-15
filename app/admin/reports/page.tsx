@@ -361,7 +361,7 @@ export default function ReportsPage() {
             `}</style>
 
             <div className="min-h-screen bg-gray-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 md:py-6 space-y-4">
                     <BentoNavbar />
 
                     {/* Top Header */}
@@ -370,9 +370,9 @@ export default function ReportsPage() {
                             <h1 className="text-2xl font-black text-gray-900">Business Intelligence</h1>
                             <p className="text-gray-500 text-sm mt-0.5">Consolidated reports · {SLIDES[activeSlide].label}</p>
                         </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                             {/* Time Range */}
-                            <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto scrollbar-hide flex-1 sm:flex-none">
+                            <div className="flex bg-gray-100 p-1 rounded-xl overflow-x-auto hide-scrollbar w-full sm:w-auto">
                                 {["today", "week", "month", "year"].map((r) => (
                                     <button
                                         key={r}
@@ -416,7 +416,7 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Main Layout: Side Tabs + Slide Panel */}
-                    <div className="flex gap-4 items-stretch">
+                    <div className="flex flex-col md:flex-row gap-4 items-stretch">
 
                         {/* Vertical Side Tab Bar */}
                         <div className="hidden md:flex flex-col gap-2 w-52 shrink-0">
@@ -441,7 +441,7 @@ export default function ReportsPage() {
                         </div>
 
                         {/* Mobile Horizontal Tab Bar */}
-                        <div className="md:hidden flex gap-2 overflow-x-auto pb-1 w-full">
+                        <div className="md:hidden flex gap-2 overflow-x-auto pb-4 hide-scrollbar w-full px-1">
                             {SLIDES.map((s, idx) => {
                                 const Icon = s.icon
                                 const isActive = idx === activeSlide
@@ -472,7 +472,7 @@ export default function ReportsPage() {
                             >
                                 {/* ── FINANCIAL SUMMARY ── */}
                                 {activeSlide === 0 && (
-                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-6">
+                                    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 bg-[#8B4513] rounded-full flex items-center justify-center text-white">
@@ -590,7 +590,7 @@ export default function ReportsPage() {
 
                                 {/* ── ORDER HISTORY ── */}
                                 {activeSlide === 1 && (
-                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-6">
+                                    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 bg-[#D2691E] rounded-full flex items-center justify-center text-white">
@@ -751,7 +751,7 @@ export default function ReportsPage() {
 
                                 {/* ── INVENTORY INVESTMENT ── */}
                                 {activeSlide === 2 && (
-                                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-6">
+                                    <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 bg-purple-600 rounded-full flex items-center justify-center text-white">

@@ -58,7 +58,7 @@ export function MenuItemCard({
       style={{ animationDelay: `${index * 50}ms` }}
     >
       {/* Item Image */}
-      <div className="relative w-full h-40 bg-gradient-to-br from-accent/20 to-primary/20 rounded-lg overflow-hidden mb-4">
+      <div className="relative w-full h-24 bg-gradient-to-br from-accent/20 to-primary/20 rounded-lg overflow-hidden mb-2">
         {image ? (
           <Image
             src={image}
@@ -86,12 +86,12 @@ export function MenuItemCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-accent/20 opacity-0 group-hover:opacity-100 transition-all duration-300" />
 
         {/* Price badge */}
-        <div className="absolute top-2 right-2 bg-accent text-accent-foreground px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+        <div className="absolute top-1 right-1 bg-accent text-accent-foreground px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg">
           {price} {t("common.currencyBr")}
         </div>
 
         {/* Category icon */}
-        <div className="absolute top-2 left-2 text-2xl animate-wiggle">
+        <div className="absolute top-1 left-1 text-lg">
           {getCategoryEmoji(category)}
         </div>
 
@@ -103,27 +103,24 @@ export function MenuItemCard({
         )}
       </div>
 
-      <div className="mb-3">
-        <div className="inline-block px-2 py-1 bg-accent/20 text-accent text-xs rounded font-semibold mb-2">
-          {category}
-        </div>
-        <h3 className="text-lg font-bold text-foreground group-hover:text-accent transition-colors">{name}</h3>
+      <div className="mb-2">
+        <h3 className="text-sm font-bold text-foreground group-hover:text-accent transition-colors truncate">{name}</h3>
       </div>
 
-      {description && <p className="text-sm text-muted-foreground mb-3 line-clamp-2 group-hover:text-accent/80 transition-colors">{description}</p>}
+      {description && <p className="text-[10px] text-muted-foreground mb-2 line-clamp-1 group-hover:text-accent/80 transition-colors">{description}</p>}
 
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-2xl font-bold text-accent">{price} {t("common.currencyBr")}</div>
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-sm font-bold text-accent">{price} {t("common.currencyBr")}</div>
         {preparationTime && (
-          <div className="flex items-center gap-1 text-xs bg-primary/20 text-foreground px-2 py-1 rounded-full">
-            <span className="animate-rotate-360">⏱</span> {preparationTime}m
+          <div className="flex items-center gap-0.5 text-[9px] bg-primary/20 text-foreground px-1.5 py-0.5 rounded-full">
+            <span>⏱</span> {preparationTime}m
           </div>
         )}
       </div>
 
       <button
         onClick={onAddToCart}
-        className={`w-full py-3 rounded-lg font-bold transition-all ${isSelected
+        className={`w-full py-2 rounded-lg font-bold text-xs transition-all ${isSelected
           ? "bg-accent/30 text-accent border-2 border-accent animate-pulse-glow"
           : "bg-accent text-accent-foreground hover:opacity-90 transform hover:scale-105"
           }`}

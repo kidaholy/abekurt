@@ -43,7 +43,7 @@ export default function CashierPOSPage() {
   const [tableNumber, setTableNumber] = useState("")
   const [isButcherOrder, setIsButcherOrder] = useState(false)
   const [isDrinksOrder, setIsDrinksOrder] = useState(false)
-  const [showMobileCart, setShowMobileCart] = useState(false)
+  const [showCart, setShowCart] = useState(false)
   const [paperWidth, setPaperWidth] = useState(80)
   const [selectedBatchId, setSelectedBatchId] = useState<string>("")
   const [variantModal, setVariantModal] = useState<{ item: MenuItem } | null>(null)
@@ -240,6 +240,23 @@ export default function CashierPOSPage() {
     setCartItems(cartItems.filter((item) => item.id !== id))
   }
 
+  const handleClearCart = async () => {
+    const confirmed = await confirm({
+      title: "Clear Cart",
+      message: "Are you sure you want to remove all items from your cart?",
+      type: "warning"
+    })
+
+    if (confirmed) {
+      setCartItems([])
+      notify({
+        title: "Cart Cleared",
+        message: "All items have been removed from your cart.",
+        type: "success"
+      })
+    }
+  }
+
   const handleQuantityChange = (id: string, quantity: number) => {
     if (quantity === 0) {
       handleRemoveFromCart(id)
@@ -391,7 +408,7 @@ export default function CashierPOSPage() {
 
   return (
     <ProtectedRoute requiredRoles={["cashier"]}>
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           <BentoNavbar />
 
@@ -416,166 +433,107 @@ export default function CashierPOSPage() {
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-600">Cart Items</div>
-                <div className="text-2xl font-bold text-blue-600">{cartItems.length}</div>
+              <div className="text-right flex items-center gap-4">
+                <div className="hidden md:block">
+                  <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Store Inventory</div>
+                  <div className="text-2xl font-black text-blue-600">{menuItems.length}</div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Menu Area */}
-            <div className="lg:col-span-8 space-y-6">
-              {/* Category Filter */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setCategoryFilter(cat)}
-                      className={`px-4 py-2 rounded-lg font-black text-xs whitespace-nowrap transition-all shadow-sm flex items-center gap-2 flex-shrink-0 ${categoryFilter === cat
-                        ? "bg-blue-600 text-white scale-105"
-                        : "bg-white text-gray-500 hover:bg-gray-50 border border-gray-100"
-                        }`}
-                    >
-                      {cat !== "all" && <span className="text-sm opacity-70">🍳</span>}
-                      {cat === "all" ? "All Items" : cat}
-                    </button>
+          <div className="flex flex-col gap-6">
+            {/* Category Filter */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(cat)}
+                    className={`px-4 py-2 rounded-lg font-black text-xs whitespace-nowrap transition-all shadow-sm flex items-center gap-2 flex-shrink-0 ${categoryFilter === cat
+                      ? "bg-blue-600 text-white scale-105"
+                      : "bg-white text-gray-500 hover:bg-gray-50 border border-gray-100"
+                      }`}
+                  >
+                    {cat !== "all" && <span className="text-sm opacity-70">🍳</span>}
+                    {cat === "all" ? "All Items" : cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Menu Grid */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 min-h-[600px]">
+              {menuLoading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <RefreshCw className="h-12 w-12 animate-spin text-gray-400 mb-4" />
+                  <p className="text-gray-600">Loading menu...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-20">
+                  <div className="text-6xl mb-4">⚠️</div>
+                  <h2 className="text-xl font-bold text-red-600 mb-2">Failed to Load Menu</h2>
+                  <p className="text-gray-600 mb-6">{error}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : filteredItems.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="text-6xl mb-4 opacity-30">🍽️</div>
+                  <h2 className="text-xl font-medium text-gray-400">No items found</h2>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
+                  {filteredItems.map((item, idx) => (
+                    <div key={item._id} className="transform transition-transform hover:scale-[1.02]">
+                      <MenuItemCard
+                        name={item.name}
+                        price={item.price}
+                        description={item.description}
+                        image={item.image}
+                        category={item.category}
+                        preparationTime={item.preparationTime}
+                        menuId={item.menuId}
+                        onAddToCart={() => handleAddToCart(item)}
+                        index={idx}
+                      />
+                    </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Menu Grid */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 min-h-[600px]">
-                {menuLoading ? (
-                  <div className="flex flex-col items-center justify-center py-20">
-                    <RefreshCw className="h-12 w-12 animate-spin text-gray-400 mb-4" />
-                    <p className="text-gray-600">Loading menu...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-20">
-                    <div className="text-6xl mb-4">⚠️</div>
-                    <h2 className="text-xl font-bold text-red-600 mb-2">Failed to Load Menu</h2>
-                    <p className="text-gray-600 mb-6">{error}</p>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : filteredItems.length === 0 ? (
-                  <div className="text-center py-20">
-                    <div className="text-6xl mb-4 opacity-30">🍽️</div>
-                    <h2 className="text-xl font-medium text-gray-400">No items found</h2>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filteredItems.map((item, idx) => (
-                      <div key={item._id} className="transform transition-transform hover:scale-[1.02]">
-                        <MenuItemCard
-                          name={item.name}
-                          price={item.price}
-                          description={item.description}
-                          image={item.image}
-                          category={item.category}
-                          preparationTime={item.preparationTime}
-                          menuId={item.menuId}
-                          onAddToCart={() => handleAddToCart(item)}
-                          index={idx}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Cart Sidebar - Desktop */}
-            <div className="hidden lg:block lg:col-span-4 sticky top-6">
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 min-h-[600px]">
-                <div className="flex items-center gap-3 mb-6">
-                  <ShoppingCart className="h-6 w-6 text-blue-600" />
-                  <h2 className="text-xl font-bold text-gray-900">Active Cart</h2>
-                </div>
-                <CartSidebar
-                  items={cartItems}
-                  onRemove={handleRemoveFromCart}
-                  onQuantityChange={handleQuantityChange}
-                  onCheckout={handleCheckout}
-                  isLoading={isCheckoutLoading}
-                  isEmbedded={true}
-                  tableNumber={tableNumber}
-                  setTableNumber={setTableNumber}
-                  isMeatOnly={isMeatOnly}
-                  isDrinksOnly={isDrinksOnly}
-                  isButcherOrder={isButcherOrder}
-                  setIsButcherOrder={setIsButcherOrder}
-                  isDrinksOrder={isDrinksOrder}
-                  setIsDrinksOrder={setIsDrinksOrder}
-                  paperWidth={paperWidth}
-                  setPaperWidth={setPaperWidth}
-                  assignedBatchId={selectedBatchId || user?.batchId}
-                  setSelectedBatchId={setSelectedBatchId}
-                />
-              </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Floating Cart Button - Mobile Only */}
-        <div className="lg:hidden fixed bottom-6 right-6 z-40">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setShowMobileCart(true)}
-            className="bg-[#2d5a41] text-white p-4 rounded-full shadow-2xl relative flex items-center justify-center"
-          >
-            <ShoppingCart size={24} />
-            {cartItems.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-white">
-                {cartItems.length}
-              </span>
-            )}
-          </motion.button>
-        </div>
-
-        {/* Mobile Cart Drawer */}
+        {/* Universal Cart Drawer */}
         <AnimatePresence>
-          {showMobileCart && (
+          {showCart && (
             <>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => setShowMobileCart(false)}
-                className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+                onClick={() => setShowCart(false)}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
               />
               <motion.div
                 initial={{ x: "100%" }}
                 animate={{ x: 0 }}
                 exit={{ x: "100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="lg:hidden fixed inset-y-0 right-0 w-full md:w-[400px] bg-white z-[101] shadow-2xl flex flex-col"
+                className="fixed inset-y-0 right-0 w-full md:w-[450px] bg-white z-[101] shadow-2xl flex flex-col"
               >
-                <div className="p-6 border-b flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <ShoppingCart className="text-[#2d5a41]" />
-                    <h2 className="text-xl font-bold">Your Order</h2>
-                  </div>
-                  <button
-                    onClick={() => setShowMobileCart(false)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <X size={24} />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-hidden p-6">
+                <div className="flex-1 overflow-hidden">
                   <CartSidebar
                     items={cartItems}
                     onRemove={handleRemoveFromCart}
                     onQuantityChange={handleQuantityChange}
                     onCheckout={handleCheckout}
-                    onClose={() => setShowMobileCart(false)}
+                    onClose={() => setShowCart(false)}
                     isLoading={isCheckoutLoading}
                     isEmbedded={true}
                     tableNumber={tableNumber}
@@ -590,6 +548,7 @@ export default function CashierPOSPage() {
                     setPaperWidth={setPaperWidth}
                     assignedBatchId={selectedBatchId || user?.batchId}
                     setSelectedBatchId={setSelectedBatchId}
+                    onClear={handleClearCart}
                   />
                 </div>
               </motion.div>
@@ -632,6 +591,27 @@ export default function CashierPOSPage() {
             </div>
           </div>
         )}
+
+        {/* Floating Circular Cart Button */}
+        <div className="fixed bottom-8 right-8 z-[90]">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowCart(true)}
+            className="w-16 h-16 bg-[#2d5a41] text-white rounded-full shadow-2xl flex items-center justify-center relative group overflow-hidden"
+          >
+            {/* Glossy overlay */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+            <ShoppingCart size={28} className="group-hover:animate-bounce" />
+
+            {cartItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-in zoom-in duration-300">
+                {cartItems.length}
+              </span>
+            )}
+          </motion.button>
+        </div>
 
         {/* Confirmation and Notification Cards */}
         <ConfirmationCard

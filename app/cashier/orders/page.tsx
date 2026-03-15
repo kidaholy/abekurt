@@ -6,7 +6,7 @@ import { BentoNavbar } from "@/components/bento-navbar"
 import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ShoppingBag, Clock, DollarSign, CheckCircle, XCircle, RefreshCw, TrendingUp } from 'lucide-react'
+import { ShoppingBag, RefreshCw } from 'lucide-react'
 
 interface OrderItem {
   menuItemId: string
@@ -77,28 +77,7 @@ export default function CashierOrdersPage() {
     return matchesStatus && matchesCategory
   })
 
-  const stats = {
-    total: orders.filter(o => !isDeletedOrder(o)).length,
-    preparing: orders.filter((o) => !isDeletedOrder(o) && ((o.status as string) === "preparing" || (o.status as string) === "pending")).length,
-    completed: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").length,
-    // Today's revenue includes all non-cancelled orders
-    revenue: orders.filter((o) => !isDeletedOrder(o)).reduce((sum, o) => sum + o.totalAmount, 0),
-    // Separate revenue for food and drinks
-    foodRevenue: orders.filter((o) => !isDeletedOrder(o)).reduce((sum, o) => {
-      const foodTotal = o.items
-        .filter(item => (item as any).mainCategory === "Food")
-        .reduce((s, i) => s + (i.price * i.quantity), 0)
-      return sum + foodTotal
-    }, 0),
-    drinkRevenue: orders.filter((o) => !isDeletedOrder(o)).reduce((sum, o) => {
-      const drinkTotal = o.items
-        .filter(item => (item as any).mainCategory === "Drinks")
-        .reduce((s, i) => s + (i.price * i.quantity), 0)
-      return sum + drinkTotal
-    }, 0),
-    // Completed revenue for reference
-    completedRevenue: orders.filter((o) => !isDeletedOrder(o) && o.status === "completed").reduce((sum, o) => sum + o.totalAmount, 0),
-  }
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -136,38 +115,7 @@ export default function CashierOrdersPage() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                {/* Revenue Stats */}
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="bg-gradient-to-br from-emerald-50 to-green-100 rounded-xl p-4 border border-emerald-200 shadow-sm min-w-[150px]">
-                    <div className="flex items-center gap-2 mb-1">
-                      <TrendingUp className="h-4 w-4 text-emerald-600" />
-                      <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Total Revenue</span>
-                    </div>
-                    <div className="text-xl font-black text-emerald-800">
-                      {loading ? '...' : `${stats.revenue.toLocaleString()} Br`}
-                    </div>
-                  </div>
 
-                  <div className="bg-orange-50 rounded-xl p-4 border border-orange-100 shadow-sm min-w-[140px]">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs">🍳</span>
-                      <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Food Sales</span>
-                    </div>
-                    <div className="text-xl font-black text-orange-800">
-                      {loading ? '...' : `${stats.foodRevenue.toLocaleString()} Br`}
-                    </div>
-                  </div>
-
-                  <div className="bg-[#2d5a41]/5 rounded-xl p-4 border border-[#2d5a41]/10 shadow-sm min-w-[140px]">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs">🍹</span>
-                      <span className="text-[10px] font-black text-[#2d5a41] uppercase tracking-widest">Drink Sales</span>
-                    </div>
-                    <div className="text-xl font-black text-[#2d5a41]">
-                      {loading ? '...' : `${stats.drinkRevenue.toLocaleString()} Br`}
-                    </div>
-                  </div>
-                </div>
                 <button
                   onClick={fetchOrders}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

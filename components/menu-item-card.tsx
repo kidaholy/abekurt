@@ -53,88 +53,79 @@ export function MenuItemCard({
 
   return (
     <div
-      className={`group card-base hover:shadow-2xl transition-all transform hover:-translate-y-2 cursor-pointer animate-slide-in-up overflow-hidden border-2 ${isSelected ? "border-accent shadow-lg shadow-accent/50" : "border-border"
-        }`}
+      className={`group transition-all duration-200 cursor-pointer animate-slide-in-up overflow-hidden
+        flex flex-row md:flex-col md:card-base md:p-6 p-2 gap-3 md:gap-0
+        border-b md:border-2 border-gray-100 md:border-border
+        ${isSelected ? "bg-accent/5 md:bg-white md:border-accent md:shadow-lg md:shadow-accent/50" : "bg-white"}
+      `}
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      {/* Item Image */}
-      <div className="relative w-full h-24 bg-gradient-to-br from-accent/20 to-primary/20 rounded-lg overflow-hidden mb-2">
+      {/* Item Image - Ultra compact on mobile */}
+      <div className="relative w-14 h-14 md:w-full md:h-24 bg-gradient-to-br from-accent/20 to-primary/20 rounded-lg overflow-hidden flex-shrink-0">
         {image ? (
           <Image
             src={image}
             alt={name}
             fill
-            className="object-cover transition-all duration-500 group-hover:scale-110 group-hover:rotate-1"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            onError={(e) => {
-              // Fallback to category emoji if image fails to load
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                parent.innerHTML = `<div class="w-full h-full flex items-center justify-center"><div class="text-6xl opacity-70 animate-float">${getCategoryEmoji(category)}</div></div>`;
-              }
-            }}
+            className="object-cover transition-all duration-500 group-hover:scale-110"
+            sizes="(max-width: 768px) 56px, (max-width: 1200px) 33vw, 20vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <div className="text-6xl opacity-70 animate-float">{getCategoryEmoji(category)}</div>
+            <div className="text-xl md:text-6xl opacity-70">{getCategoryEmoji(category)}</div>
           </div>
         )}
+      </div>
 
-        {/* Animated overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-accent/20 opacity-0 group-hover:opacity-100 transition-all duration-300" />
-
-        {/* Price badge */}
-        <div className="absolute top-1 right-1 bg-accent text-accent-foreground px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg">
-          {price} {t("common.currencyBr")}
+      <div className="flex-1 min-w-0 flex flex-row items-center justify-between md:flex-col md:items-stretch gap-2">
+        <div className="min-w-0 flex-1 md:mt-2">
+          <h3 className="text-[13px] md:text-sm font-bold text-gray-900 truncate leading-none md:leading-normal">
+            {name}
+          </h3>
+          <div className="flex items-center gap-2 mt-1 whitespace-nowrap">
+            <span className="text-[10px] text-gray-400 font-mono">#{menuId || index}</span>
+            <span className="text-gray-300 md:hidden">•</span>
+            <span className="text-[10px] md:text-sm font-black text-accent md:hidden">
+              {price} Br
+            </span>
+          </div>
+          {/* Hide description on mobile to save height */}
+          {description && (
+            <p className="hidden md:block text-[10px] text-muted-foreground mt-1 line-clamp-1">{description}</p>
+          )}
         </div>
 
-        {/* Category icon */}
-        <div className="absolute top-1 left-1 text-lg">
-          {getCategoryEmoji(category)}
+        <div className="flex items-center gap-3 md:mt-3">
+          <div className="hidden md:block text-sm font-black text-accent">
+            {price} {t("common.currencyBr")}
+          </div>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToCart();
+            }}
+            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 md:w-full md:py-2 rounded-lg font-black text-[11px] md:text-xs transition-all
+              ${isSelected
+                ? "bg-green-100 text-green-700 border border-green-200"
+                : "bg-accent text-accent-foreground shadow-sm active:scale-90"
+              }
+            `}
+          >
+            {isSelected ? (
+              <>
+                <span className="text-xs">✓</span>
+                <span className="md:inline">{t("menu.added")}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-xs">🛒</span>
+                <span className="md:inline">{t("menu.add")}</span>
+              </>
+            )}
+          </button>
         </div>
-
-        {/* Menu ID Badge */}
-        {menuId && (
-          <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white px-2 py-0.5 rounded text-[10px] font-mono border border-white/20">
-            ID: {menuId}
-          </div>
-        )}
       </div>
-
-      <div className="mb-2">
-        <h3 className="text-sm font-bold text-foreground group-hover:text-accent transition-colors truncate">{name}</h3>
-      </div>
-
-      {description && <p className="text-[10px] text-muted-foreground mb-2 line-clamp-1 group-hover:text-accent/80 transition-colors">{description}</p>}
-
-      <div className="flex justify-between items-center mb-2">
-        <div className="text-sm font-bold text-accent">{price} {t("common.currencyBr")}</div>
-        {preparationTime && (
-          <div className="flex items-center gap-0.5 text-[9px] bg-primary/20 text-foreground px-1.5 py-0.5 rounded-full">
-            <span>⏱</span> {preparationTime}m
-          </div>
-        )}
-      </div>
-
-      <button
-        onClick={onAddToCart}
-        className={`w-full py-2 rounded-lg font-bold text-xs transition-all ${isSelected
-          ? "bg-accent/30 text-accent border-2 border-accent animate-pulse-glow"
-          : "bg-accent text-accent-foreground hover:opacity-90 transform hover:scale-105"
-          }`}
-      >
-        {isSelected ? (
-          <>
-            <span className="animate-bounce">✓</span> {t("menu.addedToCart")}
-          </>
-        ) : (
-          <>
-            <span className="group-hover:animate-wiggle">🛒</span> {t("menu.addToOrder")}
-          </>
-        )}
-      </button>
     </div>
   )
 }

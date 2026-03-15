@@ -54,7 +54,7 @@ export function BentoNavbar() {
 
     return (
         <>
-            <nav className="flex justify-between items-center mb-10 px-6 py-3 bg-white/70 backdrop-blur-xl rounded-full custom-shadow border border-white/50 relative z-[100]">
+            <nav className="flex justify-between items-center mb-4 md:mb-10 px-4 md:px-6 py-2 md:py-3 bg-white/70 backdrop-blur-xl rounded-full custom-shadow border border-white/50 relative z-[100]">
                 <div className="flex items-center gap-4">
                     {/* Hamburger Button */}
                     <button

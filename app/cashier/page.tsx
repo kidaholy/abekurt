@@ -47,7 +47,7 @@ export default function CashierPOSPage() {
   const [paperWidth, setPaperWidth] = useState(80)
   const [selectedBatchId, setSelectedBatchId] = useState<string>("")
   const [variantModal, setVariantModal] = useState<{ item: MenuItem } | null>(null)
-  const { token, user } = useAuth()
+  const { token, user, logout } = useAuth()
   const { t } = useLanguage()
   const { settings } = useSettings()
   const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
@@ -410,36 +410,8 @@ export default function CashierPOSPage() {
     <ProtectedRoute requiredRoles={["cashier"]}>
       <div className="min-h-screen bg-gray-50 p-1 md:p-6">
         <div className="max-w-[1900px] mx-auto md:space-y-6">
-          <div className="hidden md:block">
+          <div className="mb-4 md:mb-0">
             <BentoNavbar />
-          </div>
-
-          {/* Mobile Sticky Header - Slim and Functional */}
-          <div className="md:hidden sticky top-0 z-[50] bg-white/90 backdrop-blur-md border-b border-gray-200 px-3 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-blue-600 rounded-lg">
-                <ShoppingCart className="h-4 w-4 text-white" />
-              </div>
-              <h1 className="text-sm font-black text-gray-900 tracking-tight">POS</h1>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-gray-900 leading-none">{user?.name}</p>
-                <p className="text-[8px] text-gray-500">{new Date().toLocaleDateString("en-US", { weekday: "short", day: "numeric" })}</p>
-              </div>
-              <button
-                onClick={() => setShowCart(true)}
-                className="relative p-2 bg-gray-100 rounded-full active:scale-90"
-              >
-                <ShoppingCart size={16} className="text-gray-700" />
-                {cartItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">
-                    {cartItems.length}
-                  </span>
-                )}
-              </button>
-            </div>
           </div>
 
           {/* Desktop Header */}
@@ -465,98 +437,105 @@ export default function CashierPOSPage() {
                 <div className="text-2xl font-black text-blue-600">{menuItems.length}</div>
               </div>
             </div>
+          </div>
 
-            <div className="flex flex-col lg:flex-row gap-4 items-start pb-20 md:pb-0">
-              <div className="flex-1 min-w-0 flex flex-col md:gap-4">
-                {/* Category Filter - Sticky on mobile */}
-                <div className="sticky top-[45px] md:static z-[40] bg-white md:bg-transparent border-b md:border-none border-gray-100 px-3 py-2 md:p-0">
-                  <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setCategoryFilter(cat)}
-                        className={`px-2.5 py-1.5 rounded-full font-black text-[10px] md:text-xs whitespace-nowrap transition-all flex items-center gap-1 flex-shrink-0 ${categoryFilter === cat
-                          ? "bg-blue-600 text-white shadow-md shadow-blue-200"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200 border border-transparent"
-                          }`}
-                      >
-                        {cat === "all" ? "All Items" : cat}
-                      </button>
+          <div className="flex flex-col lg:flex-row gap-4 items-start pb-20 md:pb-0">
+            <div className="flex-1 min-w-0 flex flex-col md:gap-4">
+              {/* Category Filter - Robust Horizontal Slider */}
+              <div className="sticky top-0 md:static z-[40] bg-gray-50/95 backdrop-blur-md md:bg-transparent border-b md:border-none border-gray-200 w-full">
+                <div
+                  className="flex flex-nowrap overflow-x-scroll px-4 md:px-0 gap-3 py-4 scroll-smooth"
+                  style={{
+                    WebkitOverflowScrolling: 'touch',
+                    touchAction: 'pan-x',
+                    scrollbarWidth: 'thin',
+                  }}
+                >
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCategoryFilter(cat)}
+                      className={`px-5 py-2.5 rounded-full font-black text-[14px] md:text-sm whitespace-nowrap transition-all flex-shrink-0 active:scale-90 shadow-sm ${categoryFilter === cat
+                        ? "bg-[#2d5a41] text-white shadow-[#2d5a41]/30 ring-2 ring-[#2d5a41]/20 scale-105"
+                        : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                        }`}
+                    >
+                      {cat === "all" ? "ALL ITEMS" : cat.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Menu Grid */}
+              <div className="md:bg-white md:rounded-xl md:p-6 pt-2 md:shadow-sm md:border border-gray-200 min-h-[600px]">
+                {menuLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <RefreshCw className="h-12 w-12 animate-spin text-gray-400 mb-4" />
+                    <p className="text-gray-600">Loading menu...</p>
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-20">
+                    <div className="text-6xl mb-4">⚠️</div>
+                    <h2 className="text-xl font-bold text-red-600 mb-2">Failed to Load Menu</h2>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : filteredItems.length === 0 ? (
+                  <div className="text-center py-20">
+                    <div className="text-6xl mb-4 opacity-30">🍽️</div>
+                    <h2 className="text-xl font-medium text-gray-400">No items found</h2>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-0 md:gap-4 bg-white md:bg-transparent rounded-2xl md:rounded-none overflow-hidden shadow-sm md:shadow-none border border-gray-100 md:border-none">
+                    {filteredItems.map((item, idx) => (
+                      <div key={item._id} className="transform transition-transform md:hover:scale-[1.02]">
+                        <MenuItemCard
+                          name={item.name}
+                          price={item.price}
+                          description={item.description}
+                          image={item.image}
+                          category={item.category}
+                          preparationTime={item.preparationTime}
+                          menuId={item.menuId}
+                          onAddToCart={() => handleAddToCart(item)}
+                          index={idx}
+                        />
+                      </div>
                     ))}
                   </div>
-                </div>
-
-                {/* Menu Grid */}
-                <div className="bg-white rounded-xl p-3 md:p-6 shadow-sm border border-gray-200 min-h-[600px]">
-                  {menuLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                      <RefreshCw className="h-12 w-12 animate-spin text-gray-400 mb-4" />
-                      <p className="text-gray-600">Loading menu...</p>
-                    </div>
-                  ) : error ? (
-                    <div className="text-center py-20">
-                      <div className="text-6xl mb-4">⚠️</div>
-                      <h2 className="text-xl font-bold text-red-600 mb-2">Failed to Load Menu</h2>
-                      <p className="text-gray-600 mb-6">{error}</p>
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  ) : filteredItems.length === 0 ? (
-                    <div className="text-center py-20">
-                      <div className="text-6xl mb-4 opacity-30">🍽️</div>
-                      <h2 className="text-xl font-medium text-gray-400">No items found</h2>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2 md:gap-3">
-                      {filteredItems.map((item, idx) => (
-                        <div key={item._id} className="transform transition-transform hover:scale-[1.02]">
-                          <MenuItemCard
-                            name={item.name}
-                            price={item.price}
-                            description={item.description}
-                            image={item.image}
-                            category={item.category}
-                            preparationTime={item.preparationTime}
-                            menuId={item.menuId}
-                            onAddToCart={() => handleAddToCart(item)}
-                            index={idx}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Desktop Side Cart - Large prominent sidebar */}
+                )}
               </div>
-              <div className="hidden lg:block w-[400px] sticky top-6 bg-white rounded-[32px] shadow-xl border border-gray-200 overflow-hidden h-[calc(100vh-120px)]">
-                <CartSidebar
-                  items={cartItems}
-                  onRemove={handleRemoveFromCart}
-                  onQuantityChange={handleQuantityChange}
-                  onCheckout={handleCheckout}
-                  onClose={undefined}
-                  isLoading={isCheckoutLoading}
-                  isEmbedded={true}
-                  tableNumber={tableNumber}
-                  setTableNumber={setTableNumber}
-                  isMeatOnly={isMeatOnly}
-                  isDrinksOnly={isDrinksOnly}
-                  isButcherOrder={isButcherOrder}
-                  setIsButcherOrder={setIsButcherOrder}
-                  isDrinksOrder={isDrinksOrder}
-                  setIsDrinksOrder={setIsDrinksOrder}
-                  paperWidth={paperWidth}
-                  setPaperWidth={setPaperWidth}
-                  assignedBatchId={selectedBatchId || user?.batchId}
-                  setSelectedBatchId={setSelectedBatchId}
-                  onClear={handleClearCart}
-                />
-              </div>
+
+              {/* Desktop Side Cart - Large prominent sidebar */}
+            </div>
+            <div className="hidden lg:block w-[400px] sticky top-6 bg-white rounded-[32px] shadow-xl border border-gray-200 overflow-hidden h-[calc(100vh-120px)]">
+              <CartSidebar
+                items={cartItems}
+                onRemove={handleRemoveFromCart}
+                onQuantityChange={handleQuantityChange}
+                onCheckout={handleCheckout}
+                onClose={undefined}
+                isLoading={isCheckoutLoading}
+                isEmbedded={true}
+                tableNumber={tableNumber}
+                setTableNumber={setTableNumber}
+                isMeatOnly={isMeatOnly}
+                isDrinksOnly={isDrinksOnly}
+                isButcherOrder={isButcherOrder}
+                setIsButcherOrder={setIsButcherOrder}
+                isDrinksOrder={isDrinksOrder}
+                setIsDrinksOrder={setIsDrinksOrder}
+                paperWidth={paperWidth}
+                setPaperWidth={setPaperWidth}
+                assignedBatchId={selectedBatchId || user?.batchId}
+                setSelectedBatchId={setSelectedBatchId}
+                onClear={handleClearCart}
+              />
             </div>
           </div>
 
@@ -644,25 +623,26 @@ export default function CashierPOSPage() {
           )}
 
           {/* Floating Circular Cart Button - Hidden on Desktop when sidebar is visible */}
-          <div className="fixed bottom-8 right-8 z-[90] lg:hidden">
+          <div className="fixed bottom-8 right-8 z-[80] lg:hidden">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowCart(true)}
-              className="w-16 h-16 bg-[#2d5a41] text-white rounded-full shadow-2xl flex items-center justify-center relative group overflow-hidden"
+              className="w-16 h-16 bg-[#2d5a41] text-white rounded-full shadow-2xl flex items-center justify-center relative group"
             >
               {/* Glossy overlay */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-full z-0" />
 
-              <ShoppingCart size={28} className="group-hover:animate-bounce" />
+              <ShoppingCart size={28} className="group-hover:animate-bounce z-10" />
 
               {cartItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-in zoom-in duration-300">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-in zoom-in duration-300 z-20">
                   {cartItems.length}
                 </span>
               )}
             </motion.button>
           </div>
+
 
           {/* Confirmation and Notification Cards */}
           <ConfirmationCard
@@ -688,6 +668,6 @@ export default function CashierPOSPage() {
           />
         </div>
       </div>
-    </ProtectedRoute>
+    </ProtectedRoute >
   )
 }

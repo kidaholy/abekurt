@@ -408,8 +408,8 @@ export default function CashierPOSPage() {
 
   return (
     <ProtectedRoute requiredRoles={["cashier"]}>
-      <div className="min-h-screen bg-gray-50 p-1 md:p-6">
-        <div className="max-w-[1900px] mx-auto md:space-y-6">
+      <div className="min-h-screen bg-gray-50 p-1 md:p-6 overflow-x-hidden">
+        <div className="max-w-[1900px] mx-auto md:space-y-6 w-full overflow-hidden">
           <div className="mb-4 md:mb-0">
             <BentoNavbar />
           </div>
@@ -439,8 +439,8 @@ export default function CashierPOSPage() {
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-4 items-start pb-20 md:pb-0">
-            <div className="flex-1 min-w-0 flex flex-col md:gap-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start pb-20 md:pb-0 w-full overflow-hidden">
+            <div className="flex-1 min-w-0 w-full flex flex-col md:gap-4 overflow-hidden">
               {/* Category Filter - Robust Horizontal Slider */}
               <div className="sticky top-0 md:static z-[40] bg-gray-50/95 backdrop-blur-md md:bg-transparent border-b md:border-none border-gray-200 w-full">
                 <div
@@ -491,7 +491,7 @@ export default function CashierPOSPage() {
                     <h2 className="text-xl font-medium text-gray-400">No items found</h2>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-0 md:gap-4 bg-white md:bg-transparent rounded-2xl md:rounded-none overflow-hidden shadow-sm md:shadow-none border border-gray-100 md:border-none">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-0 md:gap-4 bg-white md:bg-transparent rounded-2xl md:rounded-none overflow-hidden shadow-sm md:shadow-none border border-gray-100 md:border-none w-full">
                     {filteredItems.map((item, idx) => (
                       <div key={item._id} className="transform transition-transform md:hover:scale-[1.02]">
                         <MenuItemCard

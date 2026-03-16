@@ -57,6 +57,7 @@ export function MenuItemCard({
       className={`group transition-all duration-200 cursor-pointer animate-slide-in-up overflow-hidden
         flex flex-row md:flex-col md:card-base md:p-6 p-3 gap-3 md:gap-0
         border-b border-gray-100 md:border-2 md:border-border
+        w-full min-w-0 max-w-full
         ${isSelected ? "bg-accent/5 md:bg-white md:border-accent shadow-sm md:shadow-lg md:shadow-accent/50" : "bg-white hover:bg-gray-50 md:hover:bg-white"}
       `}
       style={{ animationDelay: `${index * 50}ms` }}

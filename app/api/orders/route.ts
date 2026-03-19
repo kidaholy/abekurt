@@ -188,11 +188,11 @@ export async function POST(request: Request) {
     const stockIds = Array.from(stockConsumptionMap.keys())
 
     // FETCH DATA IN PARALLEL
-    const [linkedMenuItems, stockItems, lastOrder, tableData] = await Promise.all([
+    const [linkedMenuItems, stockItems, recentOrders, tableData] = await Promise.all([
       MenuItem.find({ _id: { $in: menuItemIds } }).populate('stockItemId'),
       Stock.find({ _id: { $in: stockIds } }),
-      // Only consider orders with a pure numeric orderNumber (new format), ignoring old "ORD-..." ones
-      Order.findOne({ orderNumber: /^\d+$/ }, { orderNumber: 1 }).sort({ createdAt: -1 }),
+      // Fetch the last 50 numeric orders to find the true numeric maximum
+      Order.find({ orderNumber: /^\d+$/ }, { orderNumber: 1 }).sort({ createdAt: -1 }).limit(50).lean(),
       tableId ? Table.findById(tableId) :
         (tableNumber && tableNumber !== "Buy&Go" ? Table.findOne({ tableNumber }) : null)
     ])
@@ -215,14 +215,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Generate order number (purely numeric format: 001, 002, ...)
-    let orderNumber: string
-    if (lastOrder && lastOrder.orderNumber) {
-      const lastNumber = Number(lastOrder.orderNumber)
-      orderNumber = String(lastNumber + 1).padStart(3, "0")
-    } else {
-      orderNumber = "001"
-    }
+    // Robust Order Number Generation: Find absolute max from recent numeric orders
+    const numericOrders = (recentOrders as any[]).map(o => parseInt(o.orderNumber, 10)).filter(n => !isNaN(n));
+    const maxOrderNumber = numericOrders.length > 0 ? Math.max(...numericOrders) : 0;
+    let nextOrderNumber = maxOrderNumber + 1;
 
     // Lookup batch
     let batchId = body.batchId || (decoded.role === 'cashier' ? decoded.batchId : undefined)
@@ -236,16 +232,17 @@ export async function POST(request: Request) {
 
     // Create order data
     const orderData = {
-      orderNumber,
       items: items.map((item: any) => {
         const menu = linkedMenuItems.find(m => m._id.toString() === item.menuItemId)
+        const isDrink = menu?.mainCategory?.toLowerCase() === "drinks"
+
         return {
           ...item,
           menuId: menu?.menuId,
           category: menu?.category, // Store category for kitchen routing
           mainCategory: menu?.mainCategory, // Persist for accurate reporting separation
-          preparationTime: menu?.preparationTime || 0,
-          status: "pending",
+          preparationTime: isDrink ? 0 : (menu?.preparationTime || 0),
+          status: isDrink ? "served" : "pending",
           modifiers: item.modifiers || [],
           notes: item.notes || ""
         }
@@ -257,7 +254,10 @@ export async function POST(request: Request) {
       totalAmount,
       subtotal: subtotal || totalAmount,
       tax: tax || 0,
-      status: "preparing" as const,
+      status: items.every((item: any) => {
+        const menu = linkedMenuItems.find(m => m._id.toString() === item.menuItemId)
+        return menu?.mainCategory?.toLowerCase() === "drinks"
+      }) ? "served" : "preparing",
       paymentMethod: paymentMethod || "cash",
       customerName: customerName || `Table ${tableNumber}`,
       tableNumber,
@@ -265,14 +265,45 @@ export async function POST(request: Request) {
       batchId,
       batchNumber,
       createdBy: decoded.id,
-      thresholdMinutes: Math.max(...linkedMenuItems.map(m => m.preparationTime || 10)) || 10
+      thresholdMinutes: (() => {
+        const foodItems = linkedMenuItems.filter(m => m.mainCategory?.toLowerCase() !== "drinks")
+        if (foodItems.length === 0) return 0
+        return Math.max(...foodItems.map(m => m.preparationTime || 10))
+      })() || 10
     }
 
-    console.log("💾 Creating order in database:", orderData)
+    // 🔥 RETRY LOOP: Handle rare race conditions for duplicate orderNumber
+    let order: any;
+    let retryCount = 0;
+    const maxRetries = 3;
 
-    // Create order
-    const order = await Order.create(orderData)
-    console.log("✅ Order saved to database:", order._id)
+    while (retryCount <= maxRetries) {
+      try {
+        const orderNumberStr = String(nextOrderNumber).padStart(3, "0");
+        console.log(`Attempting to create order with number: ${orderNumberStr} (Attempt ${retryCount + 1})`);
+
+        // Create order data with the specific orderNumber
+        const finalOrderData = {
+          ...orderData,
+          orderNumber: orderNumberStr
+        };
+
+        order = await Order.create(finalOrderData);
+        console.log("✅ Order saved to database:", order._id);
+        break; // Success!
+      } catch (err: any) {
+        // Check if it's a duplicate key error for orderNumber
+        if (err.code === 11000 && err.message.includes('orderNumber')) {
+          console.warn(`⚠️ Duplicate orderNumber ${nextOrderNumber} detected. Retrying with next increment...`);
+          nextOrderNumber++;
+          retryCount++;
+          if (retryCount > maxRetries) throw new Error("Failed to generate unique order number after multiple attempts");
+        } else {
+          // It's some other error, throw it
+          throw err;
+        }
+      }
+    }
 
     // 📉 BUSINESS LOGIC: Commit initial stock deduction
     try {

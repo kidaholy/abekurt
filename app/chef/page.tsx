@@ -199,9 +199,6 @@ export default function KitchenDisplayPage() {
                   <a href="/chef/food" className="bg-orange-600 text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-2 text-sm">
                     🍳 Food Kitchen
                   </a>
-                  <a href="/chef/drinks" className="bg-[#2d5a41] text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center gap-2 text-sm">
-                    🍹 Drink Station
-                  </a>
                 </div>
               </div>
             </div>
@@ -215,18 +212,6 @@ export default function KitchenDisplayPage() {
                   <h3 className="text-3xl font-black text-gray-900 mb-2 uppercase tracking-tight">Food Kitchen</h3>
                   <p className="text-gray-500 font-medium">Manage food orders, preparation times, and multi-stage workflows.</p>
                   <div className="mt-8 flex items-center gap-2 text-orange-600 font-bold uppercase tracking-widest text-sm">
-                    Open Station <span>→</span>
-                  </div>
-                </div>
-              </a>
-
-              <a href="/chef/drinks" className="group relative overflow-hidden bg-white rounded-3xl p-8 shadow-xl border-2 border-[#2d5a41]/10 hover:border-[#2d5a41] transition-all duration-300 transform hover:-translate-y-2">
-                <div className="absolute top-0 right-0 p-8 text-8xl opacity-10 group-hover:opacity-20 transition-opacity">🍹</div>
-                <div className="relative z-10">
-                  <div className="w-16 h-16 bg-[#2d5a41]/10 rounded-2xl flex items-center justify-center text-3xl mb-6">☕</div>
-                  <h3 className="text-3xl font-black text-gray-900 mb-2 uppercase tracking-tight">Drink Station</h3>
-                  <p className="text-gray-500 font-medium">Fast-track drink orders with single-click completion logic.</p>
-                  <div className="mt-8 flex items-center gap-2 text-[#2d5a41] font-bold uppercase tracking-widest text-sm">
                     Open Station <span>→</span>
                   </div>
                 </div>

@@ -1,4 +1,6 @@
 import mongoose from "mongoose"
+import "../../lib/dns-fix"
+
 
 let isConnected = false
 

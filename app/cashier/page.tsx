@@ -10,7 +10,7 @@ import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
 import { useConfirmation } from "@/hooks/use-confirmation"
-import { ShoppingCart, RefreshCw, X } from 'lucide-react'
+import { ShoppingCart, RefreshCw, X, Search, Hash } from 'lucide-react'
 import { motion, AnimatePresence } from "framer-motion"
 import { useMemo, useRef } from "react"
 import { useSettings } from "@/context/settings-context"
@@ -45,6 +45,8 @@ export default function CashierPOSPage() {
   const [isDrinksOrder, setIsDrinksOrder] = useState(false)
   const [showCart, setShowCart] = useState(false)
   const [paperWidth, setPaperWidth] = useState(80)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [idSearchTerm, setIdSearchTerm] = useState("")
   const [selectedBatchId, setSelectedBatchId] = useState<string>("")
   const [variantModal, setVariantModal] = useState<{ item: MenuItem } | null>(null)
   const { token, user, logout } = useAuth()
@@ -400,6 +402,11 @@ export default function CashierPOSPage() {
 
   const categories = ["all", ...new Set(menuItems.map((item) => item.category))]
   const filteredItems = (categoryFilter === "all" ? menuItems : menuItems.filter((item) => item.category === categoryFilter))
+    .filter((item) => {
+      const nameMatch = !searchTerm || item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      const idMatch = !idSearchTerm || (item.menuId && item.menuId.toLowerCase() === idSearchTerm.toLowerCase())
+      return nameMatch && idMatch
+    })
     .sort((a, b) => {
       const idA = a.menuId || ""
       const idB = b.menuId || ""
@@ -441,6 +448,53 @@ export default function CashierPOSPage() {
 
           <div className="flex flex-col lg:flex-row gap-4 items-start pb-20 md:pb-0 w-full overflow-hidden">
             <div className="flex-1 min-w-0 w-full flex flex-col md:gap-4 overflow-hidden">
+              {/* Search Bar Group */}
+              <div className="px-4 md:px-0 mb-4 md:mb-0 flex flex-col md:flex-row gap-3">
+                {/* Name Search */}
+                <div className="flex-[2] relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search by item name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="block w-full pl-11 pr-10 py-3.5 bg-white border-2 border-gray-100 rounded-2xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium shadow-sm"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* ID Search */}
+                <div className="flex-1 relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Hash className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Item ID"
+                    value={idSearchTerm}
+                    onChange={(e) => setIdSearchTerm(e.target.value)}
+                    className="block w-full pl-11 pr-10 py-3.5 bg-white border-2 border-gray-100 rounded-2xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-medium shadow-sm"
+                  />
+                  {idSearchTerm && (
+                    <button
+                      onClick={() => setIdSearchTerm("")}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Category Filter - Robust Horizontal Slider */}
               <div className="sticky top-0 md:static z-[40] bg-gray-50/95 backdrop-blur-md md:bg-transparent border-b md:border-none border-gray-200 w-full">
                 <div

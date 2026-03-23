@@ -84,11 +84,11 @@ StockSchema.pre('save', async function () {
             this.status = 'out_of_stock'
         } else if (this.quantity <= this.minLimit) {
             // Keep as active but will show low stock warning
-            if (this.status === 'out_of_stock') {
+            if (this.status === 'out_of_stock' || this.status === 'finished') {
                 this.status = 'active'
             }
         } else {
-            if (this.status === 'out_of_stock') {
+            if (this.status === 'out_of_stock' || this.status === 'finished') {
                 this.status = 'active'
             }
         }

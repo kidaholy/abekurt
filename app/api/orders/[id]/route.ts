@@ -193,9 +193,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
             return NextResponse.json({ message: "Order not found" }, { status: 404 })
         }
 
-        // 🔗 BUSINESS LOGIC: Restore stock on deletion if the order was active
+        // 🔗 BUSINESS LOGIC: Restore stock on deletion if the order was not already cancelled
         const status = orderToDelete.status
-        if (status === 'pending' || status === 'preparing' || status === 'ready') {
+        if (status !== 'cancelled') {
             const stockConsumptionMap = await calculateStockConsumption(orderToDelete.items)
             await applyStockAdjustment(stockConsumptionMap, 1) // 1 = Restore
             console.log(`📡 Restored stock for deleted order #${orderToDelete.orderNumber}`)

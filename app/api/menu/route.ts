@@ -20,13 +20,38 @@ export async function GET(request: Request) {
 
     const menuItems = await MenuItem.find(query)
       .populate('stockItemId')
+      .populate('recipe.stockItemId')
       .lean()
 
-    // Filter out items where linked stock is finished (unless fetchAll is true)
+    // Filter out items where linked stock or any recipe ingredient is out of stock (unless fetchAll is true)
     const filteredItems = menuItems.filter((item: any) => {
-      if (!fetchAll && item.stockItemId && item.stockItemId.status === 'finished') {
-        return false
+      if (fetchAll) return true
+
+      // 1. Check Legacy Stock Item
+      if (item.stockItemId) {
+        const status = item.stockItemId.status
+        const qty = item.stockItemId.quantity || 0
+        if (status === 'finished' || status === 'out_of_stock' || qty <= 0) {
+          return false
+        }
       }
+
+      // 2. Check Recipe Ingredients
+      if (item.recipe && item.recipe.length > 0) {
+        for (const ingredient of item.recipe) {
+          const stock = ingredient.stockItemId
+          if (stock) {
+            const status = stock.status
+            const qty = stock.quantity || 0
+            const required = ingredient.quantityRequired || 0
+            
+            if (status === 'finished' || status === 'out_of_stock' || qty < required) {
+              return false
+            }
+          }
+        }
+      }
+
       return true
     })
 

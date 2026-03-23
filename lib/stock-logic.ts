@@ -63,10 +63,10 @@ export async function applyStockAdjustment(consumptionMap: Map<string, number>, 
         const newTotalConsumed = Math.max(0, (stockItem.totalConsumed || 0) + totalConsumedChange)
 
         let newStatus = stockItem.status
-        if (newQuantity > 0 && stockItem.status === 'finished') {
+        if (newQuantity > 0 && (stockItem.status === 'finished' || stockItem.status === 'out_of_stock')) {
             newStatus = 'active'
-        } else if (newQuantity === 0 && stockItem.status !== 'finished') {
-            newStatus = 'finished'
+        } else if (newQuantity === 0 && stockItem.status !== 'out_of_stock' && stockItem.status !== 'finished') {
+            newStatus = 'out_of_stock'
         }
 
         bulkOps.push({

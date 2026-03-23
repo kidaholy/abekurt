@@ -76,7 +76,7 @@
     "tailwind-merge": "^2.5.4",
     "tailwindcss": "^4.0.0",
     "vaul": "^1.1.1",
-    "vercel": "^50.34.1",
+    "vercel": "^50.35.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

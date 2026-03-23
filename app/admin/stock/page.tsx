@@ -11,6 +11,7 @@ import {
     Plus, Search, Trash2, Edit2, TrendingUp, History,
     Package, BarChart3, AlertCircle, ShoppingCart, Download, ChevronDown
 } from "lucide-react"
+import { ReportExporter } from "@/lib/export-utils"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 
@@ -230,7 +231,7 @@ export default function StockInventoryPage() {
 
     const exportStockCSV = (exportType: 'all' | 'low' | 'ready' | 'empty' = 'all') => {
         let itemsToExport = [...filteredStock]
-        let fileName = 'stock_export'
+        let fileName = 'Stock Inventory Report'
 
         if (exportType === 'low') {
             itemsToExport = filteredStock.filter(item =>
@@ -238,17 +239,17 @@ export default function StockInventoryPage() {
                 (item.quantity || 0) <= (item.minLimit || 0) &&
                 (item.quantity || 0) > 0
             )
-            fileName = 'low_stock'
+            fileName = 'Low Stock Report'
         } else if (exportType === 'empty') {
             itemsToExport = filteredStock.filter(item =>
                 item.trackQuantity && (item.quantity || 0) <= 0
             )
-            fileName = 'empty_stock'
+            fileName = 'Empty Stock Report'
         } else if (exportType === 'ready') {
             itemsToExport = filteredStock.filter(item =>
                 !item.trackQuantity || (item.quantity || 0) > (item.minLimit || 0)
             )
-            fileName = 'ready_stock'
+            fileName = 'Ready Stock Report'
         }
 
         if (itemsToExport.length === 0) {
@@ -262,38 +263,30 @@ export default function StockInventoryPage() {
         }
 
         const headers = ['Item Name', 'Category', 'Quantity', 'Unit', 'Status', 'Min Limit', 'Unit Cost', 'Total Value']
-        const rows = itemsToExport.map(item => {
+        const data = itemsToExport.map(item => {
             const isOut = item.trackQuantity && (item.quantity || 0) <= 0
             const isLow = item.trackQuantity && (item.quantity || 0) <= (item.minLimit || 0) && (item.quantity || 0) > 0
             const status = isOut ? 'Empty' : isLow ? 'Low Stock' : 'Ready'
             const totalValue = ((item.quantity || 0) * (item.unitCost || 0)).toFixed(2)
 
-            return [
-                item.name,
-                item.category,
-                item.quantity || 0,
-                item.unit,
-                status,
-                item.minLimit || '',
-                item.unitCost || '',
-                totalValue
-            ]
+            return {
+                'Item Name': item.name,
+                'Category': item.category,
+                'Quantity': (item.quantity || 0).toLocaleString(),
+                'Unit': item.unit,
+                'Status': status,
+                'Min Limit': item.minLimit || '',
+                'Unit Cost': item.unitCost || '',
+                'Total Value': `${totalValue} Br`
+            }
         })
 
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\n')
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        const url = URL.createObjectURL(blob)
-        link.setAttribute('href', url)
-        link.setAttribute('download', `${fileName}_${new Date().toISOString().split('T')[0]}.csv`)
-        link.style.visibility = 'hidden'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        ReportExporter.exportToCSV({
+            title: fileName,
+            period: new Date().toLocaleDateString(),
+            headers,
+            data
+        })
 
         setShowExportDropdown(false)
         notify({

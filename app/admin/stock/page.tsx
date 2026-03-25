@@ -333,7 +333,7 @@ export default function StockInventoryPage() {
                                     <TrendingUp className="w-4 h-4 opacity-40 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                                 </div>
                                 <h3 className="font-bold text-lg leading-tight">Need to Restock?</h3>
-                                <p className="text-xs text-white/60 mt-2 font-medium">Go to store to transfer items or record purchases.</p>
+                                <p className="text-xs text-white/60 mt-2 font-medium">Go to store to transfer items from bulk storage.</p>
                                 <div className="mt-4 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
                                     Open Store <Plus className="w-3 h-3" />
                                 </div>

@@ -102,13 +102,10 @@ export default function StorePage() {
             setActiveTab("transfers")
         }
     }, [user])
-    const [expenses, setExpenses] = useState<DailyExpense[]>([])
     const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpense[]>([])
     const [stockItems, setStockItems] = useState<StockItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [showForm, setShowForm] = useState(false)
     const [showStockForm, setShowStockForm] = useState(false)
-    const [editingExpense, setEditingExpense] = useState<DailyExpense | null>(null)
     const [editingOperationalExpense, setEditingOperationalExpense] = useState<OperationalExpense | null>(null)
     const [editingStock, setEditingStock] = useState<StockItem | null>(null)
     const [editingCategory, setEditingCategory] = useState<any | null>(null)
@@ -164,12 +161,6 @@ export default function StorePage() {
         notes: ""
     })
 
-    const [expenseFormData, setExpenseFormData] = useState({
-        date: new Date().toISOString().split('T')[0],
-        items: [] as Array<{ name: string; amount: number; quantity: number; unit: string }>,
-        otherExpenses: "", // Kept for aggregate view
-        description: ""
-    })
 
     const [operationalExpenseFormData, setOperationalExpenseFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -199,7 +190,6 @@ export default function StorePage() {
     useEffect(() => {
         if (token) {
             fetchStockItems()
-            fetchExpenses()
             fetchOperationalExpenses()
             fetchCategories()
             fetchAssetCategories()
@@ -234,19 +224,6 @@ export default function StorePage() {
         }
     }
 
-    const fetchExpenses = async () => {
-        try {
-            const response = await fetch("/api/admin/expenses", {
-                headers: { Authorization: `Bearer ${token}` },
-            })
-            if (response.ok) {
-                const data = await response.json()
-                setExpenses(data)
-            }
-        } catch (error) {
-            console.error("Error fetching expenses:", String(error))
-        }
-    }
 
     const fetchOperationalExpenses = async () => {
         try {
@@ -598,49 +575,6 @@ export default function StorePage() {
         }
     }
 
-    const handleSaveExpense = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setSaveLoading(true)
-        try {
-            const response = await fetch("/api/admin/expenses", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    ...expenseFormData,
-                    items: expenseFormData.items.map(i => ({
-                        ...i,
-                        amount: Number(i.amount) || 0,
-                        quantity: Number(i.quantity) || 0
-                    }))
-                }),
-            })
-
-            if (response.ok) {
-                fetchStockItems()
-                fetchExpenses()
-                resetExpenseForm()
-                notify({
-                    title: "Expense Saved",
-                    message: "Daily expense record has been saved successfully.",
-                    type: "success"
-                })
-            } else {
-                const data = await response.json()
-                notify({
-                    title: "Save Failed",
-                    message: data.error || "Failed to save expense",
-                    type: "error"
-                })
-            }
-        } catch (error) {
-            console.error("Error saving expense:", String(error))
-        } finally {
-            setSaveLoading(false)
-        }
-    }
 
     const handleSaveStock = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -901,32 +835,6 @@ export default function StorePage() {
         setShowRestockModal(true)
     }
 
-    const deleteExpense = async (id: string) => {
-        const confirmed = await confirm({
-            title: "Delete Expense Record",
-            message: "Are you sure you want to delete this expense record?",
-            type: "danger"
-        })
-
-        if (!confirmed) return
-        try {
-            const response = await fetch(`/api/admin/expenses?id=${id}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
-            })
-            if (response.ok) {
-                fetchExpenses()
-                fetchStockItems()
-                notify({
-                    title: "Expense Deleted",
-                    message: "Expense record has been deleted successfully.",
-                    type: "success"
-                })
-            }
-        } catch (error) {
-            console.error("Error deleting expense:", String(error))
-        }
-    }
 
     const handleEditExpense = (expense: DailyExpense) => {
         setEditingExpense(expense)
@@ -957,16 +865,6 @@ export default function StorePage() {
         setShowStockForm(true)
     }
 
-    const resetExpenseForm = () => {
-        setExpenseFormData({
-            date: new Date().toISOString().split('T')[0],
-            items: [],
-            otherExpenses: "",
-            description: ""
-        })
-        setEditingExpense(null)
-        setShowForm(false)
-    }
 
     const resetStockForm = () => {
         setStockFormData({
@@ -1003,10 +901,6 @@ export default function StorePage() {
         item.category.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    const filteredExpenses = expenses.filter(e =>
-        (e.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.items.some(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
 
     const filteredOperationalExpenses = operationalExpenses.filter(e =>
         e.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1034,7 +928,6 @@ export default function StorePage() {
     const totalStats = {
         storeValue: stockItems.reduce((sum, item) => sum + ((item.storeQuantity || 0) * (item.averagePurchasePrice || item.unitCost || 0)), 0),
         totalItems: stockItems.length,
-        expenseTotal: expenses.reduce((sum, e) => sum + e.otherExpenses, 0),
         fixedAssetValue: fixedAssets.reduce((sum, a) => sum + (a.totalValue || 0), 0),
         fixedAssetCount: fixedAssets.length
     }
@@ -1087,19 +980,13 @@ export default function StorePage() {
                                     className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
                                 >
                                     <h2 className="text-lg font-bold text-gray-900 mb-2">Bulk Actions</h2>
-                                    <p className="text-gray-500 text-sm mb-4">Add new items to the store or record daily purchases.</p>
+                                    <p className="text-gray-500 text-sm mb-4">Add new items to the store or manage categories.</p>
                                     <div className="space-y-3">
                                         <button
                                             onClick={() => { resetStockForm(); setShowStockForm(true); }}
                                             className="w-full bg-[#8B4513] text-white py-3 rounded-lg font-medium hover:bg-[#5D4037] transition-all flex items-center justify-center gap-2"
                                         >
                                             <Plus className="w-4 h-4" /> Add New Item
-                                        </button>
-                                        <button
-                                            onClick={() => { resetExpenseForm(); setShowForm(true); }}
-                                            className="w-full bg-white text-[#8B4513] border border-[#8B4513] py-3 rounded-lg font-medium hover:bg-[#8B4513]/5 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <DollarSign className="w-4 h-4" /> Record Purchase
                                         </button>
                                         <button
                                             onClick={() => setActiveTab('categories')}
@@ -1129,7 +1016,7 @@ export default function StorePage() {
                             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900">🏪 Store Management</h2>
-                                    <p className="text-gray-600 text-sm">Bulk inventory and purchase history.</p>
+                                    <p className="text-gray-600 text-sm">Bulk inventory and expense management.</p>
                                 </div>
                                 <div className="flex p-1 bg-gray-200/50 rounded-xl">
                                     <button
@@ -1151,10 +1038,10 @@ export default function StorePage() {
                                         Categories
                                     </button>
                                     <button
-                                        onClick={() => setActiveTab('expenses')}
+                                        onClick={() => { setActiveTab('expenses'); fetchOperationalExpenses(); }}
                                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'expenses' ? 'bg-white text-[#8B4513] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                     >
-                                        Daily Expenses
+                                        Operational Expenses
                                     </button>
                                     <button
                                         onClick={() => { setActiveTab('transfers'); fetchTransferRequests(); }}
@@ -1627,39 +1514,6 @@ export default function StorePage() {
                     </div>
                 </div>
                 <AnimatePresence>
-                    {showForm && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={resetExpenseForm} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-                            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="relative bg-white rounded-[2rem] p-8 max-w-xl w-full max-h-[90vh] overflow-y-auto">
-                                <h2 className="text-2xl font-black mb-6">Record Purchase</h2>
-                                <form onSubmit={handleSaveExpense} className="space-y-4">
-                                    <input type="date" value={expenseFormData.date} onChange={e => setExpenseFormData({ ...expenseFormData, date: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
-                                    <div className="space-y-3">
-                                        {expenseFormData.items.map((item, index) => (
-                                            <div key={index} className="flex gap-2 p-3 bg-gray-50 rounded-xl">
-                                                <input type="text" placeholder="Item" value={item.name} onChange={e => {
-                                                    const n = [...expenseFormData.items]; n[index].name = e.target.value; setExpenseFormData({ ...expenseFormData, items: n });
-                                                }} className="flex-1 bg-white p-2 rounded-lg text-sm" />
-                                                <input type="number" placeholder="Qty" step="any" value={item.quantity} onChange={e => {
-                                                    const n = [...expenseFormData.items]; n[index].quantity = Number(e.target.value); setExpenseFormData({ ...expenseFormData, items: n });
-                                                }} className="w-16 bg-white p-2 rounded-lg text-sm" />
-                                                <input type="number" placeholder="Br" step="any" value={item.amount} onChange={e => {
-                                                    const n = [...expenseFormData.items]; n[index].amount = Number(e.target.value); setExpenseFormData({ ...expenseFormData, items: n });
-                                                }} className="w-20 bg-white p-2 rounded-lg text-sm" />
-                                                <button type="button" onClick={() => setExpenseFormData({ ...expenseFormData, items: expenseFormData.items.filter((_, i) => i !== index) })} className="text-red-400"><Trash2 size={14} /></button>
-                                            </div>
-                                        ))}
-                                        <button type="button" onClick={() => setExpenseFormData({ ...expenseFormData, items: [...expenseFormData.items, { name: "", amount: 0, quantity: 1, unit: "" }] })} className="w-full p-2 border-2 border-dashed rounded-xl text-xs font-bold text-gray-400">+ Add Item</button>
-                                    </div>
-                                    <div className="flex gap-4 pt-4">
-                                        <button type="button" onClick={resetExpenseForm} className="flex-1 py-4 font-bold text-gray-400">Cancel</button>
-                                        <button type="submit" className="flex-[2] py-4 bg-[#8B4513] text-white rounded-xl font-bold">{saveLoading ? "Saving..." : "Commit Purchase"}</button>
-                                    </div>
-                                </form>
-                            </motion.div>
-                        </div>
-                    )}
-
                     {showStockForm && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={resetStockForm} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />

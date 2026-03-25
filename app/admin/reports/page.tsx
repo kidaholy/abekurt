@@ -134,6 +134,7 @@ export default function ReportsPage() {
     const periodProfit = salesSummary.periodNetProfit || 0
     const lifetimeInvestment = salesSummary.lifetimeTotalInvestment || 0
     const lifetimeNetWorth = salesSummary.lifetimeNetWorth || 0
+    const totalOperationalExpenses = salesSummary.totalOperationalExpenses || 0
     const filteredOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     const foodRevenue = filteredOrders
@@ -165,8 +166,9 @@ export default function ReportsPage() {
     const exportFinancialReport = () => {
         const data = [
             { Metric: "Total Revenue", Type: "INCOME", Amount: `${totalRevenue.toLocaleString()} ETB`, Description: "Total completed orders value for this period" },
-            { Metric: "Period Investment", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Specific investment (Restocks + Expenses) for this period" },
-            { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Investment for this period" },
+            { Metric: "Period Investment (Stock)", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Inventory restocks and historical bulk purchases" },
+            { Metric: "Operational Expenses", Type: "EXPENSE", Amount: `${totalOperationalExpenses.toLocaleString()} ETB`, Description: "Running costs (Rent, Utilities, etc.)" },
+            { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Total Investment for this period" },
             { Metric: "Lifetime Investment", Type: "EXPENSE", Amount: `${lifetimeInvestment.toLocaleString()} ETB`, Description: "Total investment since launch" },
             { Metric: "LIFETIME NET WORTH", Type: "RESULT", Amount: `${lifetimeNetWorth.toLocaleString()} ETB`, Description: "Global business standing" }
         ]
@@ -318,8 +320,9 @@ export default function ReportsPage() {
                 headers: ["Metric", "Type", "Amount", "Description"],
                 data: [
                     { Metric: "Total Revenue", Type: "INCOME", Amount: `${totalRevenue.toLocaleString()} ETB`, Description: "Total completed orders value" },
-                    { Metric: "Period Investment", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Period-specific investment" },
-                    { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Investment for this period" },
+                    { Metric: "Period Investment (Stock)", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Inventory restocks and historical bulk purchases" },
+                    { Metric: "Operational Expenses", Type: "EXPENSE", Amount: `${totalOperationalExpenses.toLocaleString()} ETB`, Description: "Running costs for this period" },
+                    { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Total Investment for this period" },
                     { Metric: "Lifetime Investment", Type: "EXPENSE", Amount: `${lifetimeInvestment.toLocaleString()} ETB`, Description: "Total investment since launch" },
                     { Metric: "LIFETIME NET WORTH", Type: "RESULT", Amount: `${lifetimeNetWorth.toLocaleString()} ETB`, Description: "Revenue - Investment since launch" }
                 ]
@@ -519,16 +522,22 @@ export default function ReportsPage() {
                                                         <td className="p-4 text-gray-400 text-xs font-medium">Portion from Drinks items</td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50/50 transition-colors">
-                                                        <td className="p-4 text-lg text-slate-800">Period Investment</td>
+                                                        <td className="p-4 text-lg text-slate-800">Operational Expenses</td>
+                                                        <td className="p-4 text-center"><span className="bg-red-50 text-red-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">EXPENSE</span></td>
+                                                        <td className="p-4 text-right text-lg font-black text-red-600">-{totalOperationalExpenses.toLocaleString()} ETB</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Rent, Utilities, and other running costs</td>
+                                                    </tr>
+                                                    <tr className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="p-4 text-lg text-slate-800">Period Investment (Stock)</td>
                                                         <td className="p-4 text-center"><span className="bg-red-50 text-red-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">EXPENSE</span></td>
                                                         <td className="p-4 text-right text-lg font-black text-red-600">-{periodInvestment.toLocaleString()} ETB</td>
-                                                        <td className="p-4 text-gray-400 text-xs font-medium">Restocks + Expenses for selected period</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Restocks + Historical bulk purchases</td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50/50 transition-colors">
                                                         <td className="p-4 text-lg text-slate-800">Period Net Profit</td>
                                                         <td className="p-4 text-center"><span className="bg-blue-50 text-blue-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">PROFIT</span></td>
                                                         <td className={`p-4 text-right text-lg font-black ${periodProfit >= 0 ? "text-blue-600" : "text-red-600"}`}>{periodProfit.toLocaleString()} ETB</td>
-                                                        <td className="p-4 text-gray-400 text-xs font-medium">Revenue - Period Investment</td>
+                                                        <td className="p-4 text-gray-400 text-xs font-medium">Revenue - Total Expenses (Stock + OpEx)</td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50/50 transition-colors">
                                                         <td className="p-4 text-lg text-slate-800">Lifetime Investment</td>
@@ -558,7 +567,14 @@ export default function ReportsPage() {
                                             <div className="p-4 rounded-2xl bg-red-50 border border-red-100">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Expense</span>
-                                                    <span className="text-[10px] font-bold text-red-600/60 uppercase">Period Investment</span>
+                                                    <span className="text-[10px] font-bold text-red-600/60 uppercase">Operational Expenses</span>
+                                                </div>
+                                                <p className="text-2xl font-black text-red-700">-{totalOperationalExpenses.toLocaleString()} <span className="text-xs">ETB</span></p>
+                                            </div>
+                                            <div className="p-4 rounded-2xl bg-red-50 border border-red-100">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Expense</span>
+                                                    <span className="text-[10px] font-bold text-red-600/60 uppercase">Period Investment (Stock)</span>
                                                 </div>
                                                 <p className="text-2xl font-black text-red-700">-{periodInvestment.toLocaleString()} <span className="text-xs">ETB</span></p>
                                             </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import Order from "@/lib/models/order"
 import DailyExpense from "@/lib/models/daily-expense"
+import OperationalExpense from "@/lib/models/operational-expense"
 import Stock from "@/lib/models/stock"
 import { validateSession } from "@/lib/auth"
 
@@ -90,7 +91,7 @@ export async function GET(request: Request) {
             paymentStats[method] = (paymentStats[method] || 0) + order.totalAmount
         })
 
-        // Fetch Expenses
+        // Fetch Expenses (Deprecated Bulk Purchases)
         const expenseQuery = {
             date: { $gte: startDate, $lte: endDate }
         }
@@ -99,6 +100,10 @@ export async function GET(request: Request) {
             const itemsCost = (exp.items || []).reduce((iSum, item) => iSum + (item.amount || 0), 0)
             return sum + (exp.otherExpenses || 0) + itemsCost
         }, 0)
+
+        // Fetch Operational Expenses (NEW)
+        const operationalExpenses = await OperationalExpense.find(expenseQuery).lean()
+        const totalOperationalExpenses = operationalExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)
 
         // 📉 PERIOD-SPECIFIC STOCK INVESTMENT
         const stocksWithHistory = await Stock.find({
@@ -115,14 +120,15 @@ export async function GET(request: Request) {
             })
         })
 
-        const totalExpenses = totalOtherExpenses + periodStockInvestment
+        const totalExpenses = totalOtherExpenses + totalOperationalExpenses + periodStockInvestment
         const periodNetProfit = totalRevenue - totalExpenses
 
         // 📊 LIFETIME CUMULATIVE METRICS (Stay constant across filters)
-        const [lifetimeRevenueData, allStock, allExpenses] = await Promise.all([
+        const [lifetimeRevenueData, allStock, allExpenses, allOpExpenses] = await Promise.all([
             Order.find({ status: { $ne: "cancelled" } }).select('totalAmount').lean(),
             Stock.find({}).select('totalInvestment').lean(),
-            DailyExpense.find({}).select('otherExpenses items').lean()
+            DailyExpense.find({}).select('otherExpenses items').lean(),
+            OperationalExpense.find({}).select('amount').lean()
         ])
 
         const lifetimeRevenue = (lifetimeRevenueData as any[]).reduce((sum, order) => sum + (order.totalAmount || 0), 0)
@@ -131,8 +137,9 @@ export async function GET(request: Request) {
             const itemsCost = (exp.items || []).reduce((iSum: number, item: any) => iSum + (item.amount || 0), 0)
             return sum + (exp.otherExpenses || 0) + itemsCost
         }, 0)
+        const lifetimeOperationalExpenses = (allOpExpenses as any[]).reduce((sum, exp) => sum + (exp.amount || 0), 0)
 
-        const lifetimeTotalInvestment = lifetimeStockInvestment + lifetimeOtherExpenses
+        const lifetimeTotalInvestment = lifetimeStockInvestment + lifetimeOtherExpenses + lifetimeOperationalExpenses
         const lifetimeNetWorth = lifetimeRevenue - lifetimeTotalInvestment
 
         return NextResponse.json({
@@ -147,18 +154,21 @@ export async function GET(request: Request) {
                 cancelledOrders,
                 paymentStats,
                 totalOtherExpenses,
+                totalOperationalExpenses,
                 periodStockInvestment,
                 totalExpenses,
                 periodNetProfit,
                 lifetimeRevenue,
                 lifetimeStockInvestment,
                 lifetimeOtherExpenses,
+                lifetimeOperationalExpenses,
                 lifetimeTotalInvestment,
                 lifetimeNetWorth
             },
-            orders: allOrders, // Return all orders for display
-            revenueOrders, // Revenue-generating orders for calculations
-            dailyExpenses
+            orders: allOrders,
+            revenueOrders,
+            dailyExpenses,
+            operationalExpenses
         })
 
     } catch (error: any) {

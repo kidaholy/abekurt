@@ -139,7 +139,7 @@ export default function ReportsPage() {
     // Calculations
     const salesSummary = periodData?.summary || {}
     const totalRevenue = salesSummary.totalRevenue || 0
-    const periodInvestment = salesSummary.totalExpenses || 0
+    const periodInvestment = (salesSummary.periodStockInvestment || 0) + (salesSummary.totalOtherExpenses || 0)
     const periodProfit = salesSummary.periodNetProfit || 0
     const lifetimeInvestment = salesSummary.lifetimeTotalInvestment || 0
     const lifetimeNetWorth = salesSummary.lifetimeNetWorth || 0

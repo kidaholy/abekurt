@@ -333,18 +333,17 @@ export default function ReportsPage() {
             const isLow = item.isLowStock || (closingQuantity <= (item.minLimit || 5))
             return {
                 "Item Name": item.name,
-                "Unit Cost": Math.round(sellingPrice).toLocaleString(),
-                "Quantity": `${totalHandled} ${item.unit || "unit"}`,
-                "Total Purchase": `${totalPurchaseValue.toLocaleString()} ETB`,
-                "Consumed": `${consumedCount} Usage`,
-                "Remains": `${closingQuantity} ${item.unit || "unit"}`,
-                "Potential Rev.": `${potentialRevenue.toLocaleString()} ETB`,
+                "Unit Cost": Math.round(sellingPrice),
+                "Quantity": totalHandled,
+                "Total Purchase": totalPurchaseValue,
+                "Consumed": consumedCount,
+                "Remains": closingQuantity,
+                "Potential Rev.": potentialRevenue,
                 "Status": isLow ? "Low Stock" : "OK"
             }
         })
-        ReportExporter.exportToWord({ title: "Inventory Investment Report", period: timeRange, headers: ["Item Name", "Unit Cost", "Quantity", "Total Purchase", "Consumed", "Remains", "Potential Rev.", "Status"], data, metadata: { companyName: settings.app_name || "Prime Addis" } })
+        ReportExporter.exportToCSV({ title: "Inventory Investment Report", period: timeRange, headers: ["Item Name", "Unit Cost", "Quantity", "Total Purchase", "Consumed", "Remains", "Potential Rev.", "Status"], data })
     }
-
 
     if (loading) {
         return (
@@ -522,13 +521,17 @@ export default function ReportsPage() {
                                                         <td className="p-4 text-gray-400 text-xs font-medium">Portion from Drinks items</td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50/50 transition-colors">
-                                                        <td className="p-4 text-lg text-slate-800">Operational Expenses</td>
+                                                        <td className="p-4 text-lg text-slate-800 flex items-center justify-between">
+                                                            Operational Expenses
+                                                        </td>
                                                         <td className="p-4 text-center"><span className="bg-red-50 text-red-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">EXPENSE</span></td>
                                                         <td className="p-4 text-right text-lg font-black text-red-600">-{totalOperationalExpenses.toLocaleString()} ETB</td>
                                                         <td className="p-4 text-gray-400 text-xs font-medium">Rent, Utilities, and other running costs</td>
                                                     </tr>
                                                     <tr className="hover:bg-gray-50/50 transition-colors">
-                                                        <td className="p-4 text-lg text-slate-800">Period Investment (Stock)</td>
+                                                        <td className="p-4 text-lg text-slate-800 flex items-center justify-between">
+                                                            Period Investment (Stock)
+                                                        </td>
                                                         <td className="p-4 text-center"><span className="bg-red-50 text-red-600 py-1 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest">EXPENSE</span></td>
                                                         <td className="p-4 text-right text-lg font-black text-red-600">-{periodInvestment.toLocaleString()} ETB</td>
                                                         <td className="p-4 text-gray-400 text-xs font-medium">Restocks + Historical bulk purchases</td>
@@ -567,14 +570,18 @@ export default function ReportsPage() {
                                             <div className="p-4 rounded-2xl bg-red-50 border border-red-100">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Expense</span>
-                                                    <span className="text-[10px] font-bold text-red-600/60 uppercase">Operational Expenses</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-red-600/60 uppercase">Operational Expenses</span>
+                                                    </div>
                                                 </div>
                                                 <p className="text-2xl font-black text-red-700">-{totalOperationalExpenses.toLocaleString()} <span className="text-xs">ETB</span></p>
                                             </div>
                                             <div className="p-4 rounded-2xl bg-red-50 border border-red-100">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">Expense</span>
-                                                    <span className="text-[10px] font-bold text-red-600/60 uppercase">Period Investment (Stock)</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-red-600/60 uppercase">Period Investment (Stock)</span>
+                                                    </div>
                                                 </div>
                                                 <p className="text-2xl font-black text-red-700">-{periodInvestment.toLocaleString()} <span className="text-xs">ETB</span></p>
                                             </div>

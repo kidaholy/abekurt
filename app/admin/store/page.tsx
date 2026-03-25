@@ -13,9 +13,10 @@ import {
     ChevronRight, Package, PlusCircle,
     Wrench, AlertTriangle, ChevronDown, ChevronUp,
     ArrowRightLeft, Check, X as CloseIcon, Clock,
-    CheckCircle2, XCircle, Filter
+    CheckCircle2, XCircle, Filter, Download
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { ReportExporter } from "@/lib/export-utils"
 
 interface TransferRequest {
     _id: string
@@ -925,6 +926,94 @@ export default function StorePage() {
         return true
     })
 
+    const filteredFixedAssets = fixedAssets.filter(asset =>
+        asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        asset.category.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const exportStoreCSV = () => {
+        const data = filteredStock
+            .filter((item: any) => (item.storeQuantity || 0) > 0 || (item.purchased || 0) > 0 || (item.totalPurchased || 0) > 0 || (item.storeOpeningStock || 0) > 0)
+            .map((item: any) => {
+                const costPrice = item.averagePurchasePrice || item.currentUnitCost || item.unitCost || 0
+                const remains = item.storeQuantity ?? 0
+                const transferredCount = item.transferred ?? 0
+                const totalPurchaseValue = remains * costPrice
+                const isLow = item.isLowStoreStock || (remains <= (item.storeMinLimit || 5)) && remains > 0
+                return {
+                    "Item Name": item.name,
+                    "Unit Cost": Math.round(costPrice),
+                    "In Store": remains,
+                    "Total Inv.": totalPurchaseValue,
+                    "Transferred": transferredCount,
+                    "Status": isLow ? "Low Stock" : "OK"
+                }
+            })
+        
+        if (data.length === 0) {
+            alert("No store inventory data found to export.")
+            return
+        }
+
+        ReportExporter.exportToCSV({
+            title: "Store Investment Report",
+            period: "Current Filter",
+            headers: ["Item Name", "Unit Cost", "In Store", "Total Inv.", "Transferred", "Status"],
+            data
+        })
+    }
+
+    const exportOperationalExpensesCSV = () => {
+        if (!filteredOperationalExpensesByDate || filteredOperationalExpensesByDate.length === 0) {
+            alert("No operational expenses found for this period/filter.")
+            return
+        }
+
+        const data = filteredOperationalExpensesByDate.map((exp: any) => ({
+            "Date": new Date(exp.date).toLocaleDateString(),
+            "Category": exp.category || "-",
+            "Amount": exp.amount ? `${exp.amount.toLocaleString()} Br` : "0 Br",
+            "Description": exp.description || "-",
+            "Recorded At": new Date(exp.createdAt).toLocaleString()
+        }))
+
+        ReportExporter.exportToCSV({
+            title: "Operational Expenses Report",
+            period: expenseDateFilter === 'all' ? "All Time" : `Current Filter (${expenseDateFilter})`,
+            headers: ["Date", "Category", "Amount", "Description", "Recorded At"],
+            data
+        })
+    }
+
+    const exportFixedAssetsCSV = () => {
+        if (!filteredFixedAssets || filteredFixedAssets.length === 0) {
+            alert("No fixed assets found to export.")
+            return
+        }
+
+        const data = filteredFixedAssets.map((asset) => {
+            const totalDismissed = asset.dismissals?.reduce((sum, d) => sum + d.valueLost, 0) || 0
+            return {
+                "Asset Name": asset.name,
+                "Category": asset.category,
+                "Quantity": asset.quantity,
+                "Unit Price": `${asset.unitPrice.toLocaleString()} Br`,
+                "Total Value": `${asset.totalValue.toLocaleString()} Br`,
+                "Value Lost": totalDismissed > 0 ? `-${totalDismissed.toLocaleString()} Br` : "0 Br",
+                "Status": asset.status === 'fully_dismissed' ? 'Dismissed' : asset.status === 'partially_dismissed' ? 'Partial' : 'Active',
+                "Purchase Date": new Date(asset.purchaseDate).toLocaleDateString(),
+                "Notes": asset.notes || "-"
+            }
+        })
+
+        ReportExporter.exportToCSV({
+            title: "Fixed Assets Report",
+            period: "Current Filter",
+            headers: ["Asset Name", "Category", "Quantity", "Unit Price", "Total Value", "Value Lost", "Status", "Purchase Date", "Notes"],
+            data
+        })
+    }
+
     const totalStats = {
         storeValue: stockItems.reduce((sum, item) => sum + ((item.storeQuantity || 0) * (item.averagePurchasePrice || item.unitCost || 0)), 0),
         totalItems: stockItems.length,
@@ -1069,6 +1158,23 @@ export default function StorePage() {
                                             className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-2xl outline-none font-bold text-sm"
                                         />
                                     </div>
+                                    <div className="flex gap-2">
+                                        {activeTab === 'inventory' && (
+                                            <button onClick={exportStoreCSV} className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-2xl hover:bg-gray-50 transition-colors font-bold text-sm shadow-sm transition-all focus:outline-none focus:ring-4 focus:ring-emerald-500/10 active:scale-[0.98]">
+                                                <Download size={16} className="text-emerald-600" /> Export CSV
+                                            </button>
+                                        )}
+                                        {activeTab === 'expenses' && (
+                                            <button onClick={exportOperationalExpensesCSV} className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-2xl hover:bg-gray-50 transition-colors font-bold text-sm shadow-sm transition-all focus:outline-none focus:ring-4 focus:ring-emerald-500/10 active:scale-[0.98]">
+                                                <Download size={16} className="text-emerald-600" /> Export CSV
+                                            </button>
+                                        )}
+                                        {activeTab === 'fixed-assets' && (
+                                            <button onClick={exportFixedAssetsCSV} className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-2xl hover:bg-gray-50 transition-colors font-bold text-sm shadow-sm transition-all focus:outline-none focus:ring-4 focus:ring-emerald-500/10 active:scale-[0.98]">
+                                                <Download size={16} className="text-emerald-600" /> Export CSV
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {activeTab === 'inventory' && (
@@ -1148,13 +1254,13 @@ export default function StorePage() {
 
                                 {activeTab === 'fixed-assets' && (
                                     <div className="space-y-4">
-                                        {fixedAssets.length === 0 ? (
+                                        {filteredFixedAssets.length === 0 ? (
                                             <div className="text-center py-20 text-gray-300 text-sm italic border-2 border-dashed border-gray-100 rounded-[2rem]">
                                                 <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                                No fixed assets added yet. Click "Add Fixed Asset" to start tracking.
+                                                No fixed assets found.
                                             </div>
                                         ) : (
-                                            fixedAssets.map((asset) => {
+                                            filteredFixedAssets.map((asset) => {
                                                 const isExpanded = expandedAsset === asset._id
                                                 const totalDismissed = asset.dismissals.reduce((s, d) => s + d.valueLost, 0)
                                                 return (

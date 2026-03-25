@@ -36,6 +36,7 @@ export default function ReportsPage() {
     const [menuItems, setMenuItems] = useState<any[]>([])
     const [menuSearchTerm, setMenuSearchTerm] = useState("")
     const [orderHistoryTab, setOrderHistoryTab] = useState<'All' | 'Food' | 'Drinks'>('All')
+    const [menuSalesTab, setMenuSalesTab] = useState<'Food' | 'Drinks'>('Food')
 
     // Context
     const { token } = useAuth()
@@ -154,13 +155,13 @@ export default function ReportsPage() {
         order.items.forEach((item: any) => {
             const name = item.name;
             if (!acc[name]) {
-                acc[name] = { name: name, category: item.category || 'N/A', quantity: 0, revenue: 0 };
+                acc[name] = { name: name, category: item.category || 'N/A', mainCategory: item.mainCategory || 'Food', quantity: 0, revenue: 0 };
             }
             acc[name].quantity += (item.quantity || 0);
             acc[name].revenue += (item.quantity || 0) * (item.price || 0);
         });
         return acc;
-    }, {} as Record<string, { name: string, category: string, quantity: number, revenue: number }>)).sort((a, b) => b.quantity - a.quantity);
+    }, {} as Record<string, { name: string, category: string, mainCategory: string, quantity: number, revenue: number }>)).sort((a, b) => b.quantity - a.quantity);
 
     // Export functions
     const exportFinancialReport = () => {
@@ -1031,23 +1032,33 @@ export default function ReportsPage() {
                                 {/* ── MENU ITEM SALES ── */}
                                 {activeSlide === 4 && (
                                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex flex-col min-h-0 h-full space-y-6">
-                                        <div className="flex items-center justify-between shrink-0">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 bg-emerald-500 rounded-full flex items-center justify-center text-white">
                                                     <ShoppingCart size={20} />
                                                 </div>
                                                 <div>
                                                     <h2 className="text-xl font-black text-slate-800">Menu Item Sales</h2>
-                                                    <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Individual sold quantity report</p>
+                                                    <div className="flex bg-gray-100 p-1 rounded-xl mt-1">
+                                                        {['Food', 'Drinks'].map((tab) => (
+                                                            <button
+                                                                key={tab}
+                                                                onClick={() => setMenuSalesTab(tab as any)}
+                                                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${menuSalesTab === tab ? "bg-[#8B4513] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                                                            >
+                                                                {tab}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="relative">
+                                            <div className="relative w-full sm:w-64">
                                                 <input
                                                     type="text"
                                                     placeholder="Search menu items..."
                                                     value={menuSearchTerm}
                                                     onChange={(e) => setMenuSearchTerm(e.target.value)}
-                                                    className="pl-4 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all w-64"
+                                                    className="pl-4 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all w-full"
                                                 />
                                             </div>
                                         </div>
@@ -1063,7 +1074,7 @@ export default function ReportsPage() {
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-50">
                                                     {menuItemSales
-                                                        .filter((item) => item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()))
+                                                        .filter((item) => item.mainCategory === menuSalesTab && item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()))
                                                         .map((item, idx) => (
                                                             <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                                                 <td className="p-4">
@@ -1087,7 +1098,7 @@ export default function ReportsPage() {
                                         {/* Mobile View */}
                                         <div className="lg:hidden space-y-4 max-h-[600px] overflow-y-auto">
                                             {menuItemSales
-                                                .filter((item) => item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()))
+                                                .filter((item) => item.mainCategory === menuSalesTab && item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()))
                                                 .map((item, idx) => (
                                                     <div key={idx} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex justify-between items-center">
                                                         <div>

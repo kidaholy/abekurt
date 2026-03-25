@@ -11,7 +11,8 @@ import dns from "dns";
  */
 
 const originalLookup = dns.lookup;
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+// Include local gateway and common public DNS as fallbacks
+dns.setServers(['192.168.8.1', '192.168.1.1', '1.1.1.1', '8.8.8.8']);
 
 async function recursiveHybridResolve(hostname: string): Promise<{ address: string, family: number }> {
     // 1. Try A record resolution via Google DNS

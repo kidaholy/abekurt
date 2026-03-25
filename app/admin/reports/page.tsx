@@ -12,6 +12,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
 
+interface MenuSalesItem {
+    name: string;
+    category: string;
+    mainCategory: string;
+    quantity: number;
+    revenue: number;
+}
+
 const SLIDES = [
     { id: "financial", label: "Financial Summary", icon: FileText, color: "#8B4513", bg: "bg-[#8B4513]" },
     { id: "orders", label: "Order History", icon: ShoppingCart, color: "#D2691E", bg: "bg-[#D2691E]" },
@@ -150,7 +158,7 @@ export default function ReportsPage() {
             .filter((i: any) => i.mainCategory === 'Drinks')
             .reduce((s: number, it: any) => s + ((it.price || 0) * (it.quantity || 0)), 0), 0)
 
-    const menuItemSales = Object.values(filteredOrders.reduce((acc, order) => {
+    const menuItemSales: any[] = Object.values(filteredOrders.reduce((acc, order) => {
         if (order.status === 'cancelled' || order.isDeleted) return acc;
         order.items.forEach((item: any) => {
             const name = item.name;
@@ -161,7 +169,7 @@ export default function ReportsPage() {
             acc[name].revenue += (item.quantity || 0) * (item.price || 0);
         });
         return acc;
-    }, {} as Record<string, { name: string, category: string, mainCategory: string, quantity: number, revenue: number }>)).sort((a, b) => b.quantity - a.quantity);
+    }, {} as Record<string, any>)).sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
 
     // Export functions
     const exportFinancialReport = () => {
@@ -290,6 +298,29 @@ export default function ReportsPage() {
         })
     }
 
+    const exportMenuSalesCSV = (mainCat: 'Food' | 'Drinks') => {
+        const data = menuItemSales
+            .filter((item) => item.mainCategory === mainCat)
+            .map((item) => ({
+                "Menu Item": item.name,
+                "Sub Category": item.category,
+                "Quantity Sold": item.quantity,
+                "Total Revenue": `${item.revenue.toLocaleString()} ETB`
+            }))
+
+        if (data.length === 0) {
+            alert(`No ${mainCat} sales data to export for this period.`)
+            return
+        }
+
+        ReportExporter.exportToCSV({
+            title: `${mainCat} Menu Item Sales Summary`,
+            period: timeRange,
+            headers: ["Menu Item", "Sub Category", "Quantity Sold", "Total Revenue"],
+            data
+        })
+    }
+
     const exportInventoryReport = () => {
         const data = (stockUsageData?.stockAnalysis || stockItems || []).map((item: any) => {
             const costPrice = item.weightedAvgCost ?? item.averagePurchasePrice ?? 0
@@ -314,35 +345,6 @@ export default function ReportsPage() {
         ReportExporter.exportToWord({ title: "Inventory Investment Report", period: timeRange, headers: ["Item Name", "Unit Cost", "Quantity", "Total Purchase", "Consumed", "Remains", "Potential Rev.", "Status"], data, metadata: { companyName: settings.app_name || "Prime Addis" } })
     }
 
-    const exportFullReport = () => {
-        const sections: ComprehensiveSection[] = [
-            {
-                title: "Financial Summary",
-                headers: ["Metric", "Type", "Amount", "Description"],
-                data: [
-                    { Metric: "Total Revenue", Type: "INCOME", Amount: `${totalRevenue.toLocaleString()} ETB`, Description: "Total completed orders value" },
-                    { Metric: "Period Investment (Stock)", Type: "EXPENSE", Amount: `${periodInvestment.toLocaleString()} ETB`, Description: "Inventory restocks and historical bulk purchases" },
-                    { Metric: "Operational Expenses", Type: "EXPENSE", Amount: `${totalOperationalExpenses.toLocaleString()} ETB`, Description: "Running costs for this period" },
-                    { Metric: "Period Net Profit", Type: "RESULT", Amount: `${periodProfit.toLocaleString()} ETB`, Description: "Revenue - Total Investment for this period" },
-                    { Metric: "Lifetime Investment", Type: "EXPENSE", Amount: `${lifetimeInvestment.toLocaleString()} ETB`, Description: "Total investment since launch" },
-                    { Metric: "LIFETIME NET WORTH", Type: "RESULT", Amount: `${lifetimeNetWorth.toLocaleString()} ETB`, Description: "Revenue - Investment since launch" }
-                ]
-            },
-            {
-                title: "Order History",
-                headers: ["Item Names", "Table", "Items (Qty)", "Total Payment", "Status", "Date/Time"],
-                data: filteredOrders.map(o => ({
-                    "Item Names": o.items.map((i: any) => i.name).join(", "),
-                    "Table": o.tableNumber ? `T-${o.tableNumber}` : "-",
-                    "Items (Qty)": o.items.reduce((acc: number, i: any) => acc + (i.quantity || 0), 0),
-                    "Total Payment": `${o.totalAmount.toLocaleString()} ETB`,
-                    "Status": o.status,
-                    "Date/Time": new Date(o.createdAt).toLocaleString()
-                }))
-            }
-        ]
-        ReportExporter.exportComprehensiveToWord({ title: "Comprehensive Business BI Report", period: timeRange, sections, metadata: { companyName: settings.app_name || "Prime Addis" } })
-    }
 
     if (loading) {
         return (
@@ -410,9 +412,6 @@ export default function ReportsPage() {
                                     </PopoverContent>
                                 </Popover>
                             </div>
-                            <button onClick={exportFullReport} className="bg-[#8B4513] text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-[#D2691E] transition-all flex items-center gap-2 whitespace-nowrap">
-                                <Download size={13} /> Export All
-                            </button>
                             <button onClick={() => window.print()} className="bg-white border border-gray-200 text-gray-500 p-2 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
                                 <Printer size={16} />
                             </button>
@@ -1039,16 +1038,24 @@ export default function ReportsPage() {
                                                 </div>
                                                 <div>
                                                     <h2 className="text-xl font-black text-slate-800">Menu Item Sales</h2>
-                                                    <div className="flex bg-gray-100 p-1 rounded-xl mt-1">
-                                                        {['Food', 'Drinks'].map((tab) => (
-                                                            <button
-                                                                key={tab}
-                                                                onClick={() => setMenuSalesTab(tab as any)}
-                                                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${menuSalesTab === tab ? "bg-[#8B4513] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
-                                                            >
-                                                                {tab}
-                                                            </button>
-                                                        ))}
+                                                    <div className="flex gap-2">
+                                                        <div className="flex bg-gray-100 p-1 rounded-xl mt-1">
+                                                            {['Food', 'Drinks'].map((tab) => (
+                                                                <button
+                                                                    key={tab}
+                                                                    onClick={() => setMenuSalesTab(tab as any)}
+                                                                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${menuSalesTab === tab ? "bg-[#8B4513] text-white shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
+                                                                >
+                                                                    {tab}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => exportMenuSalesCSV(menuSalesTab)}
+                                                            className="flex items-center gap-1.5 px-3 py-1 rounded-xl mt-1 bg-emerald-50 text-emerald-600 border border-emerald-100 font-black text-[10px] uppercase hover:bg-emerald-100 transition-all"
+                                                        >
+                                                            <Download size={12} /> CSV
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>

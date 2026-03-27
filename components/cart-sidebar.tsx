@@ -204,7 +204,7 @@ export function CartSidebar({
           </div>
         )}
 
-        {!isButcherOrder && !isDrinksOrder && (
+        {!isButcherOrder && !isDrinksOrder && !isDrinksOnly && (
           <div className="flex items-center gap-2">
             <Dialog open={isTableModalOpen} onOpenChange={setIsTableModalOpen}>
               <DialogTrigger asChild>
@@ -284,6 +284,12 @@ export function CartSidebar({
         {isDrinksOrder && (
           <div className="bg-amber-50 border-1.5 border-dashed border-amber-200 rounded-xl py-2 px-3 text-center">
             <p className="text-amber-700 text-[10px] font-black uppercase tracking-widest">Drinks To Go Mode</p>
+          </div>
+        )}
+
+        {isDrinksOnly && !isDrinksOrder && (
+          <div className="bg-amber-50 border-1.5 border-dashed border-amber-200 rounded-xl py-2 px-3 text-center">
+            <p className="text-amber-700 text-[10px] font-black uppercase tracking-widest">🥤 Drinks — Served Immediately</p>
           </div>
         )}
       </div>
@@ -387,8 +393,10 @@ export function CartSidebar({
             </>
           ) : (
             <>
-              <span className="text-xl">🚀</span>
-              <span className="uppercase tracking-widest text-sm">{t("cashier.sendToKitchen")}</span>
+              <span className="text-xl">{isDrinksOnly || isDrinksOrder ? '🥤' : '🚀'}</span>
+              <span className="uppercase tracking-widest text-sm">
+                {isDrinksOnly || isDrinksOrder ? 'Place Order' : t("cashier.sendToKitchen")}
+              </span>
             </>
           )}
         </button>

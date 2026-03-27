@@ -22,6 +22,7 @@ interface MenuItem {
   name: string
   description?: string
   category: string
+  mainCategory?: string
   price: number
   image?: string
   available?: boolean
@@ -155,13 +156,20 @@ export default function CashierPOSPage() {
   }, [cartItems])
 
   const isDrinksOnly = useMemo(() => {
+    const drinkItems = menuItems.filter(mi =>
+      cartItems.some(ci => ci.id === mi._id || ci.id.startsWith(mi._id + "_"))
+    )
+    if (drinkItems.length > 0) {
+      return drinkItems.every(mi => mi.mainCategory?.toLowerCase() === "drinks")
+    }
+    // Fallback: check category name
     return cartItems.length > 0 && cartItems.every(item =>
       item.category === "Drinks" ||
       item.category === "Beverages" ||
       item.category === "Coffee" ||
       item.category === "Juice"
     )
-  }, [cartItems])
+  }, [cartItems, menuItems])
 
   useEffect(() => {
     // Refresh user profile to ensure we have the latest floor assignment
@@ -285,7 +293,7 @@ export default function CashierPOSPage() {
     const tax = totalAmount - subtotal
 
     // Determine table number based on order type
-    const finalTableNumber = isButcherOrder ? "Buy&Go" : isDrinksOrder ? "Drinks" : tableNumber
+    const finalTableNumber = isButcherOrder ? "Buy&Go" : (isDrinksOrder || isDrinksOnly) ? "Drinks" : tableNumber
 
     setIsCheckoutLoading(true)
     try {

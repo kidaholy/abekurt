@@ -932,33 +932,36 @@ export default function StorePage() {
     )
 
     const exportStoreCSV = () => {
-        const data = filteredStock
-            .filter((item: any) => (item.storeQuantity || 0) > 0 || (item.purchased || 0) > 0 || (item.totalPurchased || 0) > 0 || (item.storeOpeningStock || 0) > 0)
-            .map((item: any) => {
-                const costPrice = item.averagePurchasePrice || item.currentUnitCost || item.unitCost || 0
-                const remains = item.storeQuantity ?? 0
-                const transferredCount = item.transferred ?? 0
-                const totalPurchaseValue = remains * costPrice
-                const isLow = item.isLowStoreStock || (remains <= (item.storeMinLimit || 5)) && remains > 0
-                return {
-                    "Item Name": item.name,
-                    "Unit Cost": Math.round(costPrice),
-                    "In Store": remains,
-                    "Total Inv.": totalPurchaseValue,
-                    "Transferred": transferredCount,
-                    "Status": isLow ? "Low Stock" : "OK"
-                }
-            })
-        
+        // Export ALL items (no quantity filter) to give complete picture
+        const data = filteredStock.map((item: any) => {
+            // Use averagePurchasePrice as the purchase cost (same as Store Valuation sidebar)
+            const costPrice = item.averagePurchasePrice || item.unitCost || 0
+            const storeQty = item.storeQuantity ?? 0
+            const activeQty = item.quantity ?? 0
+            const totalStoreValue = storeQty * costPrice
+            const isLow = item.isLowStoreStock || ((storeQty <= (item.storeMinLimit || 0)) && storeQty > 0)
+            return {
+                "Item Name": item.name,
+                "Category": item.category,
+                "Unit": item.unit,
+                "Unit Cost (Br)": costPrice > 0 ? costPrice.toFixed(2) : "—",
+                "In Store": storeQty,
+                "Active (POS)": activeQty,
+                "Store Value (Br)": totalStoreValue > 0 ? Math.round(totalStoreValue) : 0,
+                "Min Store Limit": item.storeMinLimit ?? 0,
+                "Status": storeQty <= 0 ? "Out of Stock" : isLow ? "Low Stock" : "OK"
+            }
+        })
+
         if (data.length === 0) {
             alert("No store inventory data found to export.")
             return
         }
 
         ReportExporter.exportToCSV({
-            title: "Store Investment Report",
-            period: "Current Filter",
-            headers: ["Item Name", "Unit Cost", "In Store", "Total Inv.", "Transferred", "Status"],
+            title: "Bulk Inventory Report",
+            period: searchTerm ? `Search: "${searchTerm}"` : "All Items",
+            headers: ["Item Name", "Category", "Unit", "Unit Cost (Br)", "In Store", "Active (POS)", "Store Value (Br)", "Min Store Limit", "Status"],
             data
         })
     }

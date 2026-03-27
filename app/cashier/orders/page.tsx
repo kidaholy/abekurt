@@ -21,7 +21,7 @@ interface Order {
   items: OrderItem[]
   totalAmount: number
   paymentMethod: string
-  status: "preparing" | "ready" | "completed" | "cancelled"
+  status: "preparing" | "ready" | "served" | "completed" | "cancelled"
   tableNumber: string
   batchNumber?: string
   createdAt: string
@@ -82,6 +82,7 @@ export default function CashierOrdersPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-50 text-green-700 border-green-200'
+      case 'served': return 'bg-emerald-50 text-emerald-700 border-emerald-200'
       case 'preparing': return 'bg-blue-50 text-blue-700 border-blue-200'
       case 'ready': return 'bg-teal-50 text-teal-700 border-teal-200'
       case 'cancelled': return 'bg-red-50 text-red-700 border-red-200'

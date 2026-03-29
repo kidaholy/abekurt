@@ -62,26 +62,16 @@ export default function CashierPOSPage() {
   useEffect(() => {
     let mounted = true
 
-    // 🚀 HYDRATION CACHE: Load from localStorage immediately
-    const cachedMenu = localStorage.getItem("pos_menu_cache")
-    if (cachedMenu) {
-      try {
-        const parsed = JSON.parse(cachedMenu)
-        setMenuItems(parsed)
-        setMenuLoading(false)
-      } catch (err) {
-        console.error("Failed to parse menu cache")
-      }
-    }
+    // Clear stale cache so all items are always fetched fresh
+    localStorage.removeItem("pos_menu_cache")
 
     const fetchMenuItems = async (retryCount = 0) => {
       if (!token) return
 
       try {
-        if (retryCount === 0 && !localStorage.getItem("pos_menu_cache")) setMenuLoading(true)
         setError(null)
 
-        const response = await fetch("/api/menu", {
+        const response = await fetch("/api/menu?all=true", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -132,7 +122,7 @@ export default function CashierPOSPage() {
         const refreshMenu = async () => {
           if (!token) return
           try {
-            const response = await fetch("/api/menu", { headers: { Authorization: `Bearer ${token}` } })
+            const response = await fetch("/api/menu?all=true", { headers: { Authorization: `Bearer ${token}` } })
             if (response.ok) {
               const data = await response.json()
               setMenuItems(data)

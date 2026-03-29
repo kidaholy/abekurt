@@ -242,8 +242,7 @@ export async function POST(request: Request) {
           category: menu?.category, // Store category for kitchen routing
           mainCategory: menu?.mainCategory, // Persist for accurate reporting separation
           preparationTime: isDrink ? 0 : (menu?.preparationTime || 0),
-          status: isDrink ? "served" : "pending",
-          modifiers: item.modifiers || [],
+          status: isDrink ? "served" : "pending",          modifiers: item.modifiers || [],
           notes: item.notes || ""
         }
       }).sort((a: any, b: any) => {
@@ -257,7 +256,7 @@ export async function POST(request: Request) {
       status: items.every((item: any) => {
         const menu = linkedMenuItems.find(m => m._id.toString() === item.menuItemId)
         return menu?.mainCategory?.toLowerCase() === "drinks"
-      }) ? "served" : "preparing",
+      }) ? "served" : "cooking",
       paymentMethod: paymentMethod || "cash",
       customerName: customerName || `Table ${tableNumber}`,
       tableNumber,

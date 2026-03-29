@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/db"
 import Order from "@/lib/models/order"
 import User from "@/lib/models/user"
@@ -41,9 +41,9 @@ export async function PUT(request: Request, context: any) {
         if (item.category && normalizedAssigned.includes(item.category.trim().normalize("NFC").toLowerCase())) {
           item.status = status
         }
-        const isItemDone = ['ready', 'served', 'completed', 'cancelled'].includes(item.status)
+        const isItemDone = ['served', 'completed', 'cancelled'].includes(item.status)
         if (!isItemDone) allItemsReady = false
-        if (item.status === 'preparing') anyItemPreparing = true
+        if (item.status === 'cooking') anyItemPreparing = true
       })
 
       if (status === 'cancelled') {
@@ -53,9 +53,9 @@ export async function PUT(request: Request, context: any) {
       } else {
         let newOverallStatus = orderToUpdate.status
         if (allItemsReady) {
-          newOverallStatus = status === 'completed' ? 'completed' : 'ready'
-        } else if (anyItemPreparing || status === 'preparing') {
-          newOverallStatus = 'preparing'
+          newOverallStatus = ['completed', 'served'].includes(status) ? status : 'served'
+        } else if (anyItemPreparing || status === 'cooking') {
+          newOverallStatus = 'cooking'
         }
         orderToUpdate.status = newOverallStatus
       }
@@ -77,14 +77,14 @@ export async function PUT(request: Request, context: any) {
       ; (async () => {
         try {
           const statusMessages: Record<string, string> = {
-            preparing: `Order #${orderNumber} is now being prepared`,
-            ready: `Order #${orderNumber} is ready for pickup!`,
+            cooking: `Order #${orderNumber} is now being cooked`,
+            served: `Order #${orderNumber} has been served`,
             completed: `Order #${orderNumber} has been completed`,
             cancelled: `Order #${orderNumber} has been cancelled by the kitchen`
           }
           if (statusMessages[status]) {
-            if (status === "ready" || status === "cancelled") {
-              addNotification(status === "ready" ? "success" : "warning", statusMessages[status], "cashier")
+            if (status === "served" || status === "cancelled") {
+              addNotification(status === "served" ? "success" : "warning", statusMessages[status], "cashier")
             }
             addNotification(status === "cancelled" ? "warning" : "info", statusMessages[status], "admin")
           }

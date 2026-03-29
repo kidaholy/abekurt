@@ -16,7 +16,7 @@ interface OrderItem {
   name: string
   quantity: number
   specialInstructions?: string
-  status: "pending" | "preparing" | "ready" | "served" | "cancelled"
+  status: "pending" | "cooking" | "served" | "cancelled"
   category?: string
 }
 
@@ -24,7 +24,7 @@ interface Order {
   _id: string
   orderNumber: string
   items: OrderItem[]
-  status: "pending" | "preparing" | "ready" | "completed" | "cancelled"
+  status: "pending" | "cooking" | "served" | "completed" | "cancelled"
   notes?: string
   batchNumber?: string
   tableNumber?: string
@@ -34,16 +34,25 @@ interface Order {
 
 export default function KitchenDisplayPage() {
   const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
   const [newOrderAlert, setNewOrderAlert] = useState(false)
   const [previousOrderCount, setPreviousOrderCount] = useState(0)
   const [assignedCategories, setAssignedCategories] = useState<string[]>([])
+  // Track dismissed order IDs so background polls don't re-add them
+  const dismissedIds = useState<Set<string>>(() => new Set())[0]
   const { token } = useAuth()
   const { t } = useLanguage()
   const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
 
   useEffect(() => {
     if (token) {
+      // Load cache instantly — no spinner
+      const cached = localStorage.getItem("chef_orders_cache")
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          setOrders(parsed)
+        } catch {}
+      }
       fetchOrders()
       fetchChefCategories()
     }
@@ -89,20 +98,6 @@ export default function KitchenDisplayPage() {
 
   const fetchOrders = async () => {
     try {
-      // 🚀 HYDRATION CACHE: Load from localStorage on very first load
-      if (loading) {
-        const cached = localStorage.getItem("chef_orders_cache")
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached)
-            setOrders(parsed)
-            setLoading(false)
-          } catch (e) {
-            console.error("Failed to parse orders cache")
-          }
-        }
-      }
-
       const response = await fetch("/api/orders", {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -110,13 +105,13 @@ export default function KitchenDisplayPage() {
         const data = await response.json()
         const activeOrders = data.filter((order: Order) =>
           order.status !== "completed" && order.status !== "cancelled" &&
+          order.status !== "served" &&
           order.items.some(item => (item as any).mainCategory === "Food")
         ).map((order: Order) => ({
           ...order,
           items: order.items.filter(item => (item as any).mainCategory === "Food")
-        }))
+        })).filter((order: Order) => !dismissedIds.has(order._id))
 
-        // Update Cache
         localStorage.setItem("chef_orders_cache", JSON.stringify(activeOrders))
 
         if (previousOrderCount > 0 && activeOrders.length > previousOrderCount) {
@@ -129,53 +124,44 @@ export default function KitchenDisplayPage() {
       }
     } catch (err) {
       console.error("Failed to load orders")
-    } finally {
-      setLoading(false)
     }
   }
 
 
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
-    const preservedOrders = orders;
-    try {
-      // Robust Optimistic Update
-      setOrders(prevOrders => {
-        const isComplete = newStatus === 'completed' || newStatus === 'cancelled';
-        if (isComplete) {
-          return prevOrders.filter(o => o._id !== orderId);
-        }
-        return prevOrders.map(order =>
-          order._id === orderId ? { ...order, status: newStatus as any } : order
-        );
-      });
+    const isTerminal = newStatus === 'served' || newStatus === 'completed' || newStatus === 'cancelled'
 
-      const response = await fetch(`/api/orders/${orderId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (response.ok) {
-        // Option A: Just keep the local state if the server confirmed it
-        // Option B: Subtle re-fetch to ensure sync without jarring jumps
-        // For responsiveness, we trust the local update and wait for next poll
-        localStorage.setItem('orderUpdated', Date.now().toString())
-      } else {
-        // Rollback
-        setOrders(preservedOrders);
-      }
-    } catch (err) {
-      // Rollback
-      setOrders(preservedOrders);
+    // Instantly remove from UI — no waiting
+    if (isTerminal) {
+      dismissedIds.add(orderId)
+      setOrders(prev => prev.filter(o => o._id !== orderId))
+    } else {
+      setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus as any } : o))
     }
+
+    // Fire API in background — kitchen doesn't wait
+    fetch(`/api/orders/${orderId}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status: newStatus }),
+    }).then(res => {
+      if (res.ok) {
+        localStorage.setItem('orderUpdated', Date.now().toString())
+      } else if (!isTerminal) {
+        // Only rollback for non-terminal status changes
+        fetchOrders()
+      }
+    }).catch(() => {
+      if (!isTerminal) fetchOrders()
+    })
   }
 
-  const preparingOrders = orders.filter((o) => o.status === "preparing")
-  const readyOrders = orders.filter((o) => o.status === "ready")
+  const activeOrders = orders.filter((o) => o.status === "pending" || o.status === "cooking")
+  const servedOrdersCount = orders.filter((o) => o.status === "served").length
 
   return (
     <ProtectedRoute requiredRoles={["chef"]}>
@@ -222,12 +208,12 @@ export default function KitchenDisplayPage() {
             {/* Stats Bar */}
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-3xl font-bold text-blue-600">{preparingOrders.length}</div>
-                <div className="text-sm text-gray-600 mt-1">Preparing</div>
+                <div className="text-3xl font-bold text-blue-600">{activeOrders.length}</div>
+                <div className="text-sm text-gray-600 mt-1">Active Orders</div>
               </div>
               <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="text-3xl font-bold text-green-600">{readyOrders.length}</div>
-                <div className="text-sm text-gray-600 mt-1">Ready</div>
+                <div className="text-3xl font-bold text-green-600">{servedOrdersCount}</div>
+                <div className="text-sm text-gray-600 mt-1">Served (Total)</div>
               </div>
             </div>
           </div>
@@ -249,31 +235,16 @@ export default function KitchenDisplayPage() {
           )}
 
           {/* Orders Grid */}
-          {loading ? (
-            <div className="flex flex-col items-center justify-center min-h-[400px]">
-              <RefreshCw className="h-12 w-12 animate-spin text-gray-400 mb-4" />
-              <p className="text-gray-600">Loading kitchen orders...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <OrderColumn
-                title="Preparing"
-                color="blue"
-                orders={preparingOrders}
-                onStatusChange={handleStatusChange}
-                nextStatus="ready"
-                t={t}
-              />
-              <OrderColumn
-                title="Ready"
-                color="green"
-                orders={readyOrders}
-                onStatusChange={handleStatusChange}
-                nextStatus="completed"
-                t={t}
-              />
-            </div>
-          )}
+          <div className="grid grid-cols-1 gap-6">
+            <OrderColumn
+              title="Active Orders"
+              color="blue"
+              orders={activeOrders}
+              onStatusChange={handleStatusChange}
+              nextStatus="served"
+              t={t}
+            />
+          </div>
         </div>
 
         <ConfirmationCard
@@ -326,9 +297,9 @@ function OrderColumn({
   return (
     <div className={`rounded-xl p-4 border ${colorClasses[color]} min-h-[500px]`}>
       <h2 className="text-lg font-bold text-gray-900 mb-4">{title}</h2>
-      <div className="grid grid-cols-2 gap-3 max-h-[calc(100vh-300px)] overflow-y-auto">
+      <div className="grid grid-cols-4 gap-3 max-h-[calc(100vh-300px)] overflow-y-auto">
         {orders.length === 0 ? (
-          <p className="col-span-2 text-center text-gray-500 py-8">No orders</p>
+          <p className="col-span-4 text-center text-gray-500 py-8">No orders</p>
         ) : (
           orders.map(order => (
             <OrderCard
@@ -405,8 +376,8 @@ function OrderCard({
               </div>
               <div className="flex items-center gap-2">
                 {item.status && item.status !== 'pending' && (
-                  <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-tight shadow-sm border ${item.status === 'ready' ? 'bg-green-100 text-green-700 border-green-200' :
-                    item.status === 'preparing' ? 'bg-blue-600 text-white border-blue-700' :
+                  <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-tight shadow-sm border ${item.status === 'served' ? 'bg-green-100 text-green-700 border-green-200' :
+                    item.status === 'cooking' ? 'bg-orange-600 text-white border-orange-700' :
                       'bg-gray-100 text-gray-600 border-gray-200'
                     }`}>
                     {item.status}
@@ -436,54 +407,30 @@ function OrderCardActions({
   order: Order
   onStatusChange: (orderId: string, newStatus: string) => void
 }) {
-  const [busy, setBusy] = useState(false)
-
   const handleClick = (newStatus: string) => {
-    if (busy) return
-    setBusy(true)
     onStatusChange(order._id, newStatus)
-    // Reset after 3s as safety fallback (card will unmount on success anyway)
-    setTimeout(() => setBusy(false), 3000)
   }
 
-  if (order.status === "preparing") {
+  if (order.status === "cooking" || order.status === "pending") {
     return (
       <div className="flex gap-2">
         <button
-          onClick={() => handleClick("ready")}
-          disabled={busy}
-          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          onClick={() => handleClick("served")}
+          className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-bold text-sm hover:bg-green-700 active:scale-95 transition-all"
         >
-          {busy ? (
-            <>
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-              </svg>
-              Updating...
-            </>
-          ) : "✅ Mark Ready"}
+          ✅ Ready
         </button>
       </div>
     )
   }
 
-  if (order.status === "ready") {
+  if (order.status === "served") {
     return (
       <button
         onClick={() => handleClick("completed")}
-        disabled={busy}
-        className="w-full bg-gray-800 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full bg-gray-800 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-gray-900 active:scale-95 transition-all"
       >
-        {busy ? (
-          <>
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-            </svg>
-            Completing...
-          </>
-        ) : "🏁 Complete Order"}
+        🏁 Complete Order
       </button>
     )
   }

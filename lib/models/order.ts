@@ -6,7 +6,7 @@ interface IOrderItem {
   name: string
   quantity: number
   price: number
-  status: "pending" | "preparing" | "ready" | "served" | "completed" | "cancelled"
+  status: "pending" | "cooking" | "served" | "completed" | "cancelled"
   modifiers?: string[]
   notes?: string
   category?: string
@@ -21,7 +21,7 @@ interface IOrder extends Document {
   totalAmount: number
   tax?: number
   subtotal?: number
-  status: "pending" | "preparing" | "ready" | "served" | "completed" | "cancelled"
+  status: "pending" | "cooking" | "served" | "completed" | "cancelled"
   paymentMethod: string
   customerName?: string
   tableNumber: string
@@ -52,7 +52,7 @@ const orderSchema = new Schema<IOrder>(
         price: { type: Number, required: true },
         status: {
           type: String,
-          enum: ["pending", "preparing", "ready", "served", "completed", "cancelled"],
+          enum: ["pending", "cooking", "served", "completed", "cancelled"],
           default: "pending"
         },
         modifiers: [{ type: String }],
@@ -68,7 +68,7 @@ const orderSchema = new Schema<IOrder>(
     subtotal: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ["pending", "preparing", "ready", "served", "completed", "cancelled"],
+      enum: ["pending", "cooking", "served", "completed", "cancelled"],
       default: "pending",
     },
     paymentMethod: { type: String, default: "cash" },

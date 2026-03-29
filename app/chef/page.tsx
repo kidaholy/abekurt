@@ -16,7 +16,7 @@ interface OrderItem {
   name: string
   quantity: number
   specialInstructions?: string
-  status: "pending" | "preparing" | "ready" | "served" | "cancelled"
+  status: "pending" | "cooking" | "served" | "cancelled"
   category?: string
 }
 
@@ -24,7 +24,7 @@ interface Order {
   _id: string
   orderNumber: string
   items: OrderItem[]
-  status: "pending" | "preparing" | "ready" | "completed" | "cancelled"
+  status: "pending" | "cooking" | "served" | "completed" | "cancelled"
   notes?: string
   batchNumber?: string
   tableNumber?: string
@@ -137,7 +137,7 @@ export default function KitchenDisplayPage() {
     try {
       // Robust Optimistic Update
       setOrders(prevOrders => {
-        const isComplete = newStatus === 'completed' || newStatus === 'cancelled';
+        const isComplete = newStatus === 'served' || newStatus === 'completed' || newStatus === 'cancelled';
         if (isComplete) {
           return prevOrders.filter(o => o._id !== orderId);
         }
@@ -170,8 +170,8 @@ export default function KitchenDisplayPage() {
     }
   }
 
-  const preparingOrders = orders.filter((o) => o.status === "preparing")
-  const readyOrders = orders.filter((o) => o.status === "ready")
+  const preparingOrders = orders.filter((o) => o.status === "cooking")
+  const readyOrders = orders.filter((o) => o.status === "served")
 
   return (
     <>
@@ -367,8 +367,8 @@ function OrderCard({
               </div>
               <div className="flex items-center gap-2">
                 {item.status && item.status !== 'pending' && (
-                  <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-tight shadow-sm border ${item.status === 'ready' ? 'bg-green-100 text-green-700 border-green-200' :
-                    item.status === 'preparing' ? 'bg-blue-600 text-white border-blue-700' :
+                  <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-tight shadow-sm border ${item.status === 'served' ? 'bg-green-100 text-green-700 border-green-200' :
+                    item.status === 'cooking' ? 'bg-orange-600 text-white border-orange-700' :
                       'bg-gray-100 text-gray-600 border-gray-200'
                     }`}>
                     {item.status}
@@ -408,11 +408,11 @@ function OrderCardActions({
     setTimeout(() => setBusy(false), 3000)
   }
 
-  if (order.status === "preparing") {
+  if (order.status === "cooking" || order.status === "pending") {
     return (
       <div className="flex gap-2">
         <button
-          onClick={() => handleClick("ready")}
+          onClick={() => handleClick("served")}
           disabled={busy}
           className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium text-sm hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
@@ -424,13 +424,13 @@ function OrderCardActions({
               </svg>
               Updating...
             </>
-          ) : "✅ Mark Ready"}
+          ) : "✅ Ready"}
         </button>
       </div>
     )
   }
 
-  if (order.status === "ready") {
+  if (order.status === "served") {
     return (
       <button
         onClick={() => handleClick("completed")}

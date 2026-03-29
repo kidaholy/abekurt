@@ -80,7 +80,7 @@ export default function ChefOrdersPage() {
     }
   }
 
-  const statuses = ["all", "pending", "preparing", "ready", "completed"]
+  const statuses = ["all", "pending", "cooking", "served", "completed"]
   const filteredOrders = filterStatus === "all" ? orders : orders.filter((o) => o.status === filterStatus)
 
   return (
@@ -152,13 +152,15 @@ export default function ChefOrdersPage() {
                         <span
                           className={`px-2 py-1 rounded text-xs font-semibold capitalize ${order.status === "ready"
                             ? "bg-success/20 text-success"
-                            : order.status === "preparing"
-                              ? "bg-info/20 text-info"
-                              : order.status === "pending"
-                                ? "bg-warning/20 text-warning"
-                                : order.status === "completed"
-                                  ? "bg-muted text-muted-foreground"
-                                  : "bg-danger/20 text-danger"
+                            : order.status === "served"
+                              ? "bg-primary/20 text-primary"
+                              : order.status === "preparing"
+                                ? "bg-info/20 text-info"
+                                : order.status === "pending"
+                                  ? "bg-warning/20 text-warning"
+                                  : order.status === "completed"
+                                    ? "bg-muted text-muted-foreground"
+                                    : "bg-danger/20 text-danger"
                             }`}
                         >
                           {order.status}

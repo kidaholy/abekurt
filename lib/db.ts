@@ -46,11 +46,14 @@ export async function connectDB() {
     cached.conn = await cached.promise
   } catch (e: any) {
     cached.promise = null
-    console.error("❌ MongoDB connection error:", {
-      message: e.message,
-      code: e.code,
-      reason: e.reason ? "Topology mismatch or network issue" : "Unknown",
-      stack: e.stack?.split('\n').slice(0, 2).join('\n')
+    console.error("❌ MongoDB connection error (raw):", e)
+    console.error("❌ MongoDB connection error (detail):", {
+      name: e?.name,
+      message: e?.message,
+      code: e?.code,
+      codeName: e?.codeName,
+      reason: e?.reason,
+      stack: e?.stack?.split('\n').slice(0, 5).join('\n')
     })
     throw e
   }

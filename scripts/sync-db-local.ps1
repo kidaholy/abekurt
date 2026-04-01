@@ -59,19 +59,25 @@ if (-not $dumpDir) {
     exit 1
 }
 
-# Check for mongorestore
+# Find mongorestore executable
+$restorePath = "mongorestore"
 if (-not (Get-Command "mongorestore" -ErrorAction SilentlyContinue)) {
-    Write-Host "---" -ForegroundColor Red
-    Write-Host "ERROR: 'mongorestore' not found!" -ForegroundColor Red
-    Write-Host "Please download and install MongoDB Database Tools from:" -ForegroundColor Yellow
-    Write-Host "https://www.mongodb.com/try/download/database-tools" -ForegroundColor Yellow
-    Write-Host "---"
-    Write-Host "NOTE: I've kept your backup files in './tmp_backup'. Once installed, you can try again."
-    exit 1
+    $defaultRestorePath = "C:\Program Files\MongoDB\Tools\100\bin\mongorestore.exe"
+    if (Test-Path $defaultRestorePath) {
+        $restorePath = "& '$defaultRestorePath'"
+    } else {
+        Write-Host "---" -ForegroundColor Red
+        Write-Host "ERROR: 'mongorestore' not found!" -ForegroundColor Red
+        Write-Host "Please download and install MongoDB Database Tools from:" -ForegroundColor Yellow
+        Write-Host "https://www.mongodb.com/try/download/database-tools" -ForegroundColor Yellow
+        Write-Host "---"
+        Write-Host "NOTE: I've kept your backup files in './tmp_backup'. Once installed, you can try again."
+        exit 1
+    }
 }
 
 Write-Host "Restoring from: $($dumpDir.FullName)"
-mongorestore --drop "$($dumpDir.FullName)"
+Invoke-Expression "$restorePath --drop '$($dumpDir.FullName)'"
 
 # Check if restore was successful
 if ($LASTEXITCODE -ne 0) {

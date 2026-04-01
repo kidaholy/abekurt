@@ -1,0 +1,41 @@
+name: MongoDB Atlas Backup
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install MongoDB Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y mongodb-database-tools
+
+    - name: Run mongodump
+      env:
+        MONGODB_ATLAS_URI: ${{ secrets.MONGODB_ATLAS_URI }}
+        MONGODB_ATLAS_DATABASE: ${{ secrets.MONGODB_ATLAS_DATABASE }}
+      run: |
+        if [ -z "$MONGODB_ATLAS_URI" ]; then
+          echo "MONGODB_ATLAS_URI secret is not set"
+          exit 1
+        fi
+        # Create backup directory
+        mkdir dump
+        # Run mongodump
+        mongodump --uri="$MONGODB_ATLAS_URI" --db="$MONGODB_ATLAS_DATABASE" --out=dump/
+
+    - name: Archive Backup
+      run: |
+        TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+        zip -r mongodb_backup_$TIMESTAMP.zip dump/
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mongodb-backup-${{ github.sha }}
+        path: mongodb_backup_*.zip
+        retention-days: 7

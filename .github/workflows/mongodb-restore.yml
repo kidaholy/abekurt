@@ -1,0 +1,52 @@
+name: MongoDB Atlas Restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        description: 'Name of the artifact to restore from (leave empty if providing a direct URL)'
+        required: false
+      backup_url:
+        description: 'Direct URL to the backup zip file (if not using artifact)'
+        required: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install MongoDB Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y mongodb-database-tools
+
+    - name: Download Artifact
+      if: "${{ github.event.inputs.artifact_name != '' }}"
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ github.event.inputs.artifact_name }}
+        path: restore_dump
+
+    - name: Download from URL
+      if: "${{ github.event.inputs.backup_url != '' }}"
+      run: |
+        mkdir -p restore_dump
+        curl -L "${{ github.event.inputs.backup_url }}" -o restore_dump/backup.zip
+        unzip restore_dump/backup.zip -d restore_dump/
+
+    - name: Run mongorestore
+      env:
+        MONGODB_ATLAS_URI: ${{ secrets.MONGODB_ATLAS_URI }}
+      run: |
+        if [ -z "$MONGODB_ATLAS_URI" ]; then
+          echo "MONGODB_ATLAS_URI secret is not set"
+          exit 1
+        fi
+        # Find the dump directory (it might be nested)
+        DUMP_DIR=$(find restore_dump -name "dump" -type d | head -n 1)
+        if [ -z "$DUMP_DIR" ]; then
+          # Try searching for the database name directory inside restore_dump
+          DUMP_DIR=$(find restore_dump -maxdepth 2 -type d ! -path "restore_dump" | head -n 1)
+        fi
+        
+        echo "Restoring from $DUMP_DIR"
+        mongorestore --uri="$MONGODB_ATLAS_URI" --drop "$DUMP_DIR"

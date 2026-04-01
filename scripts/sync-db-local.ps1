@@ -26,7 +26,7 @@ Write-Host "Found latest successful backup run: $runId"
 
 # 2. Download the artifact
 Write-Host "Downloading artifact..."
-Invoke-Expression "$ghPath run download $runId --name 'mongodb-backup-*' --dir './tmp_backup'"
+Invoke-Expression "$ghPath run download $runId --name 'mongodb-atlas-dump' --dir './tmp_backup'"
 
 if (-not (Test-Path "./tmp_backup")) {
     Write-Error "Failed to download artifact."

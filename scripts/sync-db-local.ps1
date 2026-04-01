@@ -2,8 +2,20 @@
 # This script downloads the latest MongoDB backup from GitHub Actions and restores it locally.
 # Prerequisites: GitHub CLI (gh) installed and authenticated, mongorestore installed locally.
 
+# Find gh executable
+$ghPath = "gh"
+if (-not (Get-Command "gh" -ErrorAction SilentlyContinue)) {
+    $defaultGhPath = "C:\Program Files\GitHub CLI\gh.exe"
+    if (Test-Path $defaultGhPath) {
+        $ghPath = "& '$defaultGhPath'"
+    } else {
+        Write-Error "GitHub CLI (gh) not found in PATH or at $defaultGhPath. Please install it and restart your terminal."
+        exit 1
+    }
+}
+
 # 1. Get the latest successful run ID of the "MongoDB Atlas Backup" workflow
-$runId = gh run list --workflow "mongodb-backup.yml" --status success --limit 1 --json databaseId --jq '.[0].databaseId'
+$runId = Invoke-Expression "$ghPath run list --workflow 'mongodb-backup.yml' --status success --limit 1 --json databaseId --jq '.[0].databaseId'"
 
 if (-not $runId) {
     Write-Error "No successful backup runs found."
@@ -14,7 +26,7 @@ Write-Host "Found latest successful backup run: $runId"
 
 # 2. Download the artifact
 Write-Host "Downloading artifact..."
-gh run download $runId --name "mongodb-backup-*" --dir "./tmp_backup"
+Invoke-Expression "$ghPath run download $runId --name 'mongodb-backup-*' --dir './tmp_backup'"
 
 if (-not (Test-Path "./tmp_backup")) {
     Write-Error "Failed to download artifact."

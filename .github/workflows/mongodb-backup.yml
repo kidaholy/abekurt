@@ -6,7 +6,7 @@ on:
   workflow_dispatch: # Manual trigger
 
 jobs:
-  backup:
+  dump:
     runs-on: ubuntu-22.04
     steps:
     - name: Install MongoDB Tools
@@ -37,20 +37,46 @@ jobs:
         echo "BACKUP_FILENAME=mongodb_backup_${TIMESTAMP}.zip" >> $GITHUB_ENV
         zip -r mongodb_backup_${TIMESTAMP}.zip dump/
 
-    - name: Upload to Backblaze B2
-      env:
-        B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
-        B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-        B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
-      run: |
-        pip install b2 --quiet
-        b2 authorize-account "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
-        b2 upload-file "$B2_BUCKET_NAME" "$BACKUP_FILENAME" "backups/$BACKUP_FILENAME"
-        echo "Uploaded $BACKUP_FILENAME to B2 bucket: $B2_BUCKET_NAME"
+    - name: Upload shared artifact for parallel jobs
+      uses: actions/upload-artifact@v4
+      with:
+        name: mongodb-dump-shared
+        path: mongodb_backup_*.zip
+        retention-days: 1
 
-    - name: Upload Artifact (short-term)
+  upload-github-artifact:
+    runs-on: ubuntu-22.04
+    needs: dump
+    steps:
+    - name: Download shared dump
+      uses: actions/download-artifact@v4
+      with:
+        name: mongodb-dump-shared
+
+    - name: Re-upload as long-term artifact
       uses: actions/upload-artifact@v4
       with:
         name: mongodb-atlas-dump
         path: mongodb_backup_*.zip
         retention-days: 7
+
+  upload-backblaze:
+    runs-on: ubuntu-22.04
+    needs: dump
+    env:
+      B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+      B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+    steps:
+    - name: Download shared dump
+      uses: actions/download-artifact@v4
+      with:
+        name: mongodb-dump-shared
+
+    - name: Upload to Backblaze B2
+      run: |
+        pip install b2 --quiet
+        b2 authorize-account "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
+        BACKUP_FILENAME=$(ls mongodb_backup_*.zip | head -n 1)
+        b2 upload-file "$B2_BUCKET_NAME" "$BACKUP_FILENAME" "backups/$BACKUP_FILENAME"
+        echo "Uploaded $BACKUP_FILENAME to B2 bucket: $B2_BUCKET_NAME"

@@ -2,7 +2,7 @@ name: MongoDB Atlas Backup
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Daily at midnight
+    - cron: '0 */5 * * *' # Every 5 hours
   workflow_dispatch: # Manual trigger
 
 jobs:
@@ -28,17 +28,27 @@ jobs:
           echo "MONGODB_ATLAS_URI secret is not set"
           exit 1
         fi
-        # Create backup directory
         mkdir dump
-        # Run mongodump
         mongodump --uri="$MONGODB_ATLAS_URI" --db="$MONGODB_ATLAS_DATABASE" --out=dump/
 
     - name: Archive Backup
       run: |
         TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-        zip -r mongodb_backup_$TIMESTAMP.zip dump/
+        echo "BACKUP_FILENAME=mongodb_backup_${TIMESTAMP}.zip" >> $GITHUB_ENV
+        zip -r mongodb_backup_${TIMESTAMP}.zip dump/
 
-    - name: Upload Artifact
+    - name: Upload to Backblaze B2
+      env:
+        B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+        B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+        B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+      run: |
+        pip install b2 --quiet
+        b2 authorize-account "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
+        b2 upload-file "$B2_BUCKET_NAME" "$BACKUP_FILENAME" "backups/$BACKUP_FILENAME"
+        echo "Uploaded $BACKUP_FILENAME to B2 bucket: $B2_BUCKET_NAME"
+
+    - name: Upload Artifact (short-term)
       uses: actions/upload-artifact@v4
       with:
         name: mongodb-atlas-dump

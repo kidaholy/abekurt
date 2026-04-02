@@ -4,10 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       artifact_name:
-        description: 'Name of the artifact to restore from (leave empty if providing a direct URL)'
+        description: 'Name of the GitHub artifact to restore from'
         required: false
       backup_url:
-        description: 'Direct URL to the backup zip file (if not using artifact)'
+        description: 'Direct URL to the backup zip file'
+        required: false
+      b2_filename:
+        description: 'Filename in Backblaze B2 to restore from (e.g. backups/mongodb_backup_20240101_000000.zip)'
         required: false
 
 jobs:
@@ -23,6 +26,19 @@ jobs:
            sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
         sudo apt-get update
         sudo apt-get install -y mongodb-database-tools
+
+    - name: Download from Backblaze B2
+      if: "${{ github.event.inputs.b2_filename != '' }}"
+      env:
+        B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
+        B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+        B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+      run: |
+        pip install b2 --quiet
+        b2 authorize-account "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
+        mkdir -p restore_dump
+        b2 download-file-by-name "$B2_BUCKET_NAME" "${{ github.event.inputs.b2_filename }}" restore_dump/backup.zip
+        unzip restore_dump/backup.zip -d restore_dump/
 
     - name: Download Artifact
       if: "${{ github.event.inputs.artifact_name != '' }}"
@@ -46,12 +62,9 @@ jobs:
           echo "MONGODB_ATLAS_URI secret is not set"
           exit 1
         fi
-        # Find the dump directory (it might be nested)
         DUMP_DIR=$(find restore_dump -name "dump" -type d | head -n 1)
         if [ -z "$DUMP_DIR" ]; then
-          # Try searching for the database name directory inside restore_dump
           DUMP_DIR=$(find restore_dump -maxdepth 2 -type d ! -path "restore_dump" | head -n 1)
         fi
-        
         echo "Restoring from $DUMP_DIR"
         mongorestore --uri="$MONGODB_ATLAS_URI" --drop "$DUMP_DIR"

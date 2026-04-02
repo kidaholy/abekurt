@@ -76,7 +76,7 @@ jobs:
     - name: Upload to Backblaze B2
       run: |
         pip install b2 --quiet
-        b2 authorize-account "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
+        b2 account authorize "$B2_APPLICATION_KEY_ID" "$B2_APPLICATION_KEY"
         BACKUP_FILENAME=$(ls mongodb_backup_*.zip | head -n 1)
-        b2 upload-file "$B2_BUCKET_NAME" "$BACKUP_FILENAME" "backups/$BACKUP_FILENAME"
+        b2 file upload "$B2_BUCKET_NAME" "$BACKUP_FILENAME" "backups/$BACKUP_FILENAME"
         echo "Uploaded $BACKUP_FILENAME to B2 bucket: $B2_BUCKET_NAME"

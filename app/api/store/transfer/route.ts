@@ -30,6 +30,17 @@ export async function POST(request: Request) {
             }, { status: 400 })
         }
 
+        // Check if transfer would leave store below minimum limit
+        const remainingStoreQuantity = stockItem.storeQuantity - quantity
+        if (stockItem.trackQuantity && remainingStoreQuantity < stockItem.storeMinLimit) {
+            return NextResponse.json({
+                message: `Transfer would leave store quantity (${remainingStoreQuantity}) below minimum limit (${stockItem.storeMinLimit}). Please adjust quantity.`,
+                currentStore: stockItem.storeQuantity,
+                minLimit: stockItem.storeMinLimit,
+                wouldRemain: remainingStoreQuantity
+            }, { status: 400 })
+        }
+
         // Perform transfer
         stockItem.storeQuantity -= quantity
         stockItem.quantity += quantity

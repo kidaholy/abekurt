@@ -668,8 +668,8 @@ export default function StorePage() {
         setSaveLoading(true)
         try {
             const addedAmount = Number(restockAmount)
-            const totalCost = Number(newTotalCost)
-            const sellingPrice = newUnitCost ? Number(newUnitCost) : restockingItem.unitCost
+            const unitCost = Number(newUnitCost) || restockingItem.unitCost
+            const totalCost = addedAmount * unitCost // Calculate total cost from unit cost and quantity
 
             const response = await fetch(`/api/stock/${restockingItem._id}`, {
                 method: "PUT",
@@ -681,8 +681,8 @@ export default function StorePage() {
                     action: 'restock',
                     quantityAdded: addedAmount,
                     totalPurchaseCost: totalCost,
-                    newUnitCost: sellingPrice,
-                    notes: `Restocked ${addedAmount} ${restockingItem.unit} for total cost ${totalCost} Br`
+                    newUnitCost: unitCost,
+                    notes: `Restocked ${addedAmount} ${restockingItem.unit} at ${unitCost} per unit (total: ${totalCost} Br)`
                 }),
             })
 
@@ -1663,8 +1663,8 @@ export default function StorePage() {
                                             <input type="number" step="any" placeholder="In Store Qty" value={stockFormData.quantity} onChange={e => setStockFormData({ ...stockFormData, quantity: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Total Cost</label>
-                                            <input type="number" step="any" placeholder="Total Cost" value={stockFormData.totalPurchaseCost} onChange={e => setStockFormData({ ...stockFormData, totalPurchaseCost: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Unit Cost</label>
+                                            <input type="number" step="any" placeholder="Unit Cost" value={stockFormData.totalPurchaseCost} onChange={e => setStockFormData({ ...stockFormData, totalPurchaseCost: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Limit For Store Alert</label>
@@ -1696,8 +1696,14 @@ export default function StorePage() {
                             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="relative bg-white rounded-[2rem] p-8 max-w-sm w-full">
                                 <h2 className="text-xl font-black mb-4">Restock {restockingItem.name}</h2>
                                 <form onSubmit={handleRestockSubmit} className="space-y-4">
-                                    <input type="number" step="any" placeholder="Amount to add" value={restockAmount} onChange={e => setRestockAmount(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
-                                    <input type="number" step="any" placeholder="Total Cost" value={newTotalCost} onChange={e => setNewTotalCost(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Amount to add</label>
+                                        <input type="number" step="any" placeholder="Amount to add" value={restockAmount} onChange={e => setRestockAmount(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Unit Cost (from store)</label>
+                                        <input type="number" step="any" placeholder="Unit Cost" value={newUnitCost} onChange={e => setNewUnitCost(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
+                                    </div>
                                     <div className="flex gap-3 pt-4">
                                         <button type="button" onClick={() => setShowRestockModal(false)} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Cancel</button>
                                         <button type="submit" className="flex-1 py-3 bg-[#8B4513] text-white rounded-xl font-bold">Restock</button>

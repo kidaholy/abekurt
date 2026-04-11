@@ -93,7 +93,7 @@ export default function TransfersPage() {
 
     const fetchStock = async () => {
         try {
-            const response = await fetch("/api/admin/store/inventory", {
+            const response = await fetch("/api/stock", {
                 headers: { Authorization: `Bearer ${token}` }
             })
             if (response.ok) {

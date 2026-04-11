@@ -966,10 +966,10 @@ export default function ReportsPage() {
                                                     {(stockUsageData?.stockAnalysis || stockItems || [])
                                                         .filter((item: any) => (item.storeQuantity || 0) > 0 || (item.purchased || 0) > 0 || (item.totalPurchased || 0) > 0 || (item.storeOpeningStock || 0) > 0)
                                                         .map((item: any, idx: number) => {
-                                                            const costPrice = item.averagePurchasePrice || item.currentUnitCost || item.unitCost || 0
+                                                            const unitCost = item.unitCost || item.averagePurchasePrice || item.currentUnitCost || 0
                                                             const remains = item.storeQuantity ?? 0
                                                             const transferredCount = item.transferred ?? 0
-                                                            const totalPurchaseValue = item.storeClosingValue ?? (remains * costPrice)
+                                                            const totalPurchaseValue = item.storeClosingValue ?? (remains * unitCost)
                                                             const isLow = item.isLowStoreStock || (remains <= (item.storeMinLimit || 5)) && remains > 0
                                                             return (
                                                                 <tr key={idx} className={`hover:bg-gray-50 transition-colors ${isLow ? 'bg-red-50/30' : ''}`}>
@@ -977,7 +977,7 @@ export default function ReportsPage() {
                                                                         <p className="font-black text-slate-800">{item.name}</p>
                                                                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-0.5">{item.category}</p>
                                                                     </td>
-                                                                    <td className="p-4 text-center text-orange-600">{Math.round(costPrice).toLocaleString()} <span className="text-[10px]">Br</span></td>
+                                                                    <td className="p-4 text-center text-orange-600">{Math.round(unitCost).toLocaleString()} <span className="text-[10px]">Br</span></td>
                                                                     <td className="p-4 text-center"><p className={`text-sm ${isLow ? 'text-red-600' : 'text-slate-800'}`}>{remains} <span className="text-[10px] text-gray-400">{item.unit}</span></p></td>
                                                                     <td className="p-4 text-center text-green-600">{totalPurchaseValue.toLocaleString()} <span className="text-[10px]">Br</span></td>
                                                                     <td className="p-4 text-center text-red-400">{transferredCount} <span className="text-[10px] uppercase font-black tracking-tighter">Moved</span></td>
@@ -994,10 +994,10 @@ export default function ReportsPage() {
                                             {(stockUsageData?.stockAnalysis || stockItems || [])
                                                 .filter((item: any) => (item.storeQuantity || 0) > 0 || (item.purchased || 0) > 0 || (item.totalPurchased || 0) > 0 || (item.storeOpeningStock || 0) > 0)
                                                 .map((item: any, idx: number) => {
-                                                    const costPrice = item.averagePurchasePrice || item.currentUnitCost || item.unitCost || 0
+                                                    const unitCost = item.unitCost || item.averagePurchasePrice || item.currentUnitCost || 0
                                                     const remains = item.storeQuantity ?? 0
                                                     const transferredCount = item.transferred ?? 0
-                                                    const totalPurchaseValue = item.storeClosingValue ?? (remains * costPrice)
+                                                    const totalPurchaseValue = item.storeClosingValue ?? (remains * unitCost)
                                                     const isLow = item.isLowStoreStock || (remains <= (item.storeMinLimit || 5)) && remains > 0
                                                     return (
                                                         <div key={idx} className={`p-4 rounded-2xl border ${isLow ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
@@ -1025,7 +1025,7 @@ export default function ReportsPage() {
                                                                 </div>
                                                                 <div className="text-right">
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Unit Cost</p>
-                                                                    <p className="text-lg font-black text-orange-600">{Math.round(costPrice).toLocaleString()} Br</p>
+                                                                    <p className="text-lg font-black text-orange-600">{Math.round(unitCost).toLocaleString()} Br</p>
                                                                 </div>
                                                             </div>
                                                         </div>

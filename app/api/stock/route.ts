@@ -51,12 +51,13 @@ export async function GET(request: Request) {
                 _id: item._id.toString(),
                 averagePurchasePrice: avgPurchasePrice, // Ensure this field exists
                 storeQuantity: item.storeQuantity || 0, // Expose Store Quantity
-                totalValue: (item.quantity || 0) * avgPurchasePrice, // Current Stock Value
+                totalQuantity: (item.quantity || 0) + (item.storeQuantity || 0), // Total inventory
+                totalValue: ((item.quantity || 0) + (item.storeQuantity || 0)) * avgPurchasePrice, // Total Stock Value (POS + Store)
                 storeValue: (item.storeQuantity || 0) * avgPurchasePrice, // Current Store Value
                 totalLifetimeInvestment: item.totalInvestment || 0,
                 totalLifetimePurchased: item.totalPurchased || 0,
-                sellingValue: (item.quantity || 0) * (item.unitCost || 0), // Potential revenue
-                profitMargin: (item.unitCost || 0) > 0 ? (((item.unitCost - avgPurchasePrice) / item.unitCost) * 100).toFixed(1) : 0,
+                sellingValue: (item.quantity || 0) * (item.unitCost || 0), // Potential revenue from POS stock
+                profitMargin: (item.unitCost || 0) > 0 ? (((item.unitCost - avgPurchasePrice) / item.unitCost) * 100).toFixed(1) : "0",
                 isLowStock: item.trackQuantity && (item.quantity || 0) <= (item.minLimit || 0),
                 isLowStoreStock: item.trackQuantity && (item.storeQuantity || 0) <= (item.storeMinLimit || 0),
                 isOutOfStock: item.trackQuantity && (item.quantity || 0) <= 0,
@@ -88,6 +89,36 @@ export async function POST(request: Request) {
 
         const body = await request.json()
         console.log("📝 Stock data received:", body)
+
+        // Validate required fields
+        if (!body.name || !body.unit) {
+            return NextResponse.json({ message: "Name and unit are required" }, { status: 400 })
+        }
+
+        // Validate unit cost is not zero or negative
+        if (body.unitCost !== undefined && body.unitCost !== null) {
+            const unitCost = Number(body.unitCost)
+            if (unitCost <= 0) {
+                return NextResponse.json({ message: "Unit cost must be greater than 0" }, { status: 400 })
+            }
+        }
+
+        // Validate quantities are not negative
+        if (body.quantity !== undefined && Number(body.quantity) < 0) {
+            return NextResponse.json({ message: "Quantity cannot be negative" }, { status: 400 })
+        }
+
+        if (body.storeQuantity !== undefined && Number(body.storeQuantity) < 0) {
+            return NextResponse.json({ message: "Store quantity cannot be negative" }, { status: 400 })
+        }
+
+        // Validate sellUnitEquivalent is positive
+        if (body.sellUnitEquivalent !== undefined && body.sellUnitEquivalent !== null && body.sellUnitEquivalent !== "") {
+            const sellUnitEquivalent = Number(body.sellUnitEquivalent.toString().replace(',', '.'))
+            if (sellUnitEquivalent <= 0) {
+                return NextResponse.json({ message: "Sell unit equivalent must be greater than 0" }, { status: 400 })
+            }
+        }
 
         // Validate unit type based on unit
         let unitType = 'count' // default

@@ -18,6 +18,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: "Missing required fields" }, { status: 400 })
         }
 
+        // Validate quantities are positive
+        if (sourceQuantity <= 0 || targetYield <= 0) {
+            return NextResponse.json({ message: "Quantities must be greater than 0" }, { status: 400 })
+        }
+
         // 1. Decrement source
         const sourceItem = await Stock.findById(sourceId)
         if (!sourceItem || sourceItem.quantity < sourceQuantity) {
@@ -35,6 +40,17 @@ export async function POST(request: Request) {
 
         targetItem.quantity += targetYield
         await targetItem.save()
+
+        // Log the conversion
+        const StoreLog = (await import("@/lib/models/store-log")).default
+        await StoreLog.create({
+            stockId: sourceItem._id,
+            type: 'CONVERSION',
+            quantity: sourceQuantity,
+            unit: sourceItem.unit,
+            user: decoded.id,
+            notes: `Converted to ${targetItem.name} (yield: ${targetYield} ${targetItem.unit})`
+        })
 
         return NextResponse.json({
             message: "Conversion successful",

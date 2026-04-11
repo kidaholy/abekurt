@@ -371,11 +371,17 @@ export default function CashierPOSPage() {
               iframe.contentWindow?.focus()
               iframe.contentWindow?.print()
 
-              // Cleanup POS state after print dialog opens (Speed up: 300ms)
+              // Print second copy after first print dialog closes
               setTimeout(() => {
-                document.body.removeChild(iframe)
-                setShowOrderAnimation(false)
-              }, 300)
+                iframe.contentWindow?.focus()
+                iframe.contentWindow?.print()
+
+                // Cleanup POS state after print dialogs (Speed up: 300ms)
+                setTimeout(() => {
+                  document.body.removeChild(iframe)
+                  setShowOrderAnimation(false)
+                }, 300)
+              }, 1000) // Wait 1 second between prints
             }, 300)
           }
         }, 800) // Speed up: Delay print for only 800ms (synced with fast animation)

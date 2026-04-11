@@ -302,7 +302,16 @@ export class UniversalPOSPrinter {
   async printKitchenOrder(order: KitchenOrder): Promise<boolean> {
     try {
       const receipt = this.generateKitchenReceipt(order)
-      return await this.sendToPrinter(receipt)
+      // Print first copy
+      const firstPrint = await this.sendToPrinter(receipt)
+      
+      // Wait 500ms before printing second copy to ensure printer processes first copy
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Print second copy
+      const secondPrint = await this.sendToPrinter(receipt)
+      
+      return firstPrint && secondPrint
     } catch (error) {
       console.error('Kitchen printing failed:', error)
       return false

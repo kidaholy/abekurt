@@ -149,6 +149,23 @@ export const getReceiptHTML = ({
           </div>
           <div style="height: 30px;"></div>
         </div>
+        <script>
+          window.addEventListener('beforeprint', function() {
+            if (window.print) {
+              // Set copies to 2 in the print settings
+              const printSettings = window.print.settings || {};
+              printSettings.numCopies = 2;
+            }
+          });
+          // Auto-set copies when page loads
+          setTimeout(function() {
+            try {
+              if (window.print && window.print.settings) {
+                window.print.settings.numCopies = 2;
+              }
+            } catch(e) {}
+          }, 100);
+        </script>
       </body>
     </html>
   `

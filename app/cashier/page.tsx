@@ -332,6 +332,12 @@ export default function CashierPOSPage() {
             return
           }
 
+          // Don't print for drinks orders
+          if (isDrinksOrder || isDrinksOnly) {
+            setShowOrderAnimation(false)
+            return
+          }
+
           // Isolated Iframe Printing
           const receiptHtml = getReceiptHTML({
             orderNumber: data.orderNumber,

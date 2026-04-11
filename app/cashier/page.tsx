@@ -336,6 +336,7 @@ export default function CashierPOSPage() {
           const receiptHtml = getReceiptHTML({
             orderNumber: data.orderNumber,
             tableNumber: finalTableNumber,
+            batchNumber: data.batchNumber,
             items: cartItems.map(item => ({
               menuId: item.menuId,
               name: item.name,

@@ -37,28 +37,15 @@ export default function KitchenDisplayPage() {
   const [newOrderAlert, setNewOrderAlert] = useState(false)
   const [previousOrderCount, setPreviousOrderCount] = useState(0)
   const [assignedCategories, setAssignedCategories] = useState<string[]>([])
+  const [zoomMode, setZoomMode] = useState(false)
   // Track dismissed order IDs so background polls don't re-add them
   const dismissedIds = useState<Set<string>>(() => new Set())[0]
   const { token } = useAuth()
   const { t } = useLanguage()
   const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
 
-  useEffect(() => {
-    if (token) {
-      // Load cache instantly — no spinner
-      const cached = localStorage.getItem("chef_orders_cache")
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached)
-          setOrders(parsed)
-        } catch {}
-      }
-      fetchOrders()
-      fetchChefCategories()
-    }
-    const interval = setInterval(fetchOrders, 3000)
-    return () => clearInterval(interval)
-  }, [token])
+  const activeOrders = orders.filter((o) => o.status === "pending" || o.status === "cooking")
+  const servedOrdersCount = orders.filter((o) => o.status === "served").length
 
   const fetchChefCategories = async () => {
     try {
@@ -73,28 +60,6 @@ export default function KitchenDisplayPage() {
       console.error("Failed to fetch chef categories")
     }
   }
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) fetchOrders()
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [])
-
-  useEffect(() => {
-    const handleFocus = () => fetchOrders()
-    window.addEventListener('focus', handleFocus)
-    return () => window.removeEventListener('focus', handleFocus)
-  }, [])
-
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'orderUpdated' || e.key === 'newOrderCreated') fetchOrders()
-    }
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [])
 
   const fetchOrders = async () => {
     try {
@@ -127,7 +92,44 @@ export default function KitchenDisplayPage() {
     }
   }
 
+  useEffect(() => {
+    if (token) {
+      // Load cache instantly — no spinner
+      const cached = localStorage.getItem("chef_orders_cache")
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          setOrders(parsed)
+        } catch {}
+      }
+      fetchOrders()
+      fetchChefCategories()
+    }
+    const interval = setInterval(fetchOrders, 3000)
+    return () => clearInterval(interval)
+  }, [token])
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) fetchOrders()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
+  useEffect(() => {
+    const handleFocus = () => fetchOrders()
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [])
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'orderUpdated' || e.key === 'newOrderCreated') fetchOrders()
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     const isTerminal = newStatus === 'served' || newStatus === 'completed' || newStatus === 'cancelled'
@@ -160,8 +162,78 @@ export default function KitchenDisplayPage() {
     })
   }
 
-  const activeOrders = orders.filter((o) => o.status === "pending" || o.status === "cooking")
-  const servedOrdersCount = orders.filter((o) => o.status === "served").length
+  if (zoomMode) {
+    return (
+      <ProtectedRoute requiredRoles={["chef"]}>
+        <div className="min-h-screen bg-white p-4 flex flex-col">
+          {/* Close buttons on both sides */}
+          <div className="flex justify-between items-center mb-6">
+            <button
+              onClick={() => setZoomMode(false)}
+              className="text-gray-900 text-4xl hover:text-orange-600 transition-colors"
+            >
+              ◀
+            </button>
+            <h1 className="text-3xl font-bold text-gray-900">Active Orders</h1>
+            <button
+              onClick={() => setZoomMode(false)}
+              className="text-gray-900 text-4xl hover:text-orange-600 transition-colors"
+            >
+              ▶
+            </button>
+          </div>
+
+          {/* Full screen order list */}
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {activeOrders.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-2xl">No active orders</p>
+              </div>
+            ) : (
+              activeOrders.map((order) => (
+                <div
+                  key={order._id}
+                  className="p-4 bg-gray-50 rounded-lg border-2 border-orange-500 hover:bg-orange-50 transition-colors cursor-pointer"
+                  onClick={() => handleStatusChange(order._id, 'served')}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-bold text-2xl text-gray-900">Order #{order.orderNumber}</div>
+                      {order.tableNumber && (
+                        <div className="text-lg text-gray-700">Table {order.tableNumber}</div>
+                      )}
+                    </div>
+                    <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase ${
+                      order.status === 'cooking'
+                        ? 'bg-yellow-500 text-gray-900'
+                        : 'bg-blue-500 text-white'
+                    }`}>
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="space-y-2 text-lg">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="text-gray-800">
+                        <span className="font-bold text-orange-600">{item.quantity}x</span> {item.name}
+                        {item.specialInstructions && (
+                          <div className="text-sm text-gray-600 italic ml-4">→ {item.specialInstructions}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {order.notes && (
+                    <div className="mt-3 p-3 bg-yellow-100 rounded text-gray-900 border border-yellow-400">
+                      <span className="font-bold">📝 Notes:</span> {order.notes}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
+  }
 
   return (
     <ProtectedRoute requiredRoles={["chef"]}>
@@ -197,12 +269,20 @@ export default function KitchenDisplayPage() {
                   )}
                 </div>
               </div>
-              <button
-                onClick={fetchOrders}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <RefreshCw className="h-5 w-5 text-gray-600" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchOrders}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <RefreshCw className="h-5 w-5 text-gray-600" />
+                </button>
+                <button
+                  onClick={() => setZoomMode(true)}
+                  className="text-3xl hover:text-orange-600 transition-colors"
+                >
+                  ◀ ▶
+                </button>
+              </div>
             </div>
 
             {/* Stats Bar */}

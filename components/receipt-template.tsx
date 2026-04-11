@@ -59,10 +59,12 @@ export const getReceiptHTML = ({
             font-family: 'Courier New', Courier, monospace;
             background: white;
             color: black;
+            font-weight: bold;
           }
           .receipt {
             padding: 4mm;
             box-sizing: border-box;
+            font-weight: bold;
           }
           .text-center { text-align: center; }
           .text-right { text-align: right; }
@@ -76,9 +78,9 @@ export const getReceiptHTML = ({
           .flex { display: flex; }
           .justify-between { justify-content: space-between; }
           table { width: 100%; border-collapse: collapse; }
-          th, td { padding: 4px 0; font-size: 12px; }
-          .total-row { font-size: 16px; margin-top: 8px; border-top: 1px solid black; padding-top: 8px; }
-          .footer { margin-top: 20px; text-align: center; font-size: 10px; }
+          th, td { padding: 4px 0; font-size: 12px; font-weight: bold; }
+          .total-row { font-size: 16px; margin-top: 8px; border-top: 1px solid black; padding-top: 8px; font-weight: bold; }
+          .footer { margin-top: 20px; text-align: center; font-size: 10px; font-weight: bold; }
         </style>
       </head>
       <body>
@@ -123,9 +125,9 @@ export const getReceiptHTML = ({
             <tbody>
               ${items.map(item => `
                 <tr>
-                  <td style="line-height: 1.2;">
+                  <td style="line-height: 1.2; font-weight: bold;">
                     ${item.menuId ? `#${item.menuId} ` : ""}${item.name}<br/>
-                    <small>@${item.price.toFixed(0)} ETB</small>
+                    <small style="font-weight: bold;">@${item.price.toFixed(0)} ETB</small>
                   </td>
                   <td class="text-center">${item.quantity}</td>
                   <td class="text-right font-bold">${(item.quantity * item.price).toFixed(0)}</td>

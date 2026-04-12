@@ -934,7 +934,7 @@ export default function ReportsPage() {
                                                             const transferredCount = item.transferred ?? 0
                                                             // Store value = quantity in store × purchase cost per unit
                                                             const totalPurchaseValue = item.storeClosingValue ?? (remains * unitCost)
-                                                            const isLow = item.isLowStoreStock || (remains <= (item.storeMinLimit || 5)) && remains > 0
+                                                            const isLow = remains === 0 // Only show warning when store is completely empty
                                                             return (
                                                                 <tr key={idx} className={`hover:bg-gray-50 transition-colors ${isLow ? 'bg-red-50/30' : ''}`}>
                                                                     <td className="p-4">
@@ -964,7 +964,7 @@ export default function ReportsPage() {
                                                     const transferredCount = item.transferred ?? 0
                                                     // Store value = quantity in store × purchase cost per unit
                                                     const totalPurchaseValue = item.storeClosingValue ?? (remains * unitCost)
-                                                    const isLow = item.isLowStoreStock || (remains <= (item.storeMinLimit || 5)) && remains > 0
+                                                    const isLow = remains === 0 // Only show warning when store is completely empty
                                                     return (
                                                         <div key={idx} className={`p-4 rounded-2xl border ${isLow ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
                                                             <div className="flex justify-between items-start mb-3">

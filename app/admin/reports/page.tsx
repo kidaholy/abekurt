@@ -43,6 +43,7 @@ export default function ReportsPage() {
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
     const [menuItems, setMenuItems] = useState<any[]>([])
     const [menuSearchTerm, setMenuSearchTerm] = useState("")
+    const [inventorySearchTerm, setInventorySearchTerm] = useState("")
     const [orderHistoryTab, setOrderHistoryTab] = useState<'All' | 'Food' | 'Drinks'>('All')
     const [menuSalesTab, setMenuSalesTab] = useState<'Food' | 'Drinks'>('Food')
 
@@ -794,6 +795,16 @@ export default function ReportsPage() {
                                             </button>
                                         </div>
 
+                                        <div className="flex gap-3">
+                                            <input
+                                                type="text"
+                                                placeholder="Search items..."
+                                                value={inventorySearchTerm}
+                                                onChange={(e) => setInventorySearchTerm(e.target.value)}
+                                                className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            />
+                                        </div>
+
                                         <div className="hidden lg:block max-h-[560px] overflow-y-auto border border-gray-200 rounded-2xl">
                                             <table className="w-full text-left">
                                                 <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest sticky top-0 z-10">
@@ -810,7 +821,7 @@ export default function ReportsPage() {
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-50 font-bold text-sm">
                                                     {(stockUsageData?.stockAnalysis || stockItems || [])
-                                                        .filter((item: any) => item.openingStock > 0 || item.transferred > 0 || item.closingStock > 0 || item.consumed > 0 || item.quantity > 0)
+                                                        .filter((item: any) => (item.openingStock > 0 || item.transferred > 0 || item.closingStock > 0 || item.consumed > 0 || item.quantity > 0) && (item.name.toLowerCase().includes(inventorySearchTerm.toLowerCase()) || item.category.toLowerCase().includes(inventorySearchTerm.toLowerCase())))
                                                         .map((item: any, idx: number) => {
                                                             const costPrice = item.weightedAvgCost ?? item.averagePurchasePrice ?? 0
                                                             const sellingPrice = item.currentUnitCost ?? item.unitCost ?? 0
@@ -850,7 +861,7 @@ export default function ReportsPage() {
                                         {/* Mobile Inventory Cards */}
                                         <div className="lg:hidden space-y-4">
                                             {(stockUsageData?.stockAnalysis || stockItems || [])
-                                                .filter((item: any) => item.openingStock > 0 || item.transferred > 0 || item.closingStock > 0 || item.consumed > 0 || item.quantity > 0)
+                                                .filter((item: any) => (item.openingStock > 0 || item.transferred > 0 || item.closingStock > 0 || item.consumed > 0 || item.quantity > 0) && (item.name.toLowerCase().includes(inventorySearchTerm.toLowerCase()) || item.category.toLowerCase().includes(inventorySearchTerm.toLowerCase())))
                                                 .map((item: any, idx: number) => {
                                                     const closingQuantity = item.closingStock ?? item.quantity ?? 0
                                                     const consumedCount = item.consumed ?? 0

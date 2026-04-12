@@ -46,7 +46,9 @@ export default function AdminOrdersPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [categoryFilter, setCategoryFilter] = useState<"all" | "Food" | "Drinks">("all")
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [permanentDeleting, setPermanentDeleting] = useState<string | null>(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [permanentDeletingAll, setPermanentDeletingAll] = useState(false)
   const [bulkServing, setBulkServing] = useState(false)
   const notifiedOrderIds = useRef<Set<string>>(new Set())
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -191,6 +193,87 @@ export default function AdminOrdersPage() {
       })
     } finally {
       setDeleting(null)
+    }
+  }
+
+  const handlePermanentDeleteOrder = async (orderId: string, orderNumber: string) => {
+    const confirmed = await confirm({
+      title: "Permanently Delete Order",
+      message: `Are you sure you want to permanently delete Order #${orderNumber}?\n\nThis action CANNOT be undone. The order will be removed from the database forever.`,
+      type: "danger",
+      confirmText: "Delete Forever",
+      cancelText: "Cancel"
+    })
+
+    if (!confirmed) return
+
+    setPermanentDeleting(orderId)
+    try {
+      const response = await fetch(`/api/orders/${orderId}?permanent=true`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        setOrders(prev => prev.filter(o => o._id !== orderId))
+        notify({ title: "Permanently Deleted", message: `Order #${orderNumber} has been permanently deleted.`, type: "success" })
+      } else {
+        const error = await response.json()
+        notify({ title: "Failed", message: error.message || "Failed to permanently delete order", type: "error" })
+      }
+    } catch {
+      notify({ title: "Error", message: "Failed to permanently delete order. Please try again.", type: "error" })
+    } finally {
+      setPermanentDeleting(null)
+    }
+  }
+
+  const handlePermanentDeleteAll = async () => {
+    const count = orders.filter(o => !!o.isDeleted || o.status === 'cancelled').length
+    if (count === 0) {
+      notify({ title: "Nothing to Delete", message: "There are no deleted orders to permanently remove.", type: "error" })
+      return
+    }
+
+    const confirmed = await confirm({
+      title: "Permanently Delete All Deleted Orders",
+      message: `This will permanently remove all ${count} deleted order(s) from the database forever.\n\nThis action CANNOT be undone!`,
+      type: "danger",
+      confirmText: "Delete All Forever",
+      cancelText: "Cancel"
+    })
+
+    if (!confirmed) return
+
+    const finalConfirmed = await confirm({
+      title: "Final Warning",
+      message: "You are about to permanently erase all deleted orders.\n\nAre you absolutely sure?",
+      type: "danger",
+      confirmText: "Yes, Delete Forever",
+      cancelText: "Cancel"
+    })
+
+    if (!finalConfirmed) return
+
+    setPermanentDeletingAll(true)
+    try {
+      const response = await fetch("/api/orders/permanent-delete-all", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setOrders(prev => prev.filter(o => !o.isDeleted && o.status !== 'cancelled'))
+        notify({ title: "All Permanently Deleted", message: `Successfully removed ${result.deletedCount} order(s) forever.`, type: "success" })
+      } else {
+        const error = await response.json()
+        notify({ title: "Failed", message: error.message || "Failed to permanently delete orders", type: "error" })
+      }
+    } catch {
+      notify({ title: "Error", message: "Failed to permanently delete orders. Please try again.", type: "error" })
+    } finally {
+      setPermanentDeletingAll(false)
     }
   }
 
@@ -610,7 +693,25 @@ export default function AdminOrdersPage() {
                         className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-100 rounded-2xl text-sm font-bold focus:border-[#8B4513] focus:ring-0 transition-all outline-none shadow-sm"
                       />
                     </div>
-                    {orders.length > 0 && (
+                    {filter === "deleted" ? (
+                      <button
+                        onClick={handlePermanentDeleteAll}
+                        disabled={permanentDeletingAll || filteredOrders.length === 0}
+                        className="w-full sm:w-auto bg-red-700 hover:bg-red-800 disabled:bg-red-300 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none flex items-center justify-center gap-2 whitespace-nowrap"
+                      >
+                        {permanentDeletingAll ? (
+                          <>
+                            <span className="animate-spin">⏳</span>
+                            <span className="text-xs">Deleting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="h-4 w-4" />
+                            <span className="text-xs sm:text-sm">Delete All Permanently</span>
+                          </>
+                        )}
+                      </button>
+                    ) : orders.length > 0 && (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={handleBulkServeOrders}
@@ -789,9 +890,18 @@ export default function AdminOrdersPage() {
                                   </button>
                                 )}
                                 {order.isDeleted && (
-                                  <span className="text-xs font-bold text-red-400 uppercase tracking-widest bg-red-50 px-3 py-1 rounded-full border border-red-100">
-                                    Deleted
-                                  </span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handlePermanentDeleteOrder(order._id, order.orderNumber) }}
+                                    disabled={permanentDeleting === order._id}
+                                    className="bg-red-700 hover:bg-red-800 text-white p-2.5 rounded-xl transition-all shadow-sm hover:shadow active:scale-95 disabled:opacity-50"
+                                    title="Permanently Delete"
+                                  >
+                                    {permanentDeleting === order._id ? (
+                                      <span className="animate-spin text-xs">⏳</span>
+                                    ) : (
+                                      <Trash2 className="h-5 w-5" />
+                                    )}
+                                  </button>
                                 )}
                               </div>
                             </div>

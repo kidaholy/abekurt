@@ -177,7 +177,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 }
 
-// DELETE order
+// DELETE order — supports ?permanent=true for hard delete
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const decoded = await validateSession(request)
@@ -187,12 +187,26 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         await connectDB()
 
         const { id } = await params
+        const { searchParams } = new URL(request.url)
+        const permanent = searchParams.get("permanent") === "true"
 
         const orderToDelete = await (Order as any).findById(id)
         if (!orderToDelete) {
             return NextResponse.json({ message: "Order not found" }, { status: 404 })
         }
 
+        if (permanent) {
+            // Hard delete: permanently remove from DB (already soft-deleted, no stock to restore)
+            await (Order as any).findByIdAndDelete(id)
+            addNotification(
+                "info",
+                `🗑️ Order #${orderToDelete.orderNumber} has been permanently deleted`,
+                "admin"
+            )
+            return NextResponse.json({ message: "Order permanently deleted" })
+        }
+
+        // Soft delete (existing behaviour)
         // 🔗 BUSINESS LOGIC: Restore stock on deletion if the order was not already cancelled
         const status = orderToDelete.status
         if (status !== 'cancelled') {

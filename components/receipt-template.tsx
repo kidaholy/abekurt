@@ -21,6 +21,7 @@ interface ReceiptTemplateProps {
   paperWidth?: number
   appName?: string
   appTagline?: string
+  distributions?: string[]
   vatRate?: string
 }
 
@@ -33,6 +34,7 @@ export const getReceiptHTML = ({
   tax,
   total,
   date = new Date(),
+  distributions = [],
   paperWidth = 80,
   appName = "PRIME ADDIS",
   appTagline = "Coffee & More",
@@ -108,6 +110,11 @@ export const getReceiptHTML = ({
             <div class="flex justify-between">
               <span>Batch #:</span>
               <span class="font-bold">${batchNumber}</span>
+            </div>
+            ` : ''}
+            ${distributions && distributions.length > 0 ? `
+            <div class="mt-2 p-1 border border-black text-center">
+              <span class="font-bold">DISTRIBUTION: ${distributions.join(', ')}</span>
             </div>
             ` : ''}
           </div>

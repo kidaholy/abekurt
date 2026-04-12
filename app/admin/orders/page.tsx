@@ -30,6 +30,8 @@ interface Order {
   readyAt?: string
   updatedAt?: string
   kitchenAcceptedAt?: string
+  distributions?: string[]
+  distribution?: string
 }
 
 export default function AdminOrdersPage() {
@@ -670,6 +672,17 @@ export default function AdminOrdersPage() {
                                 <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase">B#{order.batchNumber}</span>
                               )}
                               <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase">{order.tableNumber}</span>
+                              {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                                <div className="flex flex-wrap gap-1">
+                                  {order.distributions && order.distributions.length > 0 ? (
+                                    order.distributions.map((d, i) => (
+                                      <span key={i} className="bg-emerald-50 text-[#2d5a41] px-2 py-0.5 rounded text-[9px] font-black tracking-widest uppercase border border-emerald-100">🏷️ {d}</span>
+                                    ))
+                                  ) : (
+                                    <span className="bg-emerald-50 text-[#2d5a41] px-2 py-0.5 rounded text-[9px] font-black tracking-widest uppercase border border-emerald-100">🏷️ {order.distribution}</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">

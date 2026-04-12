@@ -62,7 +62,8 @@ export async function GET(request: Request) {
     if (decoded.role === 'display' || decoded.role === 'cashier') {
       if (decoded.batchId) {
         // Find all table numbers for this batch to include orders that might be missing batchId
-        const batchTables = await Table.find({ batchId: decoded.batchId }, { tableNumber: 1 }).lean() as any[]
+        const thresholdSetting = await (Settings as any).findOne({ key: "PREPARATION_TIME_THRESHOLD" })
+        const batchTables = await (Table as any).find({ batchId: decoded.batchId }, { tableNumber: 1 }).lean() as any[]
         const tableNumbers = batchTables.map((t: any) => t.tableNumber)
 
         query.$or = [
@@ -103,7 +104,7 @@ export async function GET(request: Request) {
       query["items.mainCategory"] = mainCategory
     }
 
-    let orderQuery = Order.find(query).sort({ createdAt: -1 })
+    let orderQuery = (Order as any).find(query).sort({ createdAt: -1 })
 
     if (limit) {
       orderQuery = orderQuery.limit(Number(limit))
@@ -122,7 +123,7 @@ export async function GET(request: Request) {
     }
 
     // Process orders efficiently
-    const populatedOrders = orders.map((order) => {
+    const populatedOrders = orders.map((order: any) => {
       let batchNumber = order.batchNumber || batchMap.get(order.batchId?.toString());
 
       // Filter items for chefs
@@ -143,7 +144,9 @@ export async function GET(request: Request) {
         _id: order._id.toString(),
         isDeleted: !!order.isDeleted,
         batchNumber,
-        items
+        items,
+        distribution: order.distribution,
+        distributions: order.distributions
       };
     });
 
@@ -166,8 +169,8 @@ export async function POST(request: Request) {
     console.log("📊 Database connected successfully")
 
     const body = await request.json()
-    const { items, totalAmount, subtotal, tax, paymentMethod, customerName, tableNumber, tableId } = body
-    console.log("📝 Order data received:", { items: items.length, totalAmount, subtotal, tax, tableNumber, tableId })
+    const { items, totalAmount, subtotal, tax, paymentMethod, customerName, tableNumber, tableId, distribution, distributions } = body
+    console.log("📝 Order data received:", { items: items.length, totalAmount, subtotal, tax, tableNumber, tableId, distribution, distributions })
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -192,9 +195,9 @@ export async function POST(request: Request) {
       MenuItem.find({ _id: { $in: menuItemIds } }).populate('stockItemId'),
       Stock.find({ _id: { $in: stockIds } }),
       // Fetch the last 50 numeric orders to find the true numeric maximum
-      Order.find({ orderNumber: /^\d+$/ }, { orderNumber: 1 }).sort({ createdAt: -1 }).limit(50).lean(),
-      tableId ? Table.findById(tableId) :
-        (tableNumber && tableNumber !== "Buy&Go" ? Table.findOne({ tableNumber }) : null)
+      (Order as any).find({ orderNumber: /^\d+$/ }, { orderNumber: 1 }).sort({ createdAt: -1 }).limit(50).lean(),
+      tableId ? (Table as any).findById(tableId) :
+        (tableNumber && tableNumber !== "Buy&Go" ? (Table as any).findOne({ tableNumber }) : null)
     ])
 
     // Validate sufficient stock quantities
@@ -226,7 +229,7 @@ export async function POST(request: Request) {
 
     if (batchId && !batchNumber) {
       // Fetch batch number if we don't have it yet
-      const batch = await Batch.findById(batchId).lean()
+      const batch = await (Batch as any).findById(batchId).lean()
       if (batch) batchNumber = (batch as any).batchNumber
     }
 
@@ -261,6 +264,8 @@ export async function POST(request: Request) {
       customerName: customerName || `Table ${tableNumber}`,
       tableNumber,
       tableId,
+      distribution: distribution || (distributions && distributions.length > 0 ? distributions[0] : ""),
+      distributions: distributions || (distribution ? [distribution] : []),
       batchId,
       batchNumber,
       createdBy: decoded.id,
@@ -287,7 +292,7 @@ export async function POST(request: Request) {
           orderNumber: orderNumberStr
         };
 
-        order = await Order.create(finalOrderData);
+        order = await (Order as any).create(finalOrderData);
         console.log("✅ Order saved to database:", order._id);
         break; // Success!
       } catch (err: any) {

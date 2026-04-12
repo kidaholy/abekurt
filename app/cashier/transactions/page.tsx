@@ -17,6 +17,8 @@ interface Order {
   status: string
   tableNumber: string
   createdAt: string
+  distributions?: string[]
+  distribution?: string
 }
 
 export default function TransactionsPage() {
@@ -146,8 +148,23 @@ export default function TransactionsPage() {
                           <td className="py-4 px-4">
                             <span className="text-sm font-medium text-gray-900">#{order.orderNumber}</span>
                           </td>
-                          <td className="py-4 px-4">
+                          <td className="py-4 px-4 text-center">
                             <span className="text-sm font-medium text-blue-600">Table {order.tableNumber}</span>
+                            {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {order.distributions && order.distributions.length > 0 ? (
+                                  order.distributions.map((d, i) => (
+                                    <span key={i} className="text-[9px] font-black text-[#2d5a41] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter">
+                                      {d}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-[9px] font-black text-[#2d5a41] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter">
+                                    {order.distribution}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </td>
                           <td className="py-4 px-4 text-right">
                             <span className="text-sm font-bold text-gray-900">{order.totalAmount.toFixed(2)} ETB</span>

@@ -111,6 +111,32 @@ export function OrderDetailsModal({ order, isOpen, onClose }: OrderDetailsModalP
                 </div>
               </CardContent>
             </Card>
+
+            {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+              <Card className="border-2 border-emerald-100 bg-emerald-50 md:col-span-3">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <MapPin className="h-8 w-8 text-emerald-600" />
+                    <div>
+                      <p className="text-sm text-emerald-800 font-bold">Distribution Points</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {order.distributions && order.distributions.length > 0 ? (
+                          order.distributions.map((d: string, i: number) => (
+                            <Badge key={i} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                              {d}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">
+                            {order.distribution}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Customer Information */}

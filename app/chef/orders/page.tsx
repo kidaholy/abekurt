@@ -15,6 +15,8 @@ interface Order {
   items: any[]
   batchNumber?: string
   tableNumber?: string
+  distributions?: string[]
+  distribution?: string
 }
 
 export default function ChefOrdersPage() {
@@ -144,6 +146,21 @@ export default function ChefOrdersPage() {
                             <span className="text-[10px] sm:text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
                               {order.tableNumber}
                             </span>
+                          )}
+                          {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                            <div className="flex flex-wrap gap-1">
+                              {order.distributions && order.distributions.length > 0 ? (
+                                order.distributions.map((d, i) => (
+                                  <span key={i} className="text-[9px] sm:text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                    🏷️ {d}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[9px] sm:text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                  🏷️ {order.distribution}
+                                </span>
+                              )}
+                            </div>
                           )}
                           <span className="text-xs text-muted-foreground">
                             {order.items.length} item{order.items.length !== 1 ? 's' : ''}

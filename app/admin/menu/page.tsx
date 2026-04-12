@@ -84,11 +84,15 @@ export default function AdminMenuPage() {
   const { t } = useLanguage()
   const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
   const [categories, setCategories] = useState<any[]>([])
+  const [distributions, setDistributions] = useState<any[]>([])
   const [swapMode, setSwapMode] = useState(false)
   const [swapSourceId, setSwapSourceId] = useState<string | null>(null)
   const [showCategoryManager, setShowCategoryManager] = useState(false)
+  const [showDistributionManager, setShowDistributionManager] = useState(false)
   const [categoryLoading, setCategoryLoading] = useState(false)
+  const [distributionLoading, setDistributionLoading] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
+  const [newDistributionName, setNewDistributionName] = useState("")
   const [showQrModal, setShowQrModal] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string>("")
   const [qrGenerating, setQrGenerating] = useState(false)
@@ -100,6 +104,7 @@ export default function AdminMenuPage() {
     if (token) {
       fetchMenuItems()
       fetchCategories()
+      fetchDistributions()
       fetchStockItems()
     }
   }, [token])
@@ -199,6 +204,90 @@ export default function AdminMenuPage() {
       console.error("Error updating category:", error)
     } finally {
       setCategoryLoading(false)
+    }
+  }
+
+  const fetchDistributions = async () => {
+    if (!token) return
+    try {
+      const response = await fetch("/api/distributions", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setDistributions(data)
+      }
+    } catch (error) {
+      console.error("Error fetching distributions:", error)
+    }
+  }
+
+  const handleAddDistribution = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newDistributionName.trim()) return
+    setDistributionLoading(true)
+    try {
+      const response = await fetch("/api/distributions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newDistributionName }),
+      })
+      if (response.ok) {
+        setNewDistributionName("")
+        fetchDistributions()
+      }
+    } catch (error) {
+      console.error("Error adding distribution:", error)
+    } finally {
+      setDistributionLoading(false)
+    }
+  }
+
+  const handleDeleteDistribution = async (id: string) => {
+    const confirmed = await confirm({
+      title: "Delete Distribution",
+      message: "Are you sure you want to delete this distribution?",
+      type: "warning",
+      confirmText: "Delete",
+      cancelText: "Cancel"
+    })
+
+    if (!confirmed) return
+    try {
+      const response = await fetch(`/api/distributions/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (response.ok) {
+        fetchDistributions()
+      }
+    } catch (error) {
+      console.error("Error deleting distribution:", error)
+    }
+  }
+
+  const handleUpdateDistribution = async (id: string, newName: string) => {
+    if (!newName.trim()) return
+    setDistributionLoading(true)
+    try {
+      const response = await fetch(`/api/distributions/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newName }),
+      })
+      if (response.ok) {
+        fetchDistributions()
+      }
+    } catch (error) {
+      console.error("Error updating distribution:", error)
+    } finally {
+      setDistributionLoading(false)
     }
   }
 
@@ -675,6 +764,23 @@ export default function AdminMenuPage() {
                           </select>
                           <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-[10px]">
                             ▼
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400">Distribution</label>
+                          <button
+                            onClick={() => setShowDistributionManager(true)}
+                            className="text-[10px] font-black uppercase tracking-widest text-[#8B4513] hover:underline"
+                          >
+                            {t("adminMenu.manage")}
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 flex justify-between items-center opacity-60">
+                            <span>{distributions.length} Active Distributions</span>
                           </div>
                         </div>
                       </div>
@@ -1161,6 +1267,20 @@ export default function AdminMenuPage() {
           title={t("adminMenu.manageCategories")}
           value={newCategoryName}
           onChange={setNewCategoryName}
+          t={t}
+        />
+
+        <CategoryManager
+          show={showDistributionManager}
+          onClose={() => setShowDistributionManager(false)}
+          categories={distributions}
+          onAdd={handleAddDistribution}
+          onDelete={handleDeleteDistribution}
+          onUpdate={handleUpdateDistribution}
+          loading={distributionLoading}
+          title="Manage Distributions"
+          value={newDistributionName}
+          onChange={setNewDistributionName}
           t={t}
         />
 

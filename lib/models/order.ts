@@ -37,6 +37,8 @@ interface IOrder extends Document {
   delayMinutes?: number
   thresholdMinutes?: number
   totalPreparationTime?: number
+  distribution?: string
+  distributions?: string[]
   isDeleted?: boolean
 }
 
@@ -84,6 +86,8 @@ const orderSchema = new Schema<IOrder>(
     delayMinutes: { type: Number },
     thresholdMinutes: { type: Number },
     totalPreparationTime: { type: Number },
+    distribution: { type: String },
+    distributions: [{ type: String }],
     isDeleted: { type: Boolean, default: false, index: true }
   },
   { timestamps: true }

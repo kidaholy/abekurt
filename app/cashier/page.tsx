@@ -29,6 +29,7 @@ interface MenuItem {
   preparationTime?: number
   reportUnit?: string
   distributions?: string[]
+  distribution?: string
 }
 
 
@@ -46,6 +47,8 @@ export default function CashierPOSPage() {
   const [isDrinksOrder, setIsDrinksOrder] = useState(false)
   const [showCart, setShowCart] = useState(false)
   const [paperWidth, setPaperWidth] = useState(80)
+  const [distributions, setDistributions] = useState<any[]>([])
+  const [selectedDistributions, setSelectedDistributions] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [idSearchTerm, setIdSearchTerm] = useState("")
   const [selectedBatchId, setSelectedBatchId] = useState<string>("")
@@ -64,6 +67,19 @@ export default function CashierPOSPage() {
 
     // Clear stale cache so all items are always fetched fresh
     localStorage.removeItem("pos_menu_cache")
+
+    const fetchDistributions = async () => {
+      if (!token) return
+      try {
+        const response = await fetch("/api/distributions", {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (response.ok) {
+          const data = await response.json()
+          if (mounted) setDistributions(data)
+        }
+      } catch (err) { console.error("Failed to fetch distributions") }
+    }
 
     const fetchMenuItems = async (retryCount = 0) => {
       if (!token) return
@@ -111,6 +127,7 @@ export default function CashierPOSPage() {
     }
 
     fetchMenuItems()
+    fetchDistributions()
 
     return () => { mounted = false }
   }, [token])
@@ -160,6 +177,14 @@ export default function CashierPOSPage() {
       item.category === "Juice"
     )
   }, [cartItems, menuItems])
+
+  const handleToggleDistribution = (name: string) => {
+    setSelectedDistributions(prev =>
+      prev.includes(name)
+        ? prev.filter(d => d !== name)
+        : [...prev, name]
+    )
+  }
 
   useEffect(() => {
     // Refresh user profile to ensure we have the latest floor assignment
@@ -306,6 +331,7 @@ export default function CashierPOSPage() {
           paymentMethod: "cash",
           status: "pending",
           tableNumber: finalTableNumber,
+          distributions: selectedDistributions,
           batchId: selectedBatchId || user?.batchId
         }),
       })
@@ -320,6 +346,7 @@ export default function CashierPOSPage() {
         setTableNumber("") // Clear table reset
         setIsButcherOrder(false) // Reset butcher order
         setIsDrinksOrder(false) // Reset drinks order
+        setSelectedDistributions([]) // Clear selected distributions
         setIsCheckoutLoading(false) // Stop loader early since animation is showing
 
         // Sync with other tabs
@@ -352,6 +379,7 @@ export default function CashierPOSPage() {
             subtotal,
             tax,
             total: totalAmount,
+            distributions: selectedDistributions,
             paperWidth,
             appName: settings.app_name,
             appTagline: settings.app_tagline,
@@ -599,6 +627,9 @@ export default function CashierPOSPage() {
                 setPaperWidth={setPaperWidth}
                 assignedBatchId={selectedBatchId || user?.batchId}
                 setSelectedBatchId={setSelectedBatchId}
+                distributions={distributions}
+                selectedDistributions={selectedDistributions}
+                onToggleDistribution={handleToggleDistribution}
                 onClear={handleClearCart}
               />
             </div>
@@ -643,6 +674,9 @@ export default function CashierPOSPage() {
                       setPaperWidth={setPaperWidth}
                       assignedBatchId={selectedBatchId || user?.batchId}
                       setSelectedBatchId={setSelectedBatchId}
+                      distributions={distributions}
+                      selectedDistributions={selectedDistributions}
+                      onToggleDistribution={handleToggleDistribution}
                       onClear={handleClearCart}
                     />
                   </div>

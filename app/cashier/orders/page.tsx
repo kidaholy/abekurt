@@ -27,6 +27,8 @@ interface Order {
   createdAt: string
   updatedAt: string
   isDeleted?: boolean
+  distributions?: string[]
+  distribution?: string
 }
 
 export default function CashierOrdersPage() {
@@ -197,6 +199,21 @@ export default function CashierOrdersPage() {
                               <span className="text-[10px] text-gray-400 font-bold">
                                 {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
+                              {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {order.distributions && order.distributions.length > 0 ? (
+                                    order.distributions.map((d, i) => (
+                                      <span key={i} className="text-[9px] font-black text-[#2d5a41] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter">
+                                        {d}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-[9px] font-black text-[#2d5a41] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase tracking-tighter">
+                                      {order.distribution}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="py-4 px-6">

@@ -404,7 +404,24 @@ export default function OrdersReportPage() {
                                                         </div>
                                                     </td>
                                                     <td className="py-3 px-4 text-center font-medium">
-                                                        {order.tableNumber || "N/A"}
+                                                        <div>
+                                                            <p>{order.tableNumber || "N/A"}</p>
+                                                            {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                                                                <div className="flex flex-wrap justify-center gap-1 mt-1">
+                                                                    {order.distributions && order.distributions.length > 0 ? (
+                                                                        order.distributions.map((d: string, i: number) => (
+                                                                            <span key={i} className="text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">
+                                                                                {d}
+                                                                            </span>
+                                                                        ))
+                                                                    ) : (
+                                                                        <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">
+                                                                            {order.distribution}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="py-3 px-4 text-sm text-gray-600">
                                                         {order.waiterName || "N/A"}

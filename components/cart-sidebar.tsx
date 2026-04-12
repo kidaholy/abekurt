@@ -39,6 +39,9 @@ interface CartSidebarProps {
   setPaperWidth: (val: number) => void
   assignedBatchId?: string
   setSelectedBatchId?: (val: string) => void
+  distributions?: any[]
+  selectedDistributions?: string[]
+  onToggleDistribution?: (name: string) => void
   onClear?: () => void
 }
 
@@ -62,6 +65,9 @@ export function CartSidebar({
   setPaperWidth,
   assignedBatchId,
   setSelectedBatchId,
+  distributions = [],
+  selectedDistributions = [],
+  onToggleDistribution,
   onClear,
 }: CartSidebarProps) {
   const { t } = useLanguage()
@@ -77,6 +83,7 @@ export function CartSidebar({
   const [batches, setBatches] = useState<any[]>([])
   const [activeBatchTab, setActiveBatchTab] = useState<string>("")
   const [isTableModalOpen, setIsTableModalOpen] = useState(false)
+  const [isDistributionModalOpen, setIsDistributionModalOpen] = useState(false)
 
   useEffect(() => {
     // Fetch tables and batches
@@ -272,6 +279,59 @@ export function CartSidebar({
                 </button>
               ))}
             </div>
+
+            {/* Distribution Modal Selection */}
+            {distributions.length > 0 && (
+              <Dialog open={isDistributionModalOpen} onOpenChange={setIsDistributionModalOpen}>
+                <DialogTrigger asChild>
+                  <button className={`bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-xs font-bold flex justify-between items-center hover:border-[#2d5a41] hover:bg-[#2d5a41]/5 transition-all outline-none ${selectedDistributions.length > 0 ? 'ring-2 ring-[#2d5a41]/20 border-[#2d5a41]' : ''}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400">🏷️</span>
+                      <span className={selectedDistributions.length > 0 ? "text-gray-900" : "text-gray-400"}>
+                        {selectedDistributions.length > 0
+                          ? `${selectedDistributions.length} Selected`
+                          : t("adminMenu.distributions") || "Distributions"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-gray-400">▼</span>
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md p-6">
+                  <DialogHeader className="mb-4">
+                    <DialogTitle className="text-xl font-black">Select Distributions</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {distributions.map((dist: any) => {
+                      const isSelected = selectedDistributions.includes(dist.name)
+                      return (
+                        <button
+                          key={dist._id}
+                          onClick={() => onToggleDistribution?.(dist.name)}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all border-2 ${isSelected
+                            ? "bg-[#2d5a41] text-white border-[#2d5a41] shadow-lg transform scale-[1.02]"
+                            : "bg-gray-50 text-slate-600 border-transparent hover:border-gray-200"
+                            }`}
+                        >
+                          <div className={`w-5 h-5 rounded-lg flex items-center justify-center border-2 transition-colors ${isSelected
+                            ? "bg-white border-white text-[#2d5a41]"
+                            : "bg-white border-gray-200 text-transparent"
+                            }`}>
+                            <span className="text-xs">✓</span>
+                          </div>
+                          <span className="truncate">{dist.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setIsDistributionModalOpen(false)}
+                    className="w-full bg-[#2d5a41] text-white font-black py-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform active:scale-95 uppercase tracking-widest text-sm"
+                  >
+                    {t("common.submit") || "Submit"}
+                  </button>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         )}
 

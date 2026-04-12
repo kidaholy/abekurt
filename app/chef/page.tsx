@@ -31,6 +31,8 @@ interface Order {
   tableNumber?: string
   createdAt: string
   updatedAt: string
+  distributions?: string[]
+  distribution?: string
 }
 
 export default function KitchenDisplayPage() {
@@ -326,6 +328,21 @@ function OrderCard({
                 <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
                   {order.tableNumber}
                 </span>
+              )}
+              {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                <div className="flex flex-wrap gap-1">
+                  {order.distributions && order.distributions.length > 0 ? (
+                    order.distributions.map((d, i) => (
+                      <span key={i} className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full uppercase tracking-tighter shadow-sm">
+                        🏷️ {d}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full uppercase tracking-tighter shadow-sm">
+                      🏷️ {order.distribution}
+                    </span>
+                  )}
+                </div>
               )}
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 <Clock className="h-3 w-3" />

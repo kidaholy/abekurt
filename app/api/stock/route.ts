@@ -62,7 +62,7 @@ export async function GET(request: Request) {
                 isLowStoreStock: item.trackQuantity && (item.storeQuantity || 0) <= (item.storeMinLimit || 0),
                 isOutOfStock: item.trackQuantity && (item.quantity || 0) <= 0,
                 availableForOrder: item.trackQuantity ? (item.status === 'active' && (item.quantity || 0) > 0) : true,
-                sellUnitEquivalent: item.sellUnitEquivalent || 1
+
             }
         })
 
@@ -112,13 +112,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: "Store quantity cannot be negative" }, { status: 400 })
         }
 
-        // Validate sellUnitEquivalent is positive
-        if (body.sellUnitEquivalent !== undefined && body.sellUnitEquivalent !== null && body.sellUnitEquivalent !== "") {
-            const sellUnitEquivalent = Number(body.sellUnitEquivalent.toString().replace(',', '.'))
-            if (sellUnitEquivalent <= 0) {
-                return NextResponse.json({ message: "Sell unit equivalent must be greater than 0" }, { status: 400 })
-            }
-        }
+
 
         // Validate unit type based on unit
         let unitType = 'count' // default
@@ -141,7 +135,7 @@ export async function POST(request: Request) {
             totalPurchased: body.quantity || 0,
             totalConsumed: 0,
             totalInvestment: body.totalPurchaseCost || 0,
-            sellUnitEquivalent: body.sellUnitEquivalent === undefined || body.sellUnitEquivalent === "" ? 1 : Number(body.sellUnitEquivalent.toString().replace(',', '.')) || 1
+
         }
 
         const newStock = new Stock(stockData)

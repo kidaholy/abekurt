@@ -1120,7 +1120,7 @@ export default function AdminMenuPage() {
                               setFormData({
                                 ...formData,
                                 stockItemId: stockId,
-                                stockConsumption: stock ? (stock.sellUnitEquivalent || 1).toString() : "1.0"
+                                stockConsumption: "1.0"
                               });
                             }}
                             className="w-full bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#f5bc6b]"

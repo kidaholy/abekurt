@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             isLowStoreStock: stockItem.trackQuantity && (stockItem.storeQuantity || 0) <= (stockItem.storeMinLimit || 0),
             isOutOfStock: stockItem.trackQuantity && (stockItem.quantity || 0) <= 0,
             availableForOrder: stockItem.trackQuantity ? (stockItem.status === 'active' && (stockItem.quantity || 0) > 0) : true,
-            sellUnitEquivalent: stockItem.sellUnitEquivalent || 1,
+
             restockHistory: stockItem.restockHistory?.map((entry: any) => ({
                 ...entry,
                 _id: entry._id?.toString(),
@@ -110,20 +110,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         }
 
         // Regular update operation
-        const allowedUpdates = ['name', 'category', 'unit', 'unitType', 'minLimit', 'storeMinLimit', 'trackQuantity', 'showStatus', 'status', 'storeQuantity', 'totalInvestment', 'sellUnitEquivalent']
+        const allowedUpdates = ['name', 'category', 'unit', 'unitType', 'minLimit', 'storeMinLimit', 'trackQuantity', 'showStatus', 'status', 'storeQuantity', 'totalInvestment']
         const updateData: any = {}
 
-        console.log('🔍 API received body:', body)
-        console.log('🔍 API received sellUnitEquivalent:', body.sellUnitEquivalent)
+
 
         for (const key of allowedUpdates) {
             if (body[key] !== undefined) {
-                if (key === 'sellUnitEquivalent') {
-                    updateData[key] = body[key] === "" ? 1 : Number(body[key].toString().replace(',', '.')) || 1
-                    console.log('🔍 API processed sellUnitEquivalent:', updateData[key])
-                } else {
+
                     updateData[key] = body[key]
-                }
             }
         }
 
@@ -157,16 +152,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
         Object.assign(stockItem, updateData)
 
-        // Explicitly set sellUnitEquivalent if present to ensure Mongoose tracks it
-        if (updateData.sellUnitEquivalent !== undefined) {
-            console.log('🔍 Setting sellUnitEquivalent on stockItem:', updateData.sellUnitEquivalent)
-            stockItem.sellUnitEquivalent = updateData.sellUnitEquivalent
-            stockItem.markModified('sellUnitEquivalent')
-        }
+
 
         await stockItem.save()
         
-        console.log('🔍 After save, stockItem.sellUnitEquivalent:', stockItem.sellUnitEquivalent)
+
 
         const serializedStock = {
             ...stockItem.toObject(),

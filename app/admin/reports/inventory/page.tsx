@@ -581,12 +581,7 @@ export default function NetWorthReportPage() {
                     <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">
                       Quantity
                     </th>
-                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">
-                      Sell Unit
-                    </th>
-                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">
-                      Portions
-                    </th>
+
                     <th className="text-right py-3 px-4 font-semibold text-sm text-gray-700">
                       Total Purchase
                     </th>
@@ -611,11 +606,8 @@ export default function NetWorthReportPage() {
                       .map((item: any, idx: number) => {
                         const totalHandled = (item.openingStock || 0) + (item.transferred || 0);
                         const remains = item.closingStock || 0;
-                        const sellUnitEquivalent = item.sellUnitEquivalent || 1;
-                        const portionsAvailable = sellUnitEquivalent > 0 ? remains / sellUnitEquivalent : 0;
-                        const potentialRevenue = portionsAvailable * (item.currentUnitCost || 0);
+                        const potentialRevenue = remains * (item.currentUnitCost || 0);
                         const consumedQuantity = item.consumed || 0;
-                        const consumedPortions = sellUnitEquivalent > 0 ? consumedQuantity / sellUnitEquivalent : consumedQuantity;
 
                         return (
                           <tr key={idx} className="hover:bg-gray-50">
@@ -626,29 +618,12 @@ export default function NetWorthReportPage() {
                             <td className="py-3 px-4 text-center font-bold text-slate-800">
                               {totalHandled.toFixed(1)} <span className="text-xs text-gray-400 font-normal">{item.unit || "unit"}</span>
                             </td>
-                            <td className="py-3 px-4 text-center font-bold text-purple-600">
-                              {sellUnitEquivalent !== 1 ? (
-                                <span>{sellUnitEquivalent} <span className="text-xs text-purple-400 font-normal">{item.unit}/portion</span></span>
-                              ) : (
-                                <span className="text-gray-400 text-xs">1:1</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-center font-bold text-amber-600">
-                              {sellUnitEquivalent !== 1 ? (
-                                <span>≈ {portionsAvailable.toFixed(1)} <span className="text-xs text-amber-400 font-normal">portions</span></span>
-                              ) : (
-                                <span className="text-gray-400 text-xs">-</span>
-                              )}
-                            </td>
+
                             <td className="py-3 px-4 text-right font-bold text-green-600">
                               {(item.transferredValue || 0).toLocaleString()} ብር
                             </td>
                             <td className="py-3 px-4 text-center font-bold text-red-500">
-                              {sellUnitEquivalent !== 1 ? (
-                                <span>{consumedPortions.toFixed(1)} <span className="text-xs text-red-300 font-normal">portions</span></span>
-                              ) : (
-                                <span>{consumedQuantity.toFixed(1)} <span className="text-xs text-red-300 font-normal">{item.unit}</span></span>
-                              )}
+                              <span>{consumedQuantity.toFixed(1)} <span className="text-xs text-red-300 font-normal">{item.unit}</span></span>
                             </td>
                             <td className="py-3 px-4 text-center font-bold text-slate-800">
                               {remains.toFixed(1)} <span className="text-xs text-gray-400 font-normal">{item.unit || "unit"}</span>
@@ -708,9 +683,7 @@ export default function NetWorthReportPage() {
                     const remains = item.closingStock || 0;
                     const isLow = item.isLowStock || remains <= (item.minLimit || 5);
                     const totalHandled = (item.openingStock || 0) + (item.transferred || 0);
-                    const sellUnitEquivalent = item.sellUnitEquivalent || 1;
-                    const portionsAvailable = sellUnitEquivalent > 0 ? remains / sellUnitEquivalent : 0;
-                    const potentialRevenue = portionsAvailable * (item.currentUnitCost || 0);
+                    const potentialRevenue = remains * (item.currentUnitCost || 0);
 
                     return (
                       <div key={idx} className="p-4 space-y-3 bg-white">
@@ -748,12 +721,7 @@ export default function NetWorthReportPage() {
                             <span className="text-[9px] text-gray-400 uppercase font-bold">Total Purchase Value</span>
                             <span className="font-black text-green-600">{(item.transferredValue || 0).toLocaleString()} Br</span>
                           </div>
-                          {sellUnitEquivalent !== 1 && (
-                            <div className="text-right">
-                              <span className="text-[9px] text-amber-500 uppercase font-bold">Portions Left</span>
-                              <div className="font-black text-amber-600">≈ {portionsAvailable.toFixed(1)}</div>
-                            </div>
-                          )}
+
                         </div>
                       </div>
                     )

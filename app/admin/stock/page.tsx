@@ -33,7 +33,7 @@ interface StockItem {
     totalPurchased?: number
     totalLifetimePurchased?: number
     totalConsumed?: number
-    sellUnitEquivalent?: number
+
 }
 
 export default function StockInventoryPage() {
@@ -60,7 +60,7 @@ export default function StockInventoryPage() {
         unitCost: "",
         trackQuantity: true,
         showStatus: true,
-        sellUnitEquivalent: "1"
+
     })
 
     const { token } = useAuth()
@@ -132,7 +132,6 @@ export default function StockInventoryPage() {
                     quantity: stockFormData.quantity === "" ? undefined : Number(stockFormData.quantity),
                     minLimit: stockFormData.minLimit === "" ? undefined : Number(stockFormData.minLimit),
                     unitCost: stockFormData.unitCost === "" ? undefined : Number(stockFormData.unitCost),
-                    sellUnitEquivalent: stockFormData.sellUnitEquivalent === "" || stockFormData.sellUnitEquivalent === undefined ? 1 : Number(stockFormData.sellUnitEquivalent.toString().replace(',', '.')) || 1
                 }),
             })
 
@@ -184,7 +183,7 @@ export default function StockInventoryPage() {
             unitCost: item.unitCost?.toString() || "",
             trackQuantity: item.trackQuantity,
             showStatus: item.showStatus,
-            sellUnitEquivalent: item.sellUnitEquivalent?.toString() || "1"
+
         })
         setShowStockForm(true)
     }
@@ -200,7 +199,7 @@ export default function StockInventoryPage() {
             unitCost: "",
             trackQuantity: true,
             showStatus: true,
-            sellUnitEquivalent: "1"
+
         })
         setEditingStock(null)
         setShowStockForm(false)
@@ -411,11 +410,7 @@ export default function StockInventoryPage() {
                                                                     </span>
                                                                     <span className="text-[10px] font-bold text-gray-400 uppercase">{item.unit}</span>
                                                                 </div>
-                                                                {item.sellUnitEquivalent && item.sellUnitEquivalent > 0 && item.sellUnitEquivalent !== 1 && (
-                                                                    <p className="text-[10px] font-black uppercase text-amber-600 mt-0.5">
-                                                                        ≈ {((item.quantity || 0) / item.sellUnitEquivalent).toFixed(1)} Portions
-                                                                    </p>
-                                                                )}
+
                                                             </td>
                                                             <td className="py-5">
                                                                 {isOut ? (
@@ -465,10 +460,7 @@ export default function StockInventoryPage() {
                                             <input type="number" step="any" value={stockFormData.minLimit} onChange={e => setStockFormData({ ...stockFormData, minLimit: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl font-bold outline-none" />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Sell Unit Equivalent ({stockFormData.unit}/portion)</label>
-                                        <input type="number" step="any" placeholder="e.g. 0.46" value={stockFormData.sellUnitEquivalent} onChange={e => setStockFormData({ ...stockFormData, sellUnitEquivalent: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl font-bold outline-none text-[#8B4513]" />
-                                    </div>
+
                                     <div className="flex gap-4 pt-6">
                                         <button type="button" onClick={resetStockForm} className="flex-1 py-4 font-bold text-gray-400">Cancel</button>
                                         <button type="submit" disabled={saveLoading} className="flex-[2] py-4 bg-[#8B4513] text-white rounded-xl font-bold shadow-lg shadow-[#8B4513]/20">

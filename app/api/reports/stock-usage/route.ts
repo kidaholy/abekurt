@@ -68,10 +68,10 @@ export async function GET(request: Request) {
         const orders = await Order.find({
             createdAt: { $gte: startDate, $lte: endDate },
             status: { $ne: "cancelled" }
-        }).select('items totalAmount createdAt status').lean()
+        }).select('items totalAmount createdAt status').lean() as any[]
 
-        const stockItems = await Stock.find({}).select('name category quantity storeQuantity unit unitCost averagePurchasePrice totalInvestment minLimit storeMinLimit status supplier updatedAt totalPurchased sellUnitEquivalent').lean()
-        const menuItems = await MenuItem.find({}).select('name reportUnit reportQuantity stockItemId recipe').lean()
+        const stockItems = await Stock.find({}).select('name category quantity storeQuantity unit unitCost averagePurchasePrice totalInvestment minLimit storeMinLimit status supplier updatedAt totalPurchased').lean() as any[]
+        const menuItems = await MenuItem.find({}).select('name reportUnit reportQuantity stockItemId recipe').lean() as any[]
         const menuMap = new Map(menuItems.map(m => [m._id.toString(), m]))
 
         const dailyExpenses = await DailyExpense.find({
@@ -301,7 +301,7 @@ export async function GET(request: Request) {
                 averagePurchasePrice: stock.averagePurchasePrice || 0,
                 totalLifetimeInvestment: stock.totalInvestment || 0,
                 totalLifetimePurchased: stock.totalPurchased || 0,
-                sellUnitEquivalent: stock.sellUnitEquivalent || 1,
+
                 openingValue: openingStock * currentUnitCost,
                 purchaseValue: purchaseData.totalCost,
                 transferredValue: transferred * currentUnitCost,

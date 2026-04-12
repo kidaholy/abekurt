@@ -71,7 +71,7 @@ interface StockItem {
     totalPurchased?: number
     totalLifetimePurchased?: number
     totalConsumed?: number
-    sellUnitEquivalent: number
+
 }
 
 interface FixedAsset {
@@ -182,7 +182,7 @@ export default function StorePage() {
         unitCost: "",
         trackQuantity: true,
         showStatus: true,
-        sellUnitEquivalent: "1"
+
     })
 
     const { t } = useLanguage()
@@ -584,7 +584,7 @@ export default function StorePage() {
             const url = editingStock ? `/api/stock/${editingStock._id}` : "/api/stock"
             const method = editingStock ? "PUT" : "POST"
 
-            const { quantity, minLimit, storeMinLimit, unitCost, totalPurchaseCost, sellUnitEquivalent, ...rest } = stockFormData
+            const { quantity, minLimit, storeMinLimit, unitCost, totalPurchaseCost, ...rest } = stockFormData
             
             const payload = {
                 ...rest,
@@ -593,12 +593,9 @@ export default function StorePage() {
                 storeMinLimit: storeMinLimit === "" ? undefined : Number(storeMinLimit),
                 unitCost: unitCost === "" ? undefined : Number(unitCost),
                 totalPurchaseCost: totalPurchaseCost === "" ? undefined : Number(totalPurchaseCost),
-                sellUnitEquivalent: sellUnitEquivalent === "" || sellUnitEquivalent === undefined ? 1 : Number(sellUnitEquivalent.toString().replace(',', '.')) || 1
             }
             
-            console.log('🔍 Sending payload:', payload)
-            console.log('🔍 sellUnitEquivalent from form:', sellUnitEquivalent)
-            console.log('🔍 sellUnitEquivalent in payload:', payload.sellUnitEquivalent)
+
             
             const response = await fetch(url, {
                 method,
@@ -861,7 +858,6 @@ export default function StorePage() {
             unitCost: item.unitCost?.toString() || "",
             trackQuantity: item.trackQuantity,
             showStatus: item.showStatus,
-            sellUnitEquivalent: item.sellUnitEquivalent?.toString() || "1"
         })
         setShowStockForm(true)
     }
@@ -879,7 +875,7 @@ export default function StorePage() {
             unitCost: "",
             trackQuantity: true,
             showStatus: true,
-            sellUnitEquivalent: "1"
+            showStatus: true,
         })
         setEditingStock(null)
         setShowStockForm(false)
@@ -1018,7 +1014,7 @@ export default function StorePage() {
     }
 
     const totalStats = {
-        storeValue: stockItems.reduce((sum, item) => sum + ((item.storeQuantity || 0) * (item.averagePurchasePrice || item.unitCost || 0)), 0),
+        storeValue: stockItems.reduce((sum, item) => sum + ((item.storeQuantity || 0) * (item.unitCost || 0)), 0),
         totalItems: stockItems.length,
         fixedAssetValue: fixedAssets.reduce((sum, a) => sum + (a.totalValue || 0), 0),
         fixedAssetCount: fixedAssets.length
@@ -1203,17 +1199,12 @@ export default function StorePage() {
                                                                 {(item.storeQuantity || 0).toLocaleString()}
                                                                 <span className="text-xs font-bold text-gray-400 ml-1 uppercase">{item.unit}</span>
                                                             </p>
-                                                            {item.sellUnitEquivalent && item.sellUnitEquivalent > 0 && item.sellUnitEquivalent !== 1 && (
-                                                                <p className="text-[10px] font-black uppercase text-amber-600">
-                                                                    ≈ {((item.storeQuantity || 0) / item.sellUnitEquivalent).toFixed(1)} Portions
-                                                                </p>
-                                                            )}
+
                                                         </td>
                                                         <td className="py-5">
                                                             {(item.quantity || 0) > 0 ? (
                                                                 <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
                                                                     {(item.quantity || 0).toLocaleString()} {item.unit} Active
-                                                                    {item.sellUnitEquivalent && item.sellUnitEquivalent > 0 && item.sellUnitEquivalent !== 1 && ` (${((item.quantity || 0) / item.sellUnitEquivalent).toFixed(1)} Portions)`}
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-[10px] font-black uppercase text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
@@ -1676,10 +1667,7 @@ export default function StorePage() {
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Selling Price (Unit Cost)</label>
                                             <input type="number" step="any" placeholder="Selling Price" value={stockFormData.unitCost} onChange={e => setStockFormData({ ...stockFormData, unitCost: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
                                         </div>
-                                        <div>
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Sell Unit Equivalent ({stockFormData.unit}/portion)</label>
-                                            <input type="number" step="any" placeholder="e.g. 0.46" value={stockFormData.sellUnitEquivalent} onChange={e => setStockFormData({ ...stockFormData, sellUnitEquivalent: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
-                                        </div>
+
                                     </div>
                                     <div className="flex gap-4 pt-4">
                                         <button type="button" onClick={resetStockForm} className="flex-1 py-4 font-bold text-gray-400">Cancel</button>

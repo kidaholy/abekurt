@@ -28,7 +28,7 @@ export interface IStock extends Document {
     totalPurchased: number // Lifetime total purchased
     totalConsumed: number // Lifetime total consumed via sales
     totalInvestment: number // Total money invested in purchasing this item
-    sellUnitEquivalent: number // How much of the base unit is consumed per portion/sale
+
     createdAt: Date
     updatedAt: Date
 }
@@ -70,7 +70,7 @@ const StockSchema = new Schema<IStock>(
         totalPurchased: { type: Number, default: 0, min: 0 },
         totalConsumed: { type: Number, default: 0, min: 0 },
         totalInvestment: { type: Number, default: 0, min: 0 },
-        sellUnitEquivalent: { type: Number, default: 1, min: 0 },
+
     },
     {
         timestamps: true,

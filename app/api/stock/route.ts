@@ -43,21 +43,21 @@ export async function GET(request: Request) {
 
         // Convert ObjectId to string for frontend compatibility and add computed fields
         const serializedItems = stockItems.map(item => {
-            // Handle migration from old purchasePrice to averagePurchasePrice
-            const avgPurchasePrice = item.averagePurchasePrice || item.purchasePrice || 0
+            // Use purchaseCost if available, otherwise fall back to averagePurchasePrice for existing items
+            const purchaseCostPrice = item.purchaseCost || item.averagePurchasePrice || 0
 
             return {
                 ...item,
                 _id: item._id.toString(),
-                averagePurchasePrice: avgPurchasePrice, // Ensure this field exists
+                purchaseCost: purchaseCostPrice, // Unit purchase cost
                 storeQuantity: item.storeQuantity || 0, // Expose Store Quantity
                 totalQuantity: (item.quantity || 0) + (item.storeQuantity || 0), // Total inventory
-                totalValue: ((item.quantity || 0) + (item.storeQuantity || 0)) * avgPurchasePrice, // Total Stock Value (POS + Store)
-                storeValue: (item.storeQuantity || 0) * avgPurchasePrice, // Current Store Value
+                totalValue: ((item.quantity || 0) + (item.storeQuantity || 0)) * purchaseCostPrice, // Total Stock Value (POS + Store) using purchaseCost
+                storeValue: (item.storeQuantity || 0) * purchaseCostPrice, // Current Store Value using purchaseCost
                 totalLifetimeInvestment: item.totalInvestment || 0,
                 totalLifetimePurchased: item.totalPurchased || 0,
                 sellingValue: (item.quantity || 0) * (item.unitCost || 0), // Potential revenue from POS stock
-                profitMargin: (item.unitCost || 0) > 0 ? (((item.unitCost - avgPurchasePrice) / item.unitCost) * 100).toFixed(1) : "0",
+                profitMargin: (item.unitCost || 0) > 0 ? (((item.unitCost - purchaseCostPrice) / item.unitCost) * 100).toFixed(1) : "0",
                 isLowStock: item.trackQuantity && (item.quantity || 0) <= (item.minLimit || 0),
                 isLowStoreStock: item.trackQuantity && (item.storeQuantity || 0) <= (item.storeMinLimit || 0),
                 isOutOfStock: item.trackQuantity && (item.quantity || 0) <= 0,
@@ -130,7 +130,8 @@ export async function POST(request: Request) {
             storeQuantity: Number(body.storeQuantity || body.quantity) || 0,
             minLimit: body.minLimit || 0,
             storeMinLimit: body.storeMinLimit || 0,
-            averagePurchasePrice: body.quantity > 0 ? (body.totalPurchaseCost || 0) / body.quantity : 0,
+            averagePurchasePrice: (Number(body.storeQuantity || body.quantity) || 0) > 0 ? (Number(body.totalPurchaseCost) || 0) / (Number(body.storeQuantity || body.quantity) || 1) : 0,
+            purchaseCost: (Number(body.storeQuantity || body.quantity) || 0) > 0 ? (Number(body.totalPurchaseCost) || 0) / (Number(body.storeQuantity || body.quantity) || 1) : 0,
             unitCost: body.unitCost || 0,
             totalPurchased: body.quantity || 0,
             totalConsumed: 0,

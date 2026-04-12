@@ -68,10 +68,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         if (body.action === 'restock' && body.quantityAdded && body.totalPurchaseCost) {
             console.log(`🔄 Restocking ${stockItem.name}: +${body.quantityAdded} ${stockItem.unit} for total cost ${body.totalPurchaseCost} Br / selling at ${body.newUnitCost || stockItem.unitCost} per unit`)
 
-            stockItem.restock(
+            // Calculate purchase cost per unit
+            const purchaseCostPerUnit = Number(body.totalPurchaseCost) / Number(body.quantityAdded)
+
+            stockItem.addToStore(
                 Number(body.quantityAdded),
                 Number(body.totalPurchaseCost),
                 Number(body.newUnitCost || stockItem.unitCost),
+                purchaseCostPerUnit,
                 body.notes || `Restocked via admin panel`,
                 decoded.id
             )
@@ -125,6 +129,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         // Handle totalPurchaseCost mapping to totalInvestment if provided
         if (body.totalPurchaseCost !== undefined) {
             updateData.totalInvestment = Number(body.totalPurchaseCost)
+            updateData.averagePurchasePrice = Number(body.totalPurchaseCost)
         }
 
         // Handle direct quantity/price updates (for admin corrections)

@@ -279,10 +279,11 @@ export async function GET(request: Request) {
             const storeOpeningStock = Math.max(0, currentStoreStock - purchased + transferred)
 
             const currentUnitCost = stock.unitCost || 0
+            const purchaseCost = stock.averagePurchasePrice || 0 // Use purchase cost for store valuation
             const totalHandled = openingStock + transferred
             const weightedAvgCost = purchased > 0
-                ? ((openingStock * (stock.averagePurchasePrice || 0)) + purchaseData.totalCost) / (openingStock + purchased)
-                : (stock.averagePurchasePrice || 0)
+                ? ((openingStock * purchaseCost) + purchaseData.totalCost) / (openingStock + purchased)
+                : purchaseCost
 
             return {
                 id: stock._id,
@@ -307,7 +308,7 @@ export async function GET(request: Request) {
                 transferredValue: transferred * currentUnitCost,
                 consumedValue: consumed * currentUnitCost,
                 closingValue: currentStock * currentUnitCost,
-                storeClosingValue: currentStoreStock * currentUnitCost,
+                storeClosingValue: currentStoreStock * purchaseCost, // Use purchaseCost for store valuation
                 usageVelocity: periodDays > 0 ? consumed / periodDays : 0,
                 isLowStock: currentStock <= (stock.minLimit || 0),
                 minLimit: stock.minLimit || 0,

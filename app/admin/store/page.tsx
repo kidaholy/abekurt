@@ -71,6 +71,7 @@ interface StockItem {
     totalPurchased?: number
     totalLifetimePurchased?: number
     totalConsumed?: number
+    storeValue?: number // Pre-calculated store value
 
 }
 
@@ -930,8 +931,9 @@ export default function StorePage() {
     const exportStoreCSV = () => {
         // Export ALL items (no quantity filter) to give complete picture
         const data = filteredStock.map((item: any) => {
-            // Use averagePurchasePrice as the purchase cost (same as Store Valuation sidebar)
-            const costPrice = item.averagePurchasePrice || item.unitCost || 0
+            // Use averagePurchasePrice as it stores the true Store Unit Cost in the database.
+            // (item.unitCost actually stores the 'Selling Price')
+            const costPrice = item.averagePurchasePrice || 0
             const storeQty = item.storeQuantity ?? 0
             const activeQty = item.quantity ?? 0
             const totalStoreValue = storeQty * costPrice
@@ -940,7 +942,7 @@ export default function StorePage() {
                 "Item Name": item.name,
                 "Category": item.category,
                 "Unit": item.unit,
-                "Unit Cost (Br)": costPrice > 0 ? costPrice.toFixed(2) : "—",
+                "Purchased Unit Price (Br)": costPrice > 0 ? costPrice.toFixed(2) : "—",
                 "In Store": storeQty,
                 "Active (POS)": activeQty,
                 "Store Value (Br)": totalStoreValue > 0 ? Math.round(totalStoreValue) : 0,
@@ -957,7 +959,7 @@ export default function StorePage() {
         ReportExporter.exportToCSV({
             title: "Bulk Inventory Report",
             period: searchTerm ? `Search: "${searchTerm}"` : "All Items",
-            headers: ["Item Name", "Category", "Unit", "Unit Cost (Br)", "In Store", "Active (POS)", "Store Value (Br)", "Min Store Limit", "Status"],
+            headers: ["Item Name", "Category", "Unit", "Purchased Unit Price (Br)", "In Store", "Active (POS)", "Store Value (Br)", "Min Store Limit", "Status"],
             data
         })
     }
@@ -1014,7 +1016,7 @@ export default function StorePage() {
     }
 
     const totalStats = {
-        storeValue: stockItems.reduce((sum, item) => sum + ((item.storeQuantity || 0) * (item.unitCost || 0)), 0),
+        storeValue: stockItems.reduce((sum, item) => sum + (item.storeValue || 0), 0),
         totalItems: stockItems.length,
         fixedAssetValue: fixedAssets.reduce((sum, a) => sum + (a.totalValue || 0), 0),
         fixedAssetCount: fixedAssets.length
@@ -1654,8 +1656,8 @@ export default function StorePage() {
                                             <input type="number" step="any" placeholder="In Store Qty" value={stockFormData.quantity} onChange={e => setStockFormData({ ...stockFormData, quantity: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Unit Cost</label>
-                                            <input type="number" step="any" placeholder="Unit Cost" value={stockFormData.totalPurchaseCost} onChange={e => setStockFormData({ ...stockFormData, totalPurchaseCost: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Purchased Unit Price</label>
+                                            <input type="number" step="any" placeholder="Purchased Unit Price" value={stockFormData.totalPurchaseCost} onChange={e => setStockFormData({ ...stockFormData, totalPurchaseCost: e.target.value })} className="p-4 bg-gray-50 rounded-xl font-bold w-full" />
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Limit For Store Alert</label>
@@ -1664,7 +1666,7 @@ export default function StorePage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Selling Price (Unit Cost)</label>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Selling Price</label>
                                             <input type="number" step="any" placeholder="Selling Price" value={stockFormData.unitCost} onChange={e => setStockFormData({ ...stockFormData, unitCost: e.target.value })} className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
                                         </div>
 
@@ -1689,8 +1691,8 @@ export default function StorePage() {
                                         <input type="number" step="any" placeholder="Amount to add" value={restockAmount} onChange={e => setRestockAmount(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Unit Cost (from store)</label>
-                                        <input type="number" step="any" placeholder="Unit Cost" value={newUnitCost} onChange={e => setNewUnitCost(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Purchased Unit Price</label>
+                                        <input type="number" step="any" placeholder="Purchased Unit Price" value={newUnitCost} onChange={e => setNewUnitCost(e.target.value)} className="w-full p-4 bg-gray-50 rounded-xl font-bold" required />
                                     </div>
                                     <div className="flex gap-3 pt-4">
                                         <button type="button" onClick={() => setShowRestockModal(false)} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold">Cancel</button>

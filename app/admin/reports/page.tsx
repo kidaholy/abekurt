@@ -928,9 +928,11 @@ export default function ReportsPage() {
                                                     {(stockUsageData?.stockAnalysis || stockItems || [])
                                                         .filter((item: any) => (item.storeQuantity || 0) > 0 || (item.purchased || 0) > 0 || (item.totalPurchased || 0) > 0 || (item.storeOpeningStock || 0) > 0)
                                                         .map((item: any, idx: number) => {
-                                                            const unitCost = item.unitCost || item.averagePurchasePrice || item.currentUnitCost || 0
+                                                            // Use purchaseCost (unit purchase cost) for store valuation, fallback to averagePurchasePrice
+                                                            const unitCost = item.purchaseCost || item.averagePurchasePrice || 0
                                                             const remains = item.storeQuantity ?? 0
                                                             const transferredCount = item.transferred ?? 0
+                                                            // Store value = quantity in store × purchase cost per unit
                                                             const totalPurchaseValue = item.storeClosingValue ?? (remains * unitCost)
                                                             const isLow = item.isLowStoreStock || (remains <= (item.storeMinLimit || 5)) && remains > 0
                                                             return (
@@ -956,9 +958,11 @@ export default function ReportsPage() {
                                             {(stockUsageData?.stockAnalysis || stockItems || [])
                                                 .filter((item: any) => (item.storeQuantity || 0) > 0 || (item.purchased || 0) > 0 || (item.totalPurchased || 0) > 0 || (item.storeOpeningStock || 0) > 0)
                                                 .map((item: any, idx: number) => {
-                                                    const unitCost = item.unitCost || item.averagePurchasePrice || item.currentUnitCost || 0
+                                                    // Use purchaseCost (unit purchase cost) for store valuation, fallback to averagePurchasePrice
+                                                    const unitCost = item.purchaseCost || item.averagePurchasePrice || 0
                                                     const remains = item.storeQuantity ?? 0
                                                     const transferredCount = item.transferred ?? 0
+                                                    // Store value = quantity in store × purchase cost per unit
                                                     const totalPurchaseValue = item.storeClosingValue ?? (remains * unitCost)
                                                     const isLow = item.isLowStoreStock || (remains <= (item.storeMinLimit || 5)) && remains > 0
                                                     return (

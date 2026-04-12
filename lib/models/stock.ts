@@ -19,6 +19,7 @@ export interface IStock extends Document {
     minLimit: number // Threshold for low POS stock warning
     storeMinLimit: number // Threshold for low Store stock warning
     averagePurchasePrice: number // Average purchase price per unit (calculated)
+    purchaseCost: number // Current unit purchase cost (what we paid per unit)
     unitCost: number // Current selling price (what we charge)
     trackQuantity: boolean
     showStatus: boolean
@@ -58,6 +59,7 @@ const StockSchema = new Schema<IStock>(
         minLimit: { type: Number, required: true, default: 0, min: 0 },
         storeMinLimit: { type: Number, required: true, default: 0, min: 0 },
         averagePurchasePrice: { type: Number, required: true, default: 0, min: 0 },
+        purchaseCost: { type: Number, required: true, default: 0, min: 0 }, // Current unit purchase cost
         unitCost: { type: Number, required: true, default: 0, min: 0 },
         trackQuantity: { type: Boolean, default: true },
         showStatus: { type: Boolean, default: true },
@@ -113,7 +115,7 @@ StockSchema.methods.consumeStock = function (quantity: number): boolean {
 }
 
 // Helper method to add to store (Purchase)
-StockSchema.methods.addToStore = function (quantityAdded: number, totalPurchaseCost: number, newUnitCost: number, notes?: string, restockedBy?: mongoose.Types.ObjectId) {
+StockSchema.methods.addToStore = function (quantityAdded: number, totalPurchaseCost: number, newUnitCost: number, purchaseCostPerUnit?: number, notes?: string, restockedBy?: mongoose.Types.ObjectId) {
     // Add to restock history
     this.restockHistory.push({
         date: new Date(),
@@ -132,6 +134,13 @@ StockSchema.methods.addToStore = function (quantityAdded: number, totalPurchaseC
     // Calculate new average purchase price
     if (this.totalPurchased > 0) {
         this.averagePurchasePrice = this.totalInvestment / this.totalPurchased
+    }
+
+    // Set purchase cost per unit (what we paid per unit)
+    if (purchaseCostPerUnit !== undefined) {
+        this.purchaseCost = purchaseCostPerUnit
+    } else if (quantityAdded > 0) {
+        this.purchaseCost = totalPurchaseCost / quantityAdded
     }
 
     this.unitCost = newUnitCost // Update to latest selling price

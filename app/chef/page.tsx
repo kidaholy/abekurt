@@ -8,7 +8,7 @@ import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
 import { useConfirmation } from "@/hooks/use-confirmation"
-import { RefreshCw, Clock, ChefHat } from 'lucide-react'
+import { RefreshCw, Clock, ChefHat, MapPin } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
 
 interface OrderItem {
@@ -360,7 +360,15 @@ function OrderCard({
             <div key={idx} className="flex justify-between items-center text-sm border-b border-gray-100 last:border-0 py-2">
               <div className="flex-1">
                 <span className="font-black text-gray-800 tracking-tight">#{item.menuId || item.menuItemId} {item.name}</span>
-                <span className="text-[10px] text-orange-600 font-black uppercase tracking-widest bg-orange-50 w-fit px-1.5 py-0.5 rounded shadow-sm border border-orange-100 mt-0.5">{item.category}</span>
+                <div className="flex flex-wrap gap-1.5 mt-0.5">
+                  <span className="text-[10px] text-orange-600 font-black uppercase tracking-widest bg-orange-50 w-fit px-1.5 py-0.5 rounded shadow-sm border border-orange-100">{item.category}</span>
+                  {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                    <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest bg-emerald-50 w-fit px-1.5 py-0.5 rounded shadow-sm border border-emerald-100 flex items-center gap-0.5">
+                      <MapPin className="h-2 w-2" />
+                      {order.distributions && order.distributions.length > 0 ? order.distributions.join(", ") : order.distribution}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {item.status && item.status !== 'pending' && (

@@ -5,6 +5,8 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { SidebarNav } from "@/components/sidebar-nav"
 import { AuthHeader } from "@/components/auth-header"
 import { useAuth } from "@/context/auth-context"
+import { MapPin } from "lucide-react"
+import { OrderDetailsModal } from "@/components/order-details-modal"
 
 interface Order {
   _id: string
@@ -24,6 +26,7 @@ export default function ChefOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState("all")
   const { token } = useAuth()
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
   useEffect(() => {
     fetchOrders()
@@ -128,7 +131,11 @@ export default function ChefOrdersPage() {
             ) : (
               <div className="space-y-3">
                 {filteredOrders.map((order) => (
-                  <div key={order._id} className="card-base hover-lift p-3">
+                  <div 
+                    key={order._id} 
+                    className="card-base hover-lift p-3 cursor-pointer"
+                    onClick={() => setSelectedOrder(order)}
+                  >
                     {/* Mobile-Optimized Order Card */}
                     <div className="flex flex-col gap-3">
                       {/* Header Row */}
@@ -206,9 +213,15 @@ export default function ChefOrdersPage() {
                         <div className="border-t pt-2">
                           <div className="flex flex-wrap gap-1">
                             {order.items.slice(0, 3).map((item, idx) => (
-                              <span key={idx} className="text-xs bg-muted px-2 py-1 rounded">
-                                {item.quantity}x {item.name}
-                              </span>
+                              <div key={idx} className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded">
+                                <span className="text-xs">{item.quantity}x {item.name}</span>
+                                {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                                  <span className="text-[8px] font-black text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 border border-emerald-100 uppercase">
+                                    <MapPin className="h-2 w-2" />
+                                    {order.distributions && order.distributions.length > 0 ? order.distributions.join(", ") : order.distribution}
+                                  </span>
+                                )}
+                              </div>
                             ))}
                             {order.items.length > 3 && (
                               <span className="text-xs text-muted-foreground px-2 py-1">
@@ -225,6 +238,12 @@ export default function ChefOrdersPage() {
             )}
           </div>
         </main>
+        
+        <OrderDetailsModal 
+          order={selectedOrder} 
+          isOpen={!!selectedOrder} 
+          onClose={() => setSelectedOrder(null)} 
+        />
       </div>
     </ProtectedRoute>
   )

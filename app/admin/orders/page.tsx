@@ -7,7 +7,8 @@ import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
 import { useConfirmation } from "@/hooks/use-confirmation"
-import { Clock, Trash2, Calendar as CalendarIcon, CheckCheck } from "lucide-react"
+import { Clock, Trash2, Calendar as CalendarIcon, CheckCheck, MapPin } from "lucide-react"
+import { OrderDetailsModal } from "@/components/order-details-modal"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
@@ -48,6 +49,7 @@ export default function AdminOrdersPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [bulkServing, setBulkServing] = useState(false)
   const notifiedOrderIds = useRef<Set<string>>(new Set())
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
   useEffect(() => {
     fetchOrders()
@@ -662,7 +664,11 @@ export default function AdminOrdersPage() {
                     {filteredOrders.map((order) => {
                       const status = getStatusConfig(order.status)
                       return (
-                        <div key={order._id} className="bg-gray-50 rounded-2xl p-4 md:p-5 border border-gray-200 hover:border-[#8B4513]/30 hover:shadow-md transition-all flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
+                        <div 
+                          key={order._id} 
+                          onClick={() => setSelectedOrder(order)}
+                          className="bg-gray-50 cursor-pointer rounded-2xl p-4 md:p-5 border border-gray-200 hover:border-[#8B4513]/30 hover:shadow-md transition-all flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8"
+                        >
 
                           {/* Left: Order Identifier & Status */}
                           <div className="flex-shrink-0 lg:w-48">
@@ -703,6 +709,12 @@ export default function AdminOrdersPage() {
                                   <span className="text-[#8B4513] font-black">{item.quantity}×</span>
                                   <span className="text-gray-700 font-bold truncate max-w-[140px]">{item.name}</span>
                                   {item.preparationTime && <span className="text-gray-400 text-[9px] italic">({item.preparationTime}m)</span>}
+                                  {((order.distributions && order.distributions.length > 0) || order.distribution) && (
+                                    <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                      <MapPin className="h-2 w-2" />
+                                      {order.distributions && order.distributions.length > 0 ? order.distributions.join(", ") : order.distribution}
+                                    </span>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -816,6 +828,12 @@ export default function AdminOrdersPage() {
           duration={notificationState.options.duration}
         />
       </div>
+
+      <OrderDetailsModal 
+        order={selectedOrder} 
+        isOpen={!!selectedOrder} 
+        onClose={() => setSelectedOrder(null)} 
+      />
     </ProtectedRoute>
   )
 }

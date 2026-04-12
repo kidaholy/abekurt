@@ -145,8 +145,8 @@ export async function GET(request: Request) {
         isDeleted: !!order.isDeleted,
         batchNumber,
         items,
-        distribution: order.distribution,
-        distributions: order.distributions
+        distribution: order.distribution || "",
+        distributions: order.distributions || (order.distribution ? [order.distribution] : [])
       };
     });
 

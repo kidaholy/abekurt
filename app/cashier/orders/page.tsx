@@ -6,7 +6,8 @@ import { BentoNavbar } from "@/components/bento-navbar"
 import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ShoppingBag, RefreshCw } from 'lucide-react'
+import { ShoppingBag, RefreshCw, MapPin } from 'lucide-react'
+import { OrderDetailsModal } from "@/components/order-details-modal"
 
 interface OrderItem {
   menuItemId: string
@@ -36,6 +37,7 @@ export default function CashierOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<"all" | "preparing" | "completed">("all")
   const [mainCategoryFilter, setMainCategoryFilter] = useState<"all" | "Food" | "Drinks">("all")
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const { token, user } = useAuth()
   const { t } = useLanguage()
 
@@ -256,6 +258,12 @@ export default function CashierOrdersPage() {
           </Card>
         </div>
       </div>
+
+      <OrderDetailsModal 
+        order={selectedOrder} 
+        isOpen={!!selectedOrder} 
+        onClose={() => setSelectedOrder(null)} 
+      />
     </ProtectedRoute>
   )
 }

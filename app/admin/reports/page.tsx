@@ -941,9 +941,9 @@ export default function ReportsPage() {
                                                                         <p className="font-black text-slate-800">{item.name}</p>
                                                                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-0.5">{item.category}</p>
                                                                     </td>
-                                                                    <td className="p-4 text-center text-orange-600">{Math.round(unitCost).toLocaleString()} <span className="text-[10px]">Br</span></td>
+                                                                    <td className="p-4 text-center text-orange-600">{unitCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} <span className="text-[10px]">Br</span></td>
                                                                     <td className="p-4 text-center"><p className={`text-sm ${isLow ? 'text-red-600' : 'text-slate-800'}`}>{remains} <span className="text-[10px] text-gray-400">{item.unit}</span></p></td>
-                                                                    <td className="p-4 text-center text-green-600">{totalPurchaseValue.toLocaleString()} <span className="text-[10px]">Br</span></td>
+                                                                    <td className="p-4 text-center text-green-600">{totalPurchaseValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} <span className="text-[10px]">Br</span></td>
                                                                     <td className="p-4 text-center text-red-400">{transferredCount} <span className="text-[10px] uppercase font-black tracking-tighter">Moved</span></td>
                                                                     <td className="p-4 text-center"><span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${isLow ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{isLow ? 'LOW' : 'OK'}</span></td>
                                                                 </tr>
@@ -987,11 +987,11 @@ export default function ReportsPage() {
                                                             <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
                                                                 <div>
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Inv</p>
-                                                                    <p className="text-lg font-black text-green-600">{totalPurchaseValue.toLocaleString()} Br</p>
+                                                                    <p className="text-lg font-black text-green-600">{totalPurchaseValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Br</p>
                                                                 </div>
                                                                 <div className="text-right">
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Unit Cost</p>
-                                                                    <p className="text-lg font-black text-orange-600">{Math.round(unitCost).toLocaleString()} Br</p>
+                                                                    <p className="text-lg font-black text-orange-600">{unitCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Br</p>
                                                                 </div>
                                                             </div>
                                                         </div>

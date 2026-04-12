@@ -62,6 +62,7 @@ interface StockItem {
     minLimit?: number
     storeMinLimit?: number
     averagePurchasePrice?: number
+    purchaseCost?: number
     unitCost?: number
     trackQuantity: boolean
     showStatus: boolean
@@ -855,7 +856,7 @@ export default function StorePage() {
             unit: item.unit,
             minLimit: item.minLimit?.toString() || "",
             storeMinLimit: item.storeMinLimit?.toString() || "",
-            totalPurchaseCost: item.totalInvestment?.toString() || "",
+            totalPurchaseCost: item.purchaseCost?.toString() || item.averagePurchasePrice?.toString() || "",
             unitCost: item.unitCost?.toString() || "",
             trackQuantity: item.trackQuantity,
             showStatus: item.showStatus,
@@ -875,7 +876,6 @@ export default function StorePage() {
             totalPurchaseCost: "",
             unitCost: "",
             trackQuantity: true,
-            showStatus: true,
             showStatus: true,
         })
         setEditingStock(null)
@@ -942,10 +942,10 @@ export default function StorePage() {
                 "Item Name": item.name,
                 "Category": item.category,
                 "Unit": item.unit,
-                "Purchased Unit Price (Br)": costPrice > 0 ? costPrice.toFixed(2) : "—",
+                "Purchased Unit Price (Br)": costPrice > 0 ? parseFloat(costPrice.toFixed(4)) : "—",
                 "In Store": storeQty,
                 "Active (POS)": activeQty,
-                "Store Value (Br)": totalStoreValue > 0 ? Math.round(totalStoreValue) : 0,
+                "Store Value (Br)": totalStoreValue > 0 ? parseFloat(totalStoreValue.toFixed(4)) : 0,
                 "Min Store Limit": item.storeMinLimit ?? 0,
                 "Status": storeQty <= 0 ? "Out of Stock" : isLow ? "Low Stock" : "OK"
             }
@@ -1044,7 +1044,7 @@ export default function StorePage() {
                                 </h2>
                                 <div className="space-y-6 relative z-10">
                                     <div>
-                                        <p className="text-4xl font-black">{totalStats.storeValue.toLocaleString()} <span className="text-xs">ETB</span></p>
+                                        <p className="text-4xl font-black">{totalStats.storeValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} <span className="text-xs">ETB</span></p>
                                         <p className="text-xs font-bold uppercase tracking-widest opacity-60 mt-1">Value of Bulk Storage</p>
                                     </div>
                                     <div className="pt-6 border-t border-white/10">

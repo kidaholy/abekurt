@@ -827,7 +827,8 @@ export default function ReportsPage() {
                                                             const sellingPrice = item.currentUnitCost ?? item.unitCost ?? 0
                                                             const closingQuantity = item.closingStock ?? item.quantity ?? 0
                                                             const consumedCount = item.consumed ?? 0
-                                                            const totalHandled = item.transferred ?? (closingQuantity + consumedCount)
+                                                            const adjustments = item.adjustments ?? 0
+                                                            const totalHandled = (item.openingStock ?? 0) + (item.transferred ?? 0) + adjustments
                                                             const remains = closingQuantity
                                                             const totalPurchaseValue = item.transferredValue ?? (totalHandled * costPrice)
                                                             const isLow = item.isLowStock || (remains <= (item.minLimit || 5))
@@ -840,14 +841,24 @@ export default function ReportsPage() {
                                                                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-0.5">{item.category}</p>
                                                                     </td>
                                                                     <td className="p-4 text-center text-orange-600">{Math.round(sellingPrice).toLocaleString()} <span className="text-[10px]">Br</span></td>
-                                                                    <td className="p-4 text-center"><p className={`text-sm ${isLow ? 'text-red-600' : 'text-slate-800'}`}>{remains} <span className="text-[10px] text-gray-400">{item.unit}</span></p></td>
+                                                                    <td className="p-4 text-center">
+                                                                        <p className={`text-sm ${isLow ? 'text-red-600' : 'text-slate-800'}`}>{remains.toFixed(2)} <span className="text-[10px] text-gray-400">{item.unit}</span></p>
+                                                                    </td>
 
                                                                     <td className="p-4 text-center text-green-600">
                                                                         {totalPurchaseValue.toLocaleString()} <span className="text-[10px]">Br</span>
                                                                         <div className="text-[9px] text-gray-400 font-medium">@{Math.round(costPrice)} avg</div>
+                                                                        <div className="text-[9px] text-gray-500 font-normal">
+                                                                            ({(item.openingStock || 0).toFixed(1)} start + {(item.transferred || 0).toFixed(1)} add)
+                                                                        </div>
                                                                     </td>
                                                                     <td className="p-4 text-center text-red-400">
-                                                                        <span>{consumedCount} <span className="text-[10px] uppercase font-black tracking-tighter">{item.unit}</span></span>
+                                                                        <span>{consumedCount.toFixed(2)} <span className="text-[10px] uppercase font-black tracking-tighter">{item.unit}</span></span>
+                                                                        {adjustments !== 0 && (
+                                                                            <div className="text-[8px] text-orange-400 font-bold uppercase">
+                                                                                {adjustments > 0 ? '+' : ''}{adjustments.toFixed(2)} adj
+                                                                            </div>
+                                                                        )}
                                                                     </td>
                                                                     <td className="p-4 text-right text-blue-600">{potentialRevenue.toLocaleString()} <span className="text-[10px]">Br</span></td>
                                                                     <td className="p-4 text-center"><span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${isLow ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{isLow ? 'LOW' : 'OK'}</span></td>
@@ -886,7 +897,7 @@ export default function ReportsPage() {
                                                                 <div className="bg-white p-3 rounded-xl border border-gray-100">
                                                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Usage Count</p>
                                                                     <p className="text-xl font-black text-slate-800">
-                                                                    <span>{consumedCount} <span className="text-xs text-gray-400 uppercase">{item.unit}</span></span>
+                                                                        <span>{consumedCount.toFixed(2)} <span className="text-xs text-gray-400 uppercase">{item.unit}</span></span>
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -1034,7 +1045,7 @@ export default function ReportsPage() {
                                                                 </button>
                                                             ))}
                                                         </div>
-                                                        <button 
+                                                        <button
                                                             onClick={() => exportMenuSalesCSV(menuSalesTab)}
                                                             className="flex items-center gap-1.5 px-3 py-1 rounded-xl mt-1 bg-emerald-50 text-emerald-600 border border-emerald-100 font-black text-[10px] uppercase hover:bg-emerald-100 transition-all"
                                                         >

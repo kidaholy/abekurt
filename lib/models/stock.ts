@@ -107,8 +107,8 @@ StockSchema.methods.isAvailableForOrder = function (requiredQuantity: number = 1
 StockSchema.methods.consumeStock = function (quantity: number): boolean {
     if (!this.trackQuantity) return true
     if (this.quantity >= quantity) {
-        this.quantity -= quantity
-        this.totalConsumed += quantity
+        this.quantity = Math.round((this.quantity - quantity) * 10000) / 10000
+        this.totalConsumed = Math.round((this.totalConsumed + quantity) * 10000) / 10000
         return true
     }
     return false
@@ -127,7 +127,7 @@ StockSchema.methods.addToStore = function (quantityAdded: number, totalPurchaseC
     })
 
     // Update current values - Add to STORE first
-    this.storeQuantity += quantityAdded
+    this.storeQuantity = Math.round((this.storeQuantity + quantityAdded) * 10000) / 10000
     this.totalPurchased += quantityAdded
     this.totalInvestment += totalPurchaseCost
 
@@ -149,8 +149,8 @@ StockSchema.methods.addToStore = function (quantityAdded: number, totalPurchaseC
 // Helper method to move from Store to Stock (Transfer)
 StockSchema.methods.moveToStock = function (quantity: number) {
     if (this.storeQuantity >= quantity) {
-        this.storeQuantity -= quantity
-        this.quantity += quantity
+        this.storeQuantity = Math.round((this.storeQuantity - quantity) * 10000) / 10000
+        this.quantity = Math.round((this.quantity + quantity) * 10000) / 10000
         return true
     }
     return false

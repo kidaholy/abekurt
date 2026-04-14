@@ -604,7 +604,7 @@ export default function NetWorthReportPage() {
                     periodData.usage.stockAnalysis
                       .filter((item: any) => item.openingStock > 0 || item.transferred > 0 || item.closingStock > 0 || item.consumed > 0)
                       .map((item: any, idx: number) => {
-                        const totalHandled = (item.openingStock || 0) + (item.transferred || 0);
+                        const totalHandled = (item.openingStock || 0) + (item.transferred || 0) + (item.adjustments || 0);
                         const remains = item.closingStock || 0;
                         const potentialRevenue = remains * (item.currentUnitCost || 0);
                         const consumedQuantity = item.consumed || 0;

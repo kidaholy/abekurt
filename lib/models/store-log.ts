@@ -9,6 +9,7 @@ export interface IStoreLog extends Document {
     totalPrice?: number
     user: mongoose.Types.ObjectId
     notes?: string
+    location?: 'POS' | 'STORE'
     date: Date
 }
 
@@ -26,6 +27,7 @@ const StoreLogSchema = new Schema<IStoreLog>(
         totalPrice: { type: Number },
         user: { type: Schema.Types.ObjectId, ref: "User", required: true },
         notes: { type: String },
+        location: { type: String, enum: ['POS', 'STORE'], default: 'STORE' },
         date: { type: Date, default: Date.now }
     },
     {

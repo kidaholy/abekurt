@@ -152,6 +152,7 @@ export async function POST(request: Request) {
                 pricePerUnit: stockData.averagePurchasePrice,
                 totalPrice: stockData.totalInvestment,
                 user: decoded.id,
+                location: 'STORE',
                 notes: "Initial inventory entry (Store)"
             })
 

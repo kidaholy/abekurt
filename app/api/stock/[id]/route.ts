@@ -122,7 +122,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         for (const key of allowedUpdates) {
             if (body[key] !== undefined) {
 
-                    updateData[key] = body[key]
+                updateData[key] = body[key]
             }
         }
 
@@ -155,12 +155,41 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             }
         }
 
+        // Track old quantities for logging
+        const oldQuantity = stockItem.quantity || 0
+        const oldStoreQuantity = stockItem.storeQuantity || 0
+
         Object.assign(stockItem, updateData)
 
+        // Log manual adjustments if quantities changed
+        if (stockItem.quantity !== oldQuantity) {
+            const StoreLog = (await import("@/lib/models/store-log")).default
+            await StoreLog.create({
+                stockId: stockItem._id,
+                type: 'ADJUSTMENT',
+                quantity: Math.round((stockItem.quantity - oldQuantity) * 10000) / 10000,
+                unit: stockItem.unit,
+                user: decoded.id,
+                location: 'POS',
+                notes: `Manual adjustment of POS stock from ${oldQuantity} to ${stockItem.quantity}`
+            })
+        }
 
+        if (stockItem.storeQuantity !== oldStoreQuantity) {
+            const StoreLog = (await import("@/lib/models/store-log")).default
+            await StoreLog.create({
+                stockId: stockItem._id,
+                type: 'ADJUSTMENT',
+                quantity: Math.round((stockItem.storeQuantity - oldStoreQuantity) * 10000) / 10000,
+                unit: stockItem.unit,
+                user: decoded.id,
+                location: 'STORE',
+                notes: `Manual adjustment of Store stock from ${oldStoreQuantity} to ${stockItem.storeQuantity}`
+            })
+        }
 
         await stockItem.save()
-        
+
 
 
         const serializedStock = {
@@ -195,7 +224,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         const { id } = await params
         const { searchParams } = new URL(request.url)
         const source = searchParams.get("source") // 'stock' or 'store'
-        
+
         const stockItem = await Stock.findById(id)
 
         if (!stockItem) {
@@ -205,11 +234,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
         // If deleting from Store page - only clear store quantity
         if (source === 'store') {
             const hasActiveStock = (stockItem.quantity || 0) > 0
-            
+
             // Always keep the record, just clear store quantity
             stockItem.storeQuantity = 0
             await stockItem.save()
-            
+
             if (hasActiveStock) {
                 return NextResponse.json({
                     message: "Item removed from Store. Active stock in POS remains.",
@@ -225,12 +254,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
         // If deleting from Stock/POS page - only clear active quantity
         const hasStoreQuantity = (stockItem.storeQuantity || 0) > 0
-        
+
         // Always keep the record, just clear active stock
         stockItem.quantity = 0
         stockItem.status = 'out_of_stock'
         await stockItem.save()
-        
+
         if (hasStoreQuantity) {
             return NextResponse.json({
                 message: "Stock removed from POS, but kept in Store because it has remaining quantity.",

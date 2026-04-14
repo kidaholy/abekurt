@@ -29,7 +29,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: "Insufficient source quantity" }, { status: 400 })
         }
 
-        sourceItem.quantity -= sourceQuantity
+        const oldSourceQuantity = sourceItem.quantity
+        sourceItem.quantity = Math.round((sourceItem.quantity - sourceQuantity) * 10000) / 10000
         await sourceItem.save()
 
         // 2. Increment target
@@ -38,18 +39,33 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: "Target item not found" }, { status: 404 })
         }
 
-        targetItem.quantity += targetYield
+        const oldTargetQuantity = targetItem.quantity
+        targetItem.quantity = Math.round((targetItem.quantity + targetYield) * 10000) / 10000
         await targetItem.save()
 
         // Log the conversion
         const StoreLog = (await import("@/lib/models/store-log")).default
+        
+        // Log Outgoing for Source
         await StoreLog.create({
             stockId: sourceItem._id,
             type: 'CONVERSION',
-            quantity: sourceQuantity,
+            quantity: -Math.abs(sourceQuantity),
             unit: sourceItem.unit,
             user: decoded.id,
+            location: 'POS',
             notes: `Converted to ${targetItem.name} (yield: ${targetYield} ${targetItem.unit})`
+        })
+
+        // Log Incoming for Target
+        await StoreLog.create({
+            stockId: targetItem._id,
+            type: 'CONVERSION',
+            quantity: Math.abs(targetYield),
+            unit: targetItem.unit,
+            user: decoded.id,
+            location: 'POS',
+            notes: `Converted from ${sourceItem.name} (waste: ${sourceQuantity} ${sourceItem.unit})`
         })
 
         return NextResponse.json({

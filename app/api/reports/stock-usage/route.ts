@@ -89,10 +89,20 @@ export async function GET(request: Request) {
         let totalOtherExpenses = 0
 
         const transferStats: Record<string, { quantity: number }> = {}
+        const adjustmentStats: Record<string, { quantity: number }> = {}
+
         storeLogs.forEach((log: any) => {
             const stockId = log.stockId.toString()
-            if (!transferStats[stockId]) transferStats[stockId] = { quantity: 0 }
-            transferStats[stockId].quantity += log.quantity
+            const type = log.type
+            const location = log.location || (type === 'TRANSFER_OUT' ? 'POS' : 'STORE')
+
+            if (type === 'TRANSFER_OUT' && location === 'POS') {
+                if (!transferStats[stockId]) transferStats[stockId] = { quantity: 0 }
+                transferStats[stockId].quantity += log.quantity
+            } else if ((type === 'ADJUSTMENT' || type === 'CONVERSION') && location === 'POS') {
+                if (!adjustmentStats[stockId]) adjustmentStats[stockId] = { quantity: 0 }
+                adjustmentStats[stockId].quantity += log.quantity
+            }
         })
 
         dailyExpenses.forEach((exp: any) => {
@@ -210,7 +220,7 @@ export async function GET(request: Request) {
                             if (!itemConsumption[stockId]) {
                                 itemConsumption[stockId] = { name: menuData.name, unit: unit, quantity: 0, stockId: stockId, orders: [] }
                             }
-                            itemConsumption[stockId].quantity += amount
+                            itemConsumption[stockId].quantity = Math.round((itemConsumption[stockId].quantity + amount) * 10000) / 10000
                             itemConsumption[stockId].orders.push({
                                 orderId: order._id,
                                 quantity: item.quantity,
@@ -273,7 +283,9 @@ export async function GET(request: Request) {
             const consumed = consumptionData.reduce((acc, c) => acc + c.quantity, 0)
 
             const currentStock = stock.quantity || 0
-            const openingStock = Math.max(0, currentStock - transferred + consumed)
+            const adjustments = adjustmentStats[stock._id.toString()]?.quantity || 0
+            // Opening = Closing - (Transferred + Adjustments) + Consumed
+            const openingStock = Math.round(Math.max(0, currentStock - transferred - adjustments + consumed) * 10000) / 10000
 
             const currentStoreStock = stock.storeQuantity || 0
             const storeOpeningStock = Math.max(0, currentStoreStock - purchased + transferred)
@@ -293,6 +305,7 @@ export async function GET(request: Request) {
                 openingStock,
                 purchased,
                 transferred,
+                adjustments,
                 consumed,
                 closingStock: currentStock,
                 storeQuantity: currentStoreStock,

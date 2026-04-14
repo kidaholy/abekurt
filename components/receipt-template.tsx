@@ -144,14 +144,6 @@ export const getReceiptHTML = ({
           </table>
 
           <div style="margin-top: 10px; font-size: 12px;">
-            <div class="flex justify-between">
-              <span>Subtotal:</span>
-              <span>${subtotal.toFixed(0)} ETB</span>
-            </div>
-            <div class="flex justify-between">
-              <span>VAT (${vatPercent}%):</span>
-              <span>${tax.toFixed(0)} ETB</span>
-            </div>
             <div class="flex justify-between total-row font-bold">
               <span>TOTAL:</span>
               <span>${total.toFixed(0)} ETB</span>

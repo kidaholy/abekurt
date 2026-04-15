@@ -8,7 +8,7 @@ import { useLanguage } from "@/context/language-context"
 import { useSettings } from "@/context/settings-context"
 import { Logo } from "@/components/logo"
 import { compressImage, validateImageFile, formatFileSize, getBase64Size } from "@/lib/utils/image-utils"
-import { Save, Upload, Link as LinkIcon, Info, CheckCircle2 } from "lucide-react"
+import { Save, Upload, Link as LinkIcon, Info, CheckCircle2, RefreshCw } from "lucide-react"
 import { ConfirmationCard, NotificationCard } from "@/components/confirmation-card"
 import { useConfirmation } from "@/hooks/use-confirmation"
 
@@ -19,12 +19,13 @@ interface AdminSettings {
   app_tagline: string
   vat_rate: string
   enable_cashier_printing: string
+  show_cashier_revenue: string
 }
 
 export default function AdminSettingsPage() {
   const { token } = useAuth()
   const { t } = useLanguage()
-  const { settings, refreshSettings } = useSettings()
+  const { settings, refreshSettings, loading: settingsLoading } = useSettings()
   const { confirmationState, confirm, closeConfirmation, notificationState, notify, closeNotification } = useConfirmation()
   const [formData, setFormData] = useState<AdminSettings>({
     logo_url: "",
@@ -32,7 +33,8 @@ export default function AdminSettingsPage() {
     app_name: "Prime Addis",
     app_tagline: "Coffee Management",
     vat_rate: "0.08",
-    enable_cashier_printing: "true"
+    enable_cashier_printing: "true",
+    show_cashier_revenue: "true"
   })
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -61,14 +63,15 @@ export default function AdminSettingsPage() {
   const [categoryType, setCategoryType] = useState<"menu" | "stock">("menu")
 
   useEffect(() => {
-    if (settings && !isInitialized.current) {
+    if (!settingsLoading && settings && !isInitialized.current) {
       setFormData({
         logo_url: settings.logo_url || "",
         favicon_url: settings.favicon_url || "",
         app_name: settings.app_name || "Prime Addis",
         app_tagline: settings.app_tagline || "Coffee Management",
         vat_rate: settings.vat_rate || "0.08",
-        enable_cashier_printing: settings.enable_cashier_printing || "true"
+        enable_cashier_printing: settings.enable_cashier_printing || "true",
+        show_cashier_revenue: settings.show_cashier_revenue || "true"
       })
       isInitialized.current = true
     }
@@ -253,6 +256,15 @@ export default function AdminSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (settingsLoading || !isInitialized.current) {
+      notify({
+        title: "Please wait",
+        message: "Settings are still loading. Please try again in a moment.",
+        type: "error"
+      })
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -263,7 +275,8 @@ export default function AdminSettingsPage() {
         { key: "app_name", value: formData.app_name, type: "string", desc: t("adminSettings.applicationName") },
         { key: "app_tagline", value: formData.app_tagline, type: "string", desc: t("adminSettings.applicationTagline") },
         { key: "vat_rate", value: formData.vat_rate, type: "number", desc: "Value Added Tax (VAT) rate" },
-        { key: "enable_cashier_printing", value: formData.enable_cashier_printing, type: "boolean", desc: "Auto-print setting" }
+        { key: "enable_cashier_printing", value: formData.enable_cashier_printing, type: "boolean", desc: "Auto-print setting" },
+        { key: "show_cashier_revenue", value: formData.show_cashier_revenue, type: "boolean", desc: "Show revenue in Recent Orders" }
       ]
 
       for (const s of settingsToSave) {
@@ -356,6 +369,20 @@ export default function AdminSettingsPage() {
     if (confirmed) {
       setFormData(prev => ({ ...prev, logo_url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=200&h=200&fit=crop&crop=center' }))
     }
+  }
+
+  if (settingsLoading && !isInitialized.current) {
+    return (
+      <ProtectedRoute requiredRoles={["admin"]}>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+          <div className="bg-white rounded-[2rem] p-12 shadow-xl border border-gray-100 flex flex-col items-center">
+            <RefreshCw className="h-12 w-12 animate-spin text-[#8B4513] mb-6" />
+            <h2 className="text-xl font-black text-gray-900 uppercase tracking-widest">Loading Settings</h2>
+            <p className="text-sm text-gray-400 font-bold mt-2">Synchronizing with secure cloud database...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
   }
 
   return (
@@ -734,7 +761,7 @@ export default function AdminSettingsPage() {
                     </div>
 
                     {/* Cashier Printing Toggle */}
-                    <div className="space-y-4 p-8 bg-gray-50 rounded-[2.5rem] border-2 border-[#8B4513]/5 shadow-inner">
+                    <div className="space-y-4 p-8 bg-gray-50 rounded-[2.5rem] border-2 border-[#8B4513]/5 shadow-inner mb-4">
                       <div className="flex items-center justify-between gap-6">
                         <div className="flex-1 space-y-2">
                           <label className="text-base font-black text-gray-800 uppercase tracking-tight flex items-center gap-2">
@@ -768,6 +795,46 @@ export default function AdminSettingsPage() {
                           </button>
                           <span className={`text-[10px] font-black uppercase tracking-widest ${formData.enable_cashier_printing === "true" ? "text-green-600" : "text-gray-400"}`}>
                             {formData.enable_cashier_printing === "true" ? "Printing ON" : "Printing OFF"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Show Cashier Revenue Toggle */}
+                    <div className="space-y-4 p-8 bg-gray-50 rounded-[2.5rem] border-2 border-[#8B4513]/5 shadow-inner">
+                      <div className="flex items-center justify-between gap-6">
+                        <div className="flex-1 space-y-2">
+                          <label className="text-base font-black text-gray-800 uppercase tracking-tight flex items-center gap-2">
+                            💰 Cashier Revenue Display
+                            {formData.show_cashier_revenue === "true" ? (
+                              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 animate-pulse">ENABLED</span>
+                            ) : (
+                              <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full border border-gray-300">DISABLED</span>
+                            )}
+                          </label>
+                          <p className="text-xs text-gray-500 font-bold leading-relaxed">
+                            {formData.show_cashier_revenue === "true"
+                              ? "The system WILL show the total, food, and drink revenue stats in the Recent Orders page."
+                              : "The system will HIDE the revenue stats from the Recent Orders page."}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({
+                              ...formData,
+                              show_cashier_revenue: formData.show_cashier_revenue === "true" ? "false" : "true"
+                            })}
+                            className={`relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-300 shadow-lg focus:outline-none ${formData.show_cashier_revenue === "true" ? "bg-green-600 ring-4 ring-green-100" : "bg-gray-300 ring-4 ring-gray-100"
+                              }`}
+                          >
+                            <span
+                              className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-xl transition-transform duration-300 ${formData.show_cashier_revenue === "true" ? "translate-x-9" : "translate-x-1"
+                                }`}
+                            />
+                          </button>
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${formData.show_cashier_revenue === "true" ? "text-green-600" : "text-gray-400"}`}>
+                            {formData.show_cashier_revenue === "true" ? "Display ON" : "Display OFF"}
                           </span>
                         </div>
                       </div>

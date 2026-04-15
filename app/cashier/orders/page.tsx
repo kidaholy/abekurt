@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { BentoNavbar } from "@/components/bento-navbar"
 import { useAuth } from "@/context/auth-context"
 import { useLanguage } from "@/context/language-context"
+import { useSettings } from "@/context/settings-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ShoppingBag, RefreshCw, MapPin } from 'lucide-react'
 import { OrderDetailsModal } from "@/components/order-details-modal"
@@ -14,6 +15,8 @@ interface OrderItem {
   name: string
   quantity: number
   price: number
+  mainCategory?: string
+  category?: string
 }
 
 interface Order {
@@ -40,6 +43,7 @@ export default function CashierOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const { token, user } = useAuth()
   const { t } = useLanguage()
+  const { settings } = useSettings()
 
   useEffect(() => {
     fetchOrders()
@@ -74,6 +78,30 @@ export default function CashierOrdersPage() {
 
   const isDeletedOrder = (o: Order) => !!o.isDeleted || o.status === "cancelled"
 
+  const todayRevenue = useMemo(() => {
+    let totalFood = 0
+    let totalDrinks = 0
+
+    orders.forEach((order) => {
+      if (isDeletedOrder(order)) return
+
+      order.items?.forEach((item: any) => {
+        const itemRevenue = (item.price || 0) * (item.quantity || 0)
+        if (item.mainCategory?.toLowerCase() === "drinks" || (item.category && item.category.toLowerCase().includes("drink"))) {
+          totalDrinks += itemRevenue
+        } else {
+          totalFood += itemRevenue
+        }
+      })
+    })
+
+    return {
+      food: totalFood,
+      drinks: totalDrinks,
+      total: totalFood + totalDrinks
+    }
+  }, [orders])
+
   const filteredOrders = orders.filter(o => {
     if (isDeletedOrder(o)) return false
     const matchesStatus = filterStatus === "all" || o.status === filterStatus
@@ -103,21 +131,40 @@ export default function CashierOrdersPage() {
           {/* Header */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <ShoppingBag className="h-8 w-8 text-blue-600" />
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <ShoppingBag className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Recent Orders</h1>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Today's sales history
+                      {user?.batchNumber && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
+                          Batch #{user.batchNumber}
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Recent Orders</h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Today's sales history
-                    {user?.batchNumber && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
-                        Batch #{user.batchNumber}
-                      </span>
-                    )}
-                  </p>
-                </div>
+
+                {settings.show_cashier_revenue === "true" && (
+                  <div className="flex flex-wrap gap-4">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 px-4 py-2 rounded-2xl border border-emerald-100">
+                      <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-0.5">Total Revenue</p>
+                      <p className="text-xl font-black text-emerald-900">{todayRevenue.total.toLocaleString()} <span className="text-[10px] opacity-70">ETB</span></p>
+                    </div>
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 px-4 py-2 rounded-2xl border border-orange-100">
+                      <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest mb-0.5">Food</p>
+                      <p className="text-xl font-black text-orange-900">{todayRevenue.food.toLocaleString()} <span className="text-[10px] opacity-70">ETB</span></p>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 px-4 py-2 rounded-2xl border border-blue-100">
+                      <p className="text-[10px] font-black text-blue-800 uppercase tracking-widest mb-0.5">Drinks</p>
+                      <p className="text-xl font-black text-blue-900">{todayRevenue.drinks.toLocaleString()} <span className="text-[10px] opacity-70">ETB</span></p>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-4">
 

@@ -48,6 +48,7 @@ export default function CashierPOSPage() {
   const [showCart, setShowCart] = useState(false)
   const [paperWidth, setPaperWidth] = useState(80)
   const [distributions, setDistributions] = useState<any[]>([])
+  const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [selectedDistributions, setSelectedDistributions] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [idSearchTerm, setIdSearchTerm] = useState("")
@@ -154,6 +155,31 @@ export default function CashierPOSPage() {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [token])
 
+  // Fetch recent orders
+  useEffect(() => {
+    const fetchRecentOrders = async () => {
+      if (!token) return
+      try {
+        // Fetch today's orders
+        const now = new Date()
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const response = await fetch(`/api/orders?startDate=${startOfDay.toISOString()}&limit=50`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (response.ok) {
+          const data = await response.json()
+          // Filter out cancelled orders and sort by newest first
+          const filtered = data.filter((order: any) => order.status !== 'cancelled').reverse()
+          setRecentOrders(filtered.slice(0, 10))
+        }
+      } catch (err) { console.error("Failed to fetch recent orders", err) }
+    }
+
+    fetchRecentOrders()
+    const interval = setInterval(fetchRecentOrders, 15000) // Refresh every 15 seconds
+    return () => clearInterval(interval)
+  }, [token])
+
   const isMeatOnly = useMemo(() => {
     return cartItems.length > 0 && cartItems.every(item =>
       item.category === "Butchery" ||
@@ -177,6 +203,45 @@ export default function CashierPOSPage() {
       item.category === "Juice"
     )
   }, [cartItems, menuItems])
+
+  // Calculate revenue breakdown for an order
+  const calculateRevenueBreakdown = (order: any) => {
+    let foodRevenue = 0
+    let drinksRevenue = 0
+
+    order.items?.forEach((item: any) => {
+      const itemRevenue = (item.price || 0) * (item.quantity || 0)
+      if (item.mainCategory?.toLowerCase() === "drinks" || item.category?.toLowerCase().includes("drink")) {
+        drinksRevenue += itemRevenue
+      } else {
+        foodRevenue += itemRevenue
+      }
+    })
+
+    return {
+      foodRevenue,
+      drinksRevenue,
+      total: foodRevenue + drinksRevenue
+    }
+  }
+
+  // Calculate today's total revenue
+  const todayRevenue = useMemo(() => {
+    let totalFood = 0
+    let totalDrinks = 0
+
+    recentOrders.forEach((order: any) => {
+      const revenue = calculateRevenueBreakdown(order)
+      totalFood += revenue.foodRevenue
+      totalDrinks += revenue.drinksRevenue
+    })
+
+    return {
+      food: totalFood,
+      drinks: totalDrinks,
+      total: totalFood + totalDrinks
+    }
+  }, [recentOrders])
 
   const handleToggleDistribution = (name: string) => {
     setSelectedDistributions(prev =>
@@ -600,6 +665,94 @@ export default function CashierPOSPage() {
                         />
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Orders Section */}
+              <div className="md:bg-white md:rounded-xl md:p-6 md:shadow-sm md:border border-gray-200">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-xl font-black text-gray-900">Recent Orders</h2>
+                    <p className="text-sm text-gray-500 mt-1">Today's sales history</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const now = new Date()
+                      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+                      fetch(`/api/orders?startDate=${startOfDay.toISOString()}&limit=50`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      })
+                        .then(res => res.ok && res.json())
+                        .then(data => {
+                          const filtered = data.filter((order: any) => order.status !== 'cancelled').reverse()
+                          setRecentOrders(filtered.slice(0, 10))
+                        })
+                    }}
+                    className="text-blue-600 hover:text-blue-700 font-bold text-sm"
+                  >
+                    🔄
+                  </button>
+                </div>
+
+                {/* Today's Revenue Summary */}
+                <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-200">
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 border border-green-200">
+                    <p className="text-xs font-black text-gray-600 uppercase tracking-widest mb-2">🍽️ Food Revenue</p>
+                    <p className="text-2xl font-black text-green-700">{todayRevenue.food.toLocaleString()} <span className="text-sm">ETB</span></p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200">
+                    <p className="text-xs font-black text-gray-600 uppercase tracking-widest mb-2">☕ Drinks Revenue</p>
+                    <p className="text-2xl font-black text-blue-700">{todayRevenue.drinks.toLocaleString()} <span className="text-sm">ETB</span></p>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border border-purple-200">
+                    <p className="text-xs font-black text-gray-600 uppercase tracking-widest mb-2">💰 Total Revenue</p>
+                    <p className="text-2xl font-black text-purple-700">{todayRevenue.total.toLocaleString()} <span className="text-sm">ETB</span></p>
+                  </div>
+                </div>
+
+                {recentOrders.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <p>No orders yet today</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {recentOrders.map((order: any) => {
+                      const revenue = calculateRevenueBreakdown(order)
+                      return (
+                        <div key={order._id} className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="text-sm font-black text-gray-600 uppercase tracking-widest">Order #{order.orderNumber}</p>
+                              <p className="text-xs text-gray-500 mt-1">{new Date(order.createdAt).toLocaleTimeString()}</p>
+                            </div>
+                            <span className={`px-2 py-1 rounded-lg text-xs font-black uppercase ${order.status === 'completed' ? 'bg-green-100 text-green-700' : order.status === 'served' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                              {order.status}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-2 mb-3 pb-3 border-b border-blue-200">
+                            {revenue.foodRevenue > 0 && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-bold text-gray-700">🍽️ Food</span>
+                                <span className="text-sm font-black text-gray-900">{revenue.foodRevenue.toLocaleString()} ETB</span>
+                              </div>
+                            )}
+                            {revenue.drinksRevenue > 0 && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-bold text-gray-700">☕ Drinks</span>
+                                <span className="text-sm font-black text-gray-900">{revenue.drinksRevenue.toLocaleString()} ETB</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-black text-gray-700 uppercase">Total</span>
+                            <span className="text-lg font-black text-blue-700">{revenue.total.toLocaleString()} ETB</span>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

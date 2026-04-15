@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
     // Get public settings (logo, app name, etc.)
     const publicSettings = await (Settings as any).find({
-      key: { $in: ["logo_url", "favicon_url", "app_name", "app_tagline", "vat_rate", "enable_cashier_printing"] }
+      key: { $in: ["logo_url", "favicon_url", "app_name", "app_tagline", "vat_rate", "enable_cashier_printing", "show_cashier_revenue"] }
     }).lean()
 
     // Convert to key-value object
@@ -25,7 +25,9 @@ export async function GET(request: Request) {
       favicon_url: "",
       app_name: "Prime Addis",
       app_tagline: "Coffee Management",
+      vat_rate: "0.08",
       enable_cashier_printing: "true",
+      show_cashier_revenue: "true",
       ...settingsObject
     }
 

@@ -9,6 +9,7 @@ interface AppSettings {
   app_tagline: string
   vat_rate: string
   enable_cashier_printing?: string
+  show_cashier_revenue?: string
 }
 
 interface SettingsContextType {
@@ -26,7 +27,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     app_name: "Prime Addis",
     app_tagline: "Coffee Management",
     vat_rate: "0.08",
-    enable_cashier_printing: "true"
+    enable_cashier_printing: "true",
+    show_cashier_revenue: "true"
   })
   const [loading, setLoading] = useState(true)
 
